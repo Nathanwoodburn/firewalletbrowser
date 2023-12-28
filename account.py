@@ -174,3 +174,12 @@ def send(account,address,amount):
     return {
         "tx": response['result']
     }
+
+def getDomain(domain: str):
+    # Get the domain
+    response = hsd.rpc_getNameInfo(domain)
+    if response['error'] is not None:
+        return {
+            "error": response['error']['message']
+        }
+    return response['result']

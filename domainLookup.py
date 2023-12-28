@@ -8,6 +8,7 @@ import datetime
 import dns.asyncresolver
 import httpx
 from requests_doh import DNSOverHTTPSSession, add_dns_provider
+import requests
 
 
 def hip2(domain: str):
@@ -134,3 +135,24 @@ def resolve_TLSA_with_doh(query_name, doh_url="https://hnsdoh.com/dns-query"):
         tlsa = r.answer[0][0]
         return tlsa
 
+
+def niami_info(domain: str):
+    response = requests.get(f"https://api.niami.io/hsd/{domain}")
+    if response.status_code != 200:
+        return False
+    
+    response = response.json()
+    output = {
+        "owner": response["data"]["owner_tx_data"]["address"],
+        "dns": response["data"]["dnsData"]
+    }
+
+    transactions = requests.get(f"https://api.niami.io/txs/{domain}")
+    if transactions.status_code != 200:
+        return False
+    
+    transactions = transactions.json()
+    output["txs"] = transactions["txs"]
+    return output
+
+        

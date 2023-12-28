@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i&amp;display=swap">
     <link rel="stylesheet" href="/assets/fonts/fontawesome-all.min.css">
     <link rel="stylesheet" href="/assets/fonts/material-icons.min.css">
+    <link rel="stylesheet" href="/assets/css/styles.min.css">
 </head>
 
 <body id="page-top">
@@ -27,10 +28,7 @@
                 <ul class="navbar-nav text-light" id="accordionSidebar">
                     <li class="nav-item"><a class="nav-link" href="/"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a></li>
                     <li class="nav-item"><a class="nav-link" href="/tx"><i class="fas fa-table"></i><span>Transactions</span></a></li>
-                    <li class="nav-item"><a class="nav-link" href="/send"><svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 24 24" width="1em" fill="currentColor" style="margin-right: 4px;">
-                                <path d="M0 0h24v24H0z" fill="none"></path>
-                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                            </svg><span>Send HNS</span></a></li>
+                    <li class="nav-item"><a class="nav-link" href="/send"><i class="material-icons">send</i><span>Send HNS</span></a></li>
                     <li class="nav-item"><a class="nav-link" href="receive"><i class="material-icons">call_received</i><span>Receive</span></a></li>
                 </ul>
                 <div class="text-center d-none d-md-inline"><button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button></div>
@@ -40,8 +38,8 @@
             <div id="content">
                 <nav class="navbar navbar-expand bg-white shadow mb-4 topbar static-top navbar-light">
                     <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
-                        <form class="d-none d-sm-inline-block me-auto ms-md-3 my-2 my-md-0 mw-100 navbar-search">
-                            <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for domain"><button class="btn btn-primary py-0" type="button"><i class="fas fa-search"></i></button></div>
+                        <form class="d-none d-sm-inline-block me-auto ms-md-3 my-2 my-md-0 mw-100 navbar-search" action="/search" method="get">
+                            <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for domain" name="q" value="{{search_term}}"><button class="btn btn-primary py-0" type="submit"><i class="fas fa-search"></i></button></div>
                         </form>
                         <ul class="navbar-nav flex-nowrap ms-auto">
                             <li class="nav-item dropdown d-sm-none no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><i class="fas fa-search"></i></a>

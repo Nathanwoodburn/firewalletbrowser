@@ -6,6 +6,7 @@ import account as account_module
 import render
 import re
 from flask_qrcode import QRcode
+import domainLookup
 
 dotenv.load_dotenv()
 
@@ -40,8 +41,8 @@ def index():
 
     return render_template("index.html", account=account, available=available,
                            total=total, pending=pending, domains=domains, domain_count=domain_count)
-    
-
+ 
+#region Transactions
 @app.route('/tx')
 def transactions():
     # Check if the user is logged in
@@ -151,7 +152,6 @@ def success():
     tx = request.args.get("tx")
     return render_template("success.html", account=account, tx=tx)
 
-
 @app.route('/checkaddress')
 def check_address():
     address = request.args.get("address")
@@ -159,6 +159,80 @@ def check_address():
         return jsonify({"result": "Invalid address"})
     
     return jsonify({"result": account_module.check_address(address)})
+#endregion
+
+#region Domains
+@app.route('/search')
+def search():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    search_term = request.args.get("q")
+    search_term = search_term.lower().strip()
+    
+
+    if len(search_term) == 0:
+        return redirect("/")
+    domain = account_module.getDomain(search_term)
+    
+    if 'error' in domain:
+        return render_template("search.html", account=account, search_term=search_term, domain=domain['error'])
+    
+    print(domain)
+    if domain['info'] is None:
+        return render_template("search.html", account=account, search_term=search_term,
+                               domain=search_term, state="AVAILABLE", next="Available Now")
+
+
+    state = domain['info']['state']
+    if state == 'CLOSED':
+        if not domain['info']['registered']:
+            state = 'AVAILABLE'
+            next = "Available Now"
+        else:
+            state = 'REGISTERED'
+            expires = domain['info']['stats']['daysUntilExpire']
+            next = f"Expires in ~{expires} days"
+
+
+    domain_info = domainLookup.niami_info(search_term)
+    owner = 'Unknown'
+    dns = []
+    txs = []
+
+    if domain_info:
+        owner = domain_info['owner']
+        dns = domain_info['dns']
+        txs = domain_info['txs']
+
+    own_domains = account_module.getDomains(account)
+    own_domains = [x['name'] for x in own_domains]
+    own_domains = [x.lower() for x in own_domains]
+    if search_term in own_domains:
+        owner = "You"
+
+    dns = render.dns(dns)
+    txs = render.txs(txs)
+
+        
+
+
+    return render_template("search.html", account=account, search_term=search_term,
+                           domain=domain['info']['name'],raw=domain,
+                           state=state, next=next, owner=owner, dns=dns, txs=txs)
+    
+
+
+    
+
+
+#endregion
+
 
 #region Account
 @app.route('/login')
@@ -199,12 +273,10 @@ def logout():
 
 #endregion
 
-
 #region Assets and default pages
 @app.route('/qr/<data>')
 def qr(data):
     return send_file(qrcode(data, mode="raw"), mimetype="image/png")
-
 
 @app.route('/assets/<path:path>')
 def send_assets(path):

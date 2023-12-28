@@ -1,3 +1,6 @@
+import datetime
+
+
 def domains(domains):
     html = ''
     for domain in domains:
@@ -13,7 +16,7 @@ def domains(domains):
 
 
 
-        html += f'<tr><td>{domain["name"]}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/domain/{domain["name"]}">Manage</a></td></tr>'
+        html += f'<tr><td>{domain["name"]}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/manage/{domain["name"]}">Manage</a></td></tr>'
     
     return html
 
@@ -65,3 +68,69 @@ def transactions(txs):
 
 
     return html
+
+
+def dns(data):
+    html_output = ""
+    
+    for entry in data:
+        html_output += f"<tr><td>{entry['type']}</td>\n"
+        
+        if entry['type'] != 'DS' and not entry['type'].startswith("GLUE") and not entry['type'].startswith("SYNTH"):
+            for key, value in entry.items():
+                if key != 'type':
+                    if isinstance(value, list):
+                        html_output += "<td>\n"
+                        for val in value:
+                            html_output += f"{val}<br>\n"
+
+                        html_output += "</td>\n"
+                    else:
+                        html_output += f"<td>{value}</td>\n"
+
+
+        elif entry['type'] == 'DS':
+            ds = str(entry['keyTag']) + " " + str(entry['algorithm']) + " " + str(entry['digestType']) + " " + entry['digest']
+            html_output += f"<td>{ds}</td>\n"
+
+        else:
+            value = ""
+            for key, val in entry.items():
+                if key != 'type':
+                    value += str(val) + " "
+            html_output += f"<td>{value}</td>\n"
+            
+        html_output += "  </tr>\n"    
+    return html_output
+
+def txs(data):
+    data = data[::-1]
+
+    html_output = ""
+
+    for entry in data:
+        html_output += f"<tr><td>{entry['action']}</td>\n"
+        html_output += f"<td><a target='_blank' href='https://niami.io/tx/{entry['txid']}'>{entry['txid'][:8]}...</a></td>\n"
+        amount = entry['amount']
+        amount = amount / 1000000
+        amount = round(amount, 2)
+
+        if entry['blind'] == None:
+            html_output += f"<td>{amount} HNS</td>\n"
+        else:
+            blind = entry['blind']
+            blind = blind / 1000000
+            blind = round(blind, 2)
+            html_output += f"<td>{amount} + {blind} HNS</td>\n"
+
+        html_output += f"<td>{timestamp_to_readable_time(entry['time'])}</td>\n"
+        html_output += f"</tr>\n"
+
+    return html_output
+
+
+def timestamp_to_readable_time(timestamp):
+    # Assuming the timestamp is in seconds
+    dt_object = datetime.datetime.fromtimestamp(timestamp)
+    readable_time = dt_object.strftime("%H:%M:%S %d %b %Y")
+    return readable_time
