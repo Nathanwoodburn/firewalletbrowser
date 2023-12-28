@@ -6,3 +6,4 @@ gunicorn
 dnspython
 cryptography
 requests-doh
+Flask-QRcode

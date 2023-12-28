@@ -1,14 +1,16 @@
-from flask import Flask, make_response, redirect, request, jsonify, render_template, send_from_directory
+from flask import Flask, make_response, redirect, request, jsonify, render_template, send_from_directory,send_file
 import os
 import dotenv
 import requests
 import account as account_module
 import render
 import re
+from flask_qrcode import QRcode
 
 dotenv.load_dotenv()
 
 app = Flask(__name__)
+qrcode = QRcode(app)
 
 
 @app.route('/')
@@ -65,6 +67,7 @@ def send_page():
     max = account_module.getBalance(account)['available']
     # Subtract approx fee of 0.02
     max = max - 0.02
+    max = round(max, 2)
 
     message = ''
     address = ''
@@ -120,6 +123,20 @@ def send():
         return redirect("/send?message=" + response['error'] + "&address=" + address + "&amount=" + str(amount))
     
     return redirect("/success?tx=" + response['tx'])
+
+@app.route('/receive')
+def receive():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    address = account_module.getAddress(account)
+
+    return render_template("receive.html", account=account, address=address)
     
 @app.route('/success')
 def success():
@@ -182,6 +199,13 @@ def logout():
 
 #endregion
 
+
+#region Assets and default pages
+@app.route('/qr/<data>')
+def qr(data):
+    return send_file(qrcode(data, mode="raw"), mimetype="image/png")
+
+
 @app.route('/assets/<path:path>')
 def send_assets(path):
     return send_from_directory('templates/assets', path)
@@ -194,12 +218,12 @@ def try_path(path):
     else:
         return page_not_found(404)
 
-
 @app.errorhandler(404)
 def page_not_found(e):
     account = account_module.check_account(request.cookies.get("account"))
 
     return render_template('404.html',account=account), 404
+#endregion
 
 if __name__ == '__main__':
     app.run(debug=True)

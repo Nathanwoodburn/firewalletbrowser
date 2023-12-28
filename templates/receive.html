@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Success - FireWallet</title>
+    <title>Receive - FireWallet</title>
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
@@ -62,11 +62,12 @@
                     </div>
                 </nav>
                 <div class="container-fluid">
-                    <h3 class="text-center text-dark mb-1">Transaction send successfully</h3>
+                    <h3 class="text-center text-dark mb-1">Receive HNS or domains to this address</h3>
                 </div>
-                <div class="card" style="max-width: 500px;margin: auto;margin-top: 50px;">
-                    <div class="card-body">
-                        <h4 class="card-title">Your transaction has been sent and will be mined soon.</h4><span style="display: block;font-size: 12px;">TX: {{tx}}</span><span style="display: block;">Check your transaction on a block explorer</span><a class="card-link" href="https://niami.io/tx/{{tx}}" target="_blank">Niami</a><a class="card-link" href="https://3xpl.com/handshake/transaction/{{tx}}" target="_blank">3xpl</a>
+                <div class="card" style="margin: auto;max-width: 500px;margin-top: 50px;">
+                    <div class="card-body text-center">
+                        <h4 class="card-title">{{address}}</h4><img src="/qr/{{address}}">
+                        <p class="card-text">Use this address to receive HNS or Handshake domains from other people or wallets.</p><a class="card-link" id="copyLink" href="javascript:;" address="{{address}}" onclick="copyAddress()">Copy</a>
                     </div>
                 </div>
             </div>
@@ -79,6 +80,7 @@
     </div>
     <script src="/assets/bootstrap/js/bootstrap.min.js"></script>
     <script src="/assets/js/script.min.js"></script>
+    <script src="/assets/js/receive.min.js"></script>
 </body>
 
 </html>

@@ -57,6 +57,13 @@ def getBalance(account: str):
 
     return {'available': available, 'total': total}
 
+def getAddress(account: str):
+    # Get the address
+    info = hsw.getAccountInfo(account, 'default')
+    if 'error' in info:
+        return ''
+    return info['receiveAddress']
+
 def getPendingTX(account: str):
     # Get the pending transactions
     info = hsw.getWalletTxHistory()
