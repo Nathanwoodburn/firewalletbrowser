@@ -27,9 +27,6 @@ def check_account(cookie: str):
         return False
 
     account = cookie.split(":")[0]
-    password = ":".join(cookie.split(":")[1:])
-
-
     # Check if the account is valid
     info = hsw.getAccountInfo(account, 'default')
     if 'error' in info:
@@ -66,17 +63,15 @@ def getAddress(account: str):
 
 def getPendingTX(account: str):
     # Get the pending transactions
-    info = hsw.getWalletTxHistory()
+    info = hsw.getWalletTxHistory(account)
     if 'error' in info:
         return 0
-    
     pending = 0
     for tx in info:
         if tx['confirmations'] < 1:
             pending += 1
 
     return pending
-
 
 def getDomains(account):
     # Get the domains
@@ -183,3 +178,24 @@ def getDomain(domain: str):
             "error": response['error']['message']
         }
     return response['result']
+
+def renewDomain(account,domain):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": "Invalid account"
+        }
+
+    response = hsw.sendRENEW(account_name,password,domain)
+    return response
+
+def getDNS(domain: str):
+    # Get the DNS
+    response = hsd.rpc_getNameResource(domain)
+    if response['error'] is not None:
+        return {
+            "error": response['error']['message']
+        }
+    return response['result']['records']

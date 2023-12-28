@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Search - FireWallet</title>
+    <title>Manage - FireWallet</title>
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
@@ -59,12 +59,12 @@
                         </ul>
                     </div>
                 </nav>
+                <h4 class="text-center" style="color: rgb(255,0,0);">{{error}}</h4>
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">{{domain}}/<span class="stick-right">{{next}}</span></h4>
-                            <h6 class="text-muted card-subtitle mb-2">{{state}}</h6>
-                            <h6 class="text-muted card-subtitle mb-2">Owner: {{owner}}</h6><a class="btn btn-primary" role="button" style="margin-right: 25px;" href="/manage/{{domain}}">Manage</a><a class="btn btn-primary" role="button" href="/auction/{{domain}}">Auction</a>
+                            <h4 class="card-title">{{domain}}/<a class="btn btn-primary stick-right" role="button" href="/manage/{{domain}}/renew">Renew</a></h4>
+                            <h6 class="text-muted card-subtitle mb-2">Expires in {{expiry}} days</h6>
                         </div>
                     </div>
                 </div>
@@ -81,27 +81,6 @@
         </thead>
         <tbody>
             {{dns | safe}}
-        </tbody>
-    </table>
-</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="container-fluid" style="margin-top: 50px;">
-                    <div class="card">
-                        <div class="card-body">
-                            <h4 class="card-title">History</h4><div class="table-responsive">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Action</th>
-                <th>TX</th>
-                <th>Amount</th>
-                <th>Time</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{txs | safe}}
         </tbody>
     </table>
 </div>

@@ -218,18 +218,54 @@ def search():
 
     dns = render.dns(dns)
     txs = render.txs(txs)
-
-        
-
-
     return render_template("search.html", account=account, search_term=search_term,
                            domain=domain['info']['name'],raw=domain,
                            state=state, next=next, owner=owner, dns=dns, txs=txs)
     
+@app.route('/manage/<domain>')
+def manage(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
 
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    
+    own_domains = account_module.getDomains(account)
+    own_domains = [x['name'] for x in own_domains]
+    own_domains = [x.lower() for x in own_domains]
+    if domain not in own_domains:
+        return redirect("/search?q=" + domain)
+    
+    domain_info = account_module.getDomain(domain)
+    if 'error' in domain_info:
+        return render_template("manage.html", account=account, domain=domain, error=domain_info['error'])
+    
+    expiry = domain_info['info']['stats']['daysUntilExpire']
+    dns = account_module.getDNS(domain)
+    dns = render.dns(dns)
+
+
+    return render_template("manage.html", account=account, domain=domain,
+                           expiry=expiry, dns=dns)
+
+
+@app.route('/manage/<domain>/renew')
+def renew(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
 
     
-
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    response = account_module.renewDomain(request.cookies.get("account"),domain)
+    return redirect("/success?tx=" + response['hash'])
 
 #endregion
 
