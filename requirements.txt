@@ -3,3 +3,6 @@ flask
 python-dotenv
 requests
 gunicorn
+dnspython
+cryptography
+requests-doh
