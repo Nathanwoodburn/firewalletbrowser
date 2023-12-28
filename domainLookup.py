@@ -7,7 +7,7 @@ import binascii
 import datetime
 import dns.asyncresolver
 import httpx
-from requests_doh import DNSOverHTTPSSession, add_dns_provider, remove_dns_provider
+from requests_doh import DNSOverHTTPSSession, add_dns_provider
 
 
 def hip2(domain: str):
@@ -114,7 +114,7 @@ def hip2(domain: str):
             
     # Catch all exceptions
     except Exception as e:
-        return "Hip2: " + str(e)
+        return "Hip2: Lookup failed."
 
 
 def resolve_with_doh(query_name, doh_url="https://hnsdoh.com/dns-query"):

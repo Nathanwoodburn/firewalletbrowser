@@ -128,6 +128,9 @@ def check_hip2(domain: str):
         return 'Invalid address'
     
     address = domainLookup.hip2(domain)
+    if address.startswith("Hip2: "):
+        return address
+
     if not check_address(address, False,True):
         return 'Hip2: Lookup succeeded but address is invalid'
     return address
@@ -139,32 +142,27 @@ def send(account,address,amount):
     password = ":".join(account.split(":")[1:])
 
 
-    # Unlock the account
-    response = requests.post(f"http://x:{APIKEY}@127.0.0.1:12039/wallet/{account_name}/unlock",
-        json={"passphrase": password,"timeout": 10})
-    
-    if response.status_code != 200:
+
+
+    response = hsw.rpc_selectWallet(account_name)
+    if response['error'] is not None:
         return {
-            "error": "Failed to unlock account"
-        }
-    if 'success' not in response.json():
-        return {
-            "error": "Failed to unlock account"
+            "error": response['error']['message']
         }
 
-    # Send the transaction
-    response = requests.post(f"http://x:{APIKEY}@127.0.0.1:12039",json={
-        "method": "sendtoaddress",
-        "params": [address,amount]
-    })
-    if response.status_code != 200:
+    response = hsw.rpc_walletPassphrase(password,10)
+    # Unlock the account
+    # response = requests.post(f"http://x:{APIKEY}@127.0.0.1:12039/wallet/{account_name}/unlock",
+        # json={"passphrase": password,"timeout": 10})
+    if response['error'] is not None:
         return {
-            "error": "Failed to send transaction"
+            "error": response['error']['message']
         }
-    response = response.json()
-    if 'error' in response:
+
+    response = hsw.rpc_sendToAddress(address,amount)
+    if response['error'] is not None:
         return {
-            "error": json.dumps(response['error'])
+            "error": response['error']['message']
         }
     return {
         "tx": response['result']
