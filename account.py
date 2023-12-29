@@ -250,3 +250,20 @@ def bid(account,domain,bid,blind):
             "error": str(e)
         }
     
+
+def openAuction(account,domain):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": "Invalid account"
+        }
+
+    try:
+        response = hsw.sendOPEN(account_name,password,domain)
+        return response
+    except Exception as e:
+        return {
+            "error": str(e)
+        }

@@ -14,6 +14,10 @@ app = Flask(__name__)
 qrcode = QRcode(app)
 
 
+# Change this if network fees change
+fees = 0.02
+
+
 @app.route('/')
 def index():
     # Check if the user is logged in
@@ -68,8 +72,8 @@ def send_page():
 
     account = account_module.check_account(request.cookies.get("account"))
     max = account_module.getBalance(account)['available']
-    # Subtract approx fee of 0.02
-    max = max - 0.02
+    # Subtract approx fee
+    max = max - fees
     max = round(max, 2)
 
     message = ''
@@ -117,7 +121,7 @@ def send():
     if amount <= 0:
         return redirect("/send?message=Invalid amount&address=" + address + "&amount=" + str(amount))
     
-    if amount > account_module.getBalance(account)['available'] - 0.02:
+    if amount > account_module.getBalance(account)['available'] - fees:
         return redirect("/send?message=Not enough funds to transfer&address=" + address + "&amount=" + str(amount))
     
     # Send the transaction
@@ -358,7 +362,6 @@ def auction(domain):
                            raw=domainInfo,state=state, next=next,
                            next_action=next_action, bids=bids,error=message)
 
-
 @app.route('/auction/<domain>/scan')
 def rescan_auction(domain):
     # Check if the user is logged in
@@ -426,6 +429,20 @@ def bid_confirm(domain):
     if 'error' in response:
         return redirect("/auction/" + domain + "?message=" + response['error'])
     
+    return redirect("/success?tx=" + response['hash'])
+
+@app.route('/auction/<domain>/open')
+def open_auction(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    response = account_module.openAuction(request.cookies.get("account"),domain)
     return redirect("/success?tx=" + response['hash'])
 
 #endregion
