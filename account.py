@@ -204,3 +204,49 @@ def getDNS(domain: str):
 def getNodeSync():
     response = hsd.getInfo()
     return response['chain']['progress']*100
+
+
+def getBids(account, domain):
+    response = hsw.getWalletBidsByName(domain,account)
+    return response
+
+def rescan_auction(account,domain):
+    # Get height of the start of the auction
+    response = hsw.rpc_selectWallet(account)
+
+
+    response = hsd.rpc_getNameInfo(domain)
+    if 'result' not in response:
+        return {
+            "error": "Invalid domain"
+        }
+    if 'bidPeriodStart' not in response['result']['info']['stats']:
+        return {
+            "error": "Not in auction"
+        }
+    height = response['result']['info']['stats']['bidPeriodStart']
+    response = hsw.rpc_importName(domain,height)
+    
+    return response
+
+
+def bid(account,domain,bid,blind):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": "Invalid account"
+        }
+    
+    bid = int(bid)*1000000
+    lockup = int(blind)*1000000 + bid
+
+    try:
+        response = hsw.sendBID(account_name,password,domain,bid,lockup)
+        return response
+    except Exception as e:
+        return {
+            "error": str(e)
+        }
+    

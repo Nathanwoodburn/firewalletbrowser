@@ -195,7 +195,6 @@ def search():
                                search_term=search_term,domain=search_term,
                                state="AVAILABLE", next="Available Now")
 
-
     state = domain['info']['state']
     if state == 'CLOSED':
         if not domain['info']['registered']:
@@ -206,12 +205,10 @@ def search():
             expires = domain['info']['stats']['daysUntilExpire']
             next = f"Expires in ~{expires} days"
     elif state == 'OPENING':
-        print(domain['info']['stats'])
         next = "Bidding opens in ~" + str(domain['info']['stats']['blocksUntilBidding']) + " blocks"
     elif state == 'BIDDING':
         next = "Reveal in ~" + str(domain['info']['stats']['blocksUntilReveal']) + " blocks"
     elif state == 'REVEAL':
-        print(domain['info']['stats'])
         next = "Reveal ends in ~" + str(domain['info']['stats']['blocksUntilClose']) + " blocks"
 
 
@@ -283,6 +280,152 @@ def renew(domain):
     
     domain = domain.lower()
     response = account_module.renewDomain(request.cookies.get("account"),domain)
+    return redirect("/success?tx=" + response['hash'])
+
+
+
+@app.route('/auction/<domain>')
+def auction(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    search_term = domain.lower().strip()    
+    # Convert emoji to punycode
+    search_term = domainLookup.emoji_to_punycode(search_term)
+    if len(search_term) == 0:
+        return redirect("/")
+
+    domainInfo = account_module.getDomain(search_term)
+    
+    if 'error' in domainInfo:
+        return render_template("auction.html", account=account,sync=account_module.getNodeSync(),
+                               search_term=search_term, domain=domainInfo['error'])
+    
+    if domainInfo['info'] is None:
+        next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
+        return render_template("auction.html", account=account, sync=account_module.getNodeSync(),
+                                search_term=search_term,domain=search_term,next_action=next_action,
+                               state="AVAILABLE", next="Open Auction")
+
+    state = domainInfo['info']['state']
+    next_action = ''
+
+    bids = account_module.getBids(account,search_term)
+    if bids == []:
+        bids = "No bids found"
+        next_action = f'<a href="/auction/{domain}/scan">Rescan Auction</a>'
+    else:
+        bids = render.bids(bids)
+
+
+    if state == 'CLOSED':
+        if not domainInfo['info']['registered']:
+            state = 'AVAILABLE'
+            next = "Available Now"
+            next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
+        else:
+            state = 'REGISTERED'
+            expires = domainInfo['info']['stats']['daysUntilExpire']
+            next = f"Expires in ~{expires} days"
+
+            own_domains = account_module.getDomains(account)
+            own_domains = [x['name'] for x in own_domains]
+            own_domains = [x.lower() for x in own_domains]
+            if search_term in own_domains:
+                next_action = f'<a href="/manage/{domain}">Manage</a>'
+    elif state == 'OPENING':
+        next = "Bidding opens in ~" + str(domainInfo['info']['stats']['blocksUntilBidding']) + " blocks"
+    elif state == 'BIDDING':
+        #! Check if the user has scanned the auction
+
+        next = "Reveal in ~" + str(domainInfo['info']['stats']['blocksUntilReveal']) + " blocks"
+    elif state == 'REVEAL':
+        next = "Reveal ends in ~" + str(domainInfo['info']['stats']['blocksUntilClose']) + " blocks"
+        next_action = f'<a href="/auction/{domain}/reveal">Reveal All</a>'
+
+    message = ''
+    if 'message' in request.args:
+        message = request.args.get("message")
+
+
+    return render_template("auction.html", account=account, sync=account_module.getNodeSync(),
+                           search_term=search_term,domain=domainInfo['info']['name'],
+                           raw=domainInfo,state=state, next=next,
+                           next_action=next_action, bids=bids,error=message)
+
+
+@app.route('/auction/<domain>/scan')
+def rescan_auction(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    
+    response = account_module.rescan_auction(account,domain)
+    print(response)    
+    return redirect("/auction/" + domain)
+
+@app.route('/auction/<domain>/bid')
+def bid(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    
+    # Show confirm page
+    total = float(request.args.get('bid')) + float(request.args.get('blind'))
+
+    action = f"Bid on {domain}/"
+    content = f"Are you sure you want to bid on {domain}/?"
+    content = "You are about to bid with the following details:<br><br>"
+    content += f"Bid: {request.args.get('bid')} HNS<br>"
+    content += f"Blind: {request.args.get('blind')} HNS<br>"
+    content += f"Total: {total} HNS (excluding fees)<br><br>"
+
+    cancel = f"/auction/{domain}"
+    confirm = f"/auction/{domain}/bid/confirm?bid={request.args.get('bid')}&blind={request.args.get('blind')}"
+
+
+
+    return render_template("confirm.html", account=account_module.check_account(request.cookies.get("account")),
+                            sync=account_module.getNodeSync(),action=action,
+                            domain=domain,content=content,cancel=cancel,confirm=confirm)
+
+@app.route('/auction/<domain>/bid/confirm')
+def bid_confirm(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    
+    # Send the bid
+    response = account_module.bid(request.cookies.get("account"),domain,
+                                  float(request.args.get('bid')),
+                                  float(request.args.get('blind')))
+    print(response)
+    if 'error' in response:
+        return redirect("/auction/" + domain + "?message=" + response['error'])
+    
     return redirect("/success?tx=" + response['hash'])
 
 #endregion
