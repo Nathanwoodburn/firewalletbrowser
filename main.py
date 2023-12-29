@@ -324,7 +324,13 @@ def auction(domain):
         bids = "No bids found"
         next_action = f'<a href="/auction/{domain}/scan">Rescan Auction</a>'
     else:
-        bids = render.bids(bids)
+        reveals = account_module.getReveals(account,search_term)
+        for reveal in reveals:
+            # Get TX
+            revealInfo = account_module.getRevealTX(reveal)
+            reveal['bid'] = revealInfo
+            print(revealInfo)
+        bids = render.bids(bids,reveals)
 
 
     if state == 'CLOSED':
@@ -515,4 +521,4 @@ def page_not_found(e):
 #endregion
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,host='0.0.0.0')

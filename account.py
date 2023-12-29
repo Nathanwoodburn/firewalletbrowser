@@ -203,18 +203,36 @@ def getDNS(domain: str):
 
 def getNodeSync():
     response = hsd.getInfo()
-    return response['chain']['progress']*100
+    sync = response['chain']['progress']*100
+    sync = round(sync, 2)
+    return sync
 
 
 def getBids(account, domain):
     response = hsw.getWalletBidsByName(domain,account)
     return response
 
+def getReveals(account,domain):
+    return hsw.getWalletRevealsByName(domain,account)
+
+
+def getRevealTX(reveal):
+    prevout = reveal['prevout']
+    hash = prevout['hash']
+    index = prevout['index']
+    tx = hsd.getTxByHash(hash)
+    revealAddress = tx['outputs'][index]['address']
+
+    for input in tx['inputs']:
+        if input['coin']['address'] == revealAddress:
+            return input['prevout']['hash']
+    return False
+    
+
+
 def rescan_auction(account,domain):
     # Get height of the start of the auction
     response = hsw.rpc_selectWallet(account)
-
-
     response = hsd.rpc_getNameInfo(domain)
     if 'result' not in response:
         return {
@@ -224,9 +242,8 @@ def rescan_auction(account,domain):
         return {
             "error": "Not in auction"
         }
-    height = response['result']['info']['stats']['bidPeriodStart']
+    height = response['result']['info']['height']-1
     response = hsw.rpc_importName(domain,height)
-    
     return response
 
 

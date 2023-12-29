@@ -1,4 +1,5 @@
 import datetime
+import json
 
 
 def domains(domains):
@@ -135,22 +136,33 @@ def timestamp_to_readable_time(timestamp):
     readable_time = dt_object.strftime("%H:%M:%S %d %b %Y")
     return readable_time
 
-def bids(data):
+def bids(bids,reveals):
     html = ''
-    for bid in data:
+    for bid in bids:
         lockup = bid['lockup']
         lockup = lockup / 1000000
         lockup = round(lockup, 2)
         html += "<tr>"
         html += f"<td>{lockup} HNS</td>"
-        # TODO If revealed
-        html += f"<td>Hidden until reveal</td>"
-        html += f"<td>Hidden until reveal</td>"
+        revealed = False
+        for reveal in reveals:
+            if reveal['bid'] == bid['prevout']['hash']:
+                revealed = True
+                value = reveal['value']
+                value = value / 1000000
+                value = round(value, 2)
+                html += f"<td>{value} HNS</td>"
+                bidValue = lockup - value
+                bidValue = round(bidValue, 2)
+                html += f"<td>{bidValue} HNS</td>"                               
+                break
+        if not revealed:
+            html += f"<td>Hidden until reveal</td>"
+            html += f"<td>Hidden until reveal</td>"
         if bid['own']:
             html += "<td>You</td>"
         else:
             html += "<td>Unknown</td>"
-
         html += "</tr>"
 
     return html
