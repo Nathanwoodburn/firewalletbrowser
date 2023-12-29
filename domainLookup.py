@@ -10,7 +10,6 @@ import httpx
 from requests_doh import DNSOverHTTPSSession, add_dns_provider
 import requests
 
-
 def hip2(domain: str):
     domain_check = False
     try:        
@@ -142,10 +141,16 @@ def niami_info(domain: str):
         return False
     
     response = response.json()
-    output = {
-        "owner": response["data"]["owner_tx_data"]["address"],
-        "dns": response["data"]["dnsData"]
-    }
+    if response["data"]["owner_tx_data"] is not None:
+        output = {
+            "owner": response["data"]["owner_tx_data"]["address"],
+            "dns": response["data"]["dnsData"]
+        }
+    else:
+        output = {
+            "owner": None,
+            "dns": []
+        }
 
     transactions = requests.get(f"https://api.niami.io/txs/{domain}")
     if transactions.status_code != 200:
@@ -156,3 +161,8 @@ def niami_info(domain: str):
     return output
 
         
+def emoji_to_punycode(emoji):
+    try:
+        return emoji.encode("idna").decode("ascii")
+    except Exception as e:
+        return ""

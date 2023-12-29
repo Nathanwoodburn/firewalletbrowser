@@ -40,7 +40,8 @@ def index():
 
 
     return render_template("index.html", account=account, available=available,
-                           total=total, pending=pending, domains=domains, domain_count=domain_count)
+                           total=total, pending=pending, domains=domains,
+                           domain_count=domain_count, sync=account_module.getNodeSync())
  
 #region Transactions
 @app.route('/tx')
@@ -55,7 +56,8 @@ def transactions():
     transactions = account_module.getTransactions(account)
     transactions = render.transactions(transactions)
 
-    return render_template("tx.html", account=account, tx=transactions)
+    return render_template("tx.html", account=account, sync=account_module.getNodeSync(),
+                           tx=transactions)
 
 
 @app.route('/send')
@@ -82,8 +84,8 @@ def send_page():
         amount = request.args.get("amount")
         
 
-    return render_template("send.html", account=account,max=max,message=message,
-                           address=address,amount=amount)
+    return render_template("send.html", account=account,sync=account_module.getNodeSync(),
+                           max=max,message=message,address=address,amount=amount)
 
 @app.route('/send', methods=["POST"])
 def send():
@@ -137,7 +139,8 @@ def receive():
     
     address = account_module.getAddress(account)
 
-    return render_template("receive.html", account=account, address=address)
+    return render_template("receive.html", account=account,sync=account_module.getNodeSync(),
+                           address=address)
     
 @app.route('/success')
 def success():
@@ -150,7 +153,8 @@ def success():
         return redirect("/logout")
 
     tx = request.args.get("tx")
-    return render_template("success.html", account=account, tx=tx)
+    return render_template("success.html", account=account,sync=account_module.getNodeSync(),
+                            tx=tx)
 
 @app.route('/checkaddress')
 def check_address():
@@ -175,18 +179,21 @@ def search():
     search_term = request.args.get("q")
     search_term = search_term.lower().strip()
     
-
+    # Convert emoji to punycode
+    search_term = domainLookup.emoji_to_punycode(search_term)
     if len(search_term) == 0:
         return redirect("/")
+
     domain = account_module.getDomain(search_term)
     
     if 'error' in domain:
-        return render_template("search.html", account=account, search_term=search_term, domain=domain['error'])
+        return render_template("search.html", account=account,sync=account_module.getNodeSync(),
+                               search_term=search_term, domain=domain['error'])
     
-    print(domain)
     if domain['info'] is None:
-        return render_template("search.html", account=account, search_term=search_term,
-                               domain=search_term, state="AVAILABLE", next="Available Now")
+        return render_template("search.html", account=account, sync=account_module.getNodeSync(),
+                               search_term=search_term,domain=search_term,
+                               state="AVAILABLE", next="Available Now")
 
 
     state = domain['info']['state']
@@ -198,6 +205,15 @@ def search():
             state = 'REGISTERED'
             expires = domain['info']['stats']['daysUntilExpire']
             next = f"Expires in ~{expires} days"
+    elif state == 'OPENING':
+        print(domain['info']['stats'])
+        next = "Bidding opens in ~" + str(domain['info']['stats']['blocksUntilBidding']) + " blocks"
+    elif state == 'BIDDING':
+        next = "Reveal in ~" + str(domain['info']['stats']['blocksUntilReveal']) + " blocks"
+    elif state == 'REVEAL':
+        print(domain['info']['stats'])
+        next = "Reveal ends in ~" + str(domain['info']['stats']['blocksUntilClose']) + " blocks"
+
 
 
     domain_info = domainLookup.niami_info(search_term)
@@ -218,9 +234,10 @@ def search():
 
     dns = render.dns(dns)
     txs = render.txs(txs)
-    return render_template("search.html", account=account, search_term=search_term,
-                           domain=domain['info']['name'],raw=domain,
-                           state=state, next=next, owner=owner, dns=dns, txs=txs)
+    return render_template("search.html", account=account, sync=account_module.getNodeSync(),
+                           search_term=search_term,domain=domain['info']['name'],
+                           raw=domain,state=state, next=next, owner=owner,
+                           dns=dns, txs=txs)
     
 @app.route('/manage/<domain>')
 def manage(domain):
@@ -242,15 +259,16 @@ def manage(domain):
     
     domain_info = account_module.getDomain(domain)
     if 'error' in domain_info:
-        return render_template("manage.html", account=account, domain=domain, error=domain_info['error'])
+        return render_template("manage.html", account=account, sync=account_module.getNodeSync(),
+                               domain=domain, error=domain_info['error'])
     
     expiry = domain_info['info']['stats']['daysUntilExpire']
     dns = account_module.getDNS(domain)
     dns = render.dns(dns)
 
 
-    return render_template("manage.html", account=account, domain=domain,
-                           expiry=expiry, dns=dns)
+    return render_template("manage.html", account=account, sync=account_module.getNodeSync(),
+                           domain=domain,expiry=expiry, dns=dns)
 
 
 @app.route('/manage/<domain>/renew')
@@ -274,7 +292,8 @@ def renew(domain):
 @app.route('/login')
 def login():
     if 'message' in request.args:
-        return render_template("login.html", error=request.args.get("message"))
+        return render_template("login.html", sync=account_module.getNodeSync(),
+                               error=request.args.get("message"))
 
 
     return render_template("login.html")
@@ -287,13 +306,15 @@ def login_post():
 
     # Check if the account is valid
     if account.count(":") > 0:
-        return render_template("login.html", error="Invalid account")
+        return render_template("login.html", sync=account_module.getNodeSync(),
+                               error="Invalid account")
 
     account = account + ":" + password
 
     # Check if the account is valid
     if not account_module.check_account(account):
-        return render_template("login.html", error="Invalid account")
+        return render_template("login.html", sync=account_module.getNodeSync(),
+                               error="Invalid account")
 
 
     # Set the cookie

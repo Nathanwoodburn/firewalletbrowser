@@ -199,3 +199,8 @@ def getDNS(domain: str):
             "error": response['error']['message']
         }
     return response['result']['records']
+
+
+def getNodeSync():
+    response = hsd.getInfo()
+    return response['chain']['progress']*100
