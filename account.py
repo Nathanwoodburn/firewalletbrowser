@@ -221,14 +221,25 @@ def getRevealTX(reveal):
     hash = prevout['hash']
     index = prevout['index']
     tx = hsd.getTxByHash(hash)
-    revealAddress = tx['outputs'][index]['address']
-
-    for input in tx['inputs']:
-        if input['coin']['address'] == revealAddress:
-            return input['prevout']['hash']
-    return False
+    return tx['inputs'][index]['prevout']['hash']
     
 
+def revealAuction(account,domain):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": "Invalid account"
+        }
+
+    try:
+        response = hsw.sendREVEAL(account_name,password,domain)
+        return response
+    except Exception as e:
+        return {
+            "error": str(e)
+        }
 
 def rescan_auction(account,domain):
     # Get height of the start of the auction

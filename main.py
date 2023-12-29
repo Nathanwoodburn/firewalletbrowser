@@ -351,8 +351,6 @@ def auction(domain):
     elif state == 'OPENING':
         next = "Bidding opens in ~" + str(domainInfo['info']['stats']['blocksUntilBidding']) + " blocks"
     elif state == 'BIDDING':
-        #! Check if the user has scanned the auction
-
         next = "Reveal in ~" + str(domainInfo['info']['stats']['blocksUntilReveal']) + " blocks"
     elif state == 'REVEAL':
         next = "Reveal ends in ~" + str(domainInfo['info']['stats']['blocksUntilClose']) + " blocks"
@@ -395,9 +393,20 @@ def bid(domain):
         return redirect("/logout")
     
     domain = domain.lower()
+    bid = request.args.get("bid")
+    blind = request.args.get("blind")
+
+    if bid is "":
+        bid = 0
+    if blind is "":
+        blind = 0
+
+    if bid+blind == 0:
+        return redirect("/auction/" + domain+ "?message=Invalid bid amount")
+
     
     # Show confirm page
-    total = float(request.args.get('bid')) + float(request.args.get('blind'))
+    total = float(bid) + float(blind)
 
     action = f"Bid on {domain}/"
     content = f"Are you sure you want to bid on {domain}/?"
@@ -433,7 +442,7 @@ def bid_confirm(domain):
                                   float(request.args.get('blind')))
     print(response)
     if 'error' in response:
-        return redirect("/auction/" + domain + "?message=" + response['error'])
+        return redirect("/auction/" + domain + "?message=" + response['error']['message'])
     
     return redirect("/success?tx=" + response['hash'])
 
@@ -450,6 +459,22 @@ def open_auction(domain):
     domain = domain.lower()
     response = account_module.openAuction(request.cookies.get("account"),domain)
     return redirect("/success?tx=" + response['hash'])
+
+@app.route('/auction/<domain>/reveal')
+def reveal_auction(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    response = account_module.revealAuction(request.cookies.get("account"),domain)
+    if 'error' in response:
+        return redirect("/auction/" + domain + "?message=" + response['error']['message'])
+    return redirect("/success?tx=" + response['hash'])
+
 
 #endregion
 

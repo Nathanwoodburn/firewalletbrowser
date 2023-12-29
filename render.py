@@ -164,5 +164,4 @@ def bids(bids,reveals):
         else:
             html += "<td>Unknown</td>"
         html += "</tr>"
-
     return html
