@@ -396,9 +396,9 @@ def bid(domain):
     bid = request.args.get("bid")
     blind = request.args.get("blind")
 
-    if bid is "":
+    if bid == "":
         bid = 0
-    if blind is "":
+    if blind == "":
         blind = 0
 
     if bid+blind == 0:

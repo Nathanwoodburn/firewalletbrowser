@@ -143,14 +143,17 @@ def niami_info(domain: str):
     response = response.json()
     if response["data"]["owner_tx_data"] is not None:
         output = {
-            "owner": response["data"]["owner_tx_data"]["address"],
-            "dns": response["data"]["dnsData"]
+            "owner": response["data"]["owner_tx_data"]["address"]
         }
     else:
         output = {
-            "owner": None,
-            "dns": []
+            "owner": None
         }
+
+    if 'dnsData' in response["data"]:
+        output["dns"] = response["data"]["dnsData"]
+    else:
+        output["dns"] = []
 
     transactions = requests.get(f"https://api.niami.io/txs/{domain}")
     if transactions.status_code != 200:
