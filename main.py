@@ -1,4 +1,5 @@
 import json
+import random
 from flask import Flask, make_response, redirect, request, jsonify, render_template, send_from_directory,send_file
 import os
 import dotenv
@@ -18,6 +19,7 @@ qrcode = QRcode(app)
 
 # Change this if network fees change
 fees = 0.02
+revokeCheck = random.randint(100000,999999)
 
 
 @app.route('/')
@@ -346,10 +348,123 @@ def manage(domain: str):
     raw_dns = str(dns).replace("'",'"')
     dns = render.dns(dns)
 
+    errorMessage = request.args.get("error")
+    if errorMessage == None:
+        errorMessage = ""
+    address = request.args.get("address")
+    if address == None:
+        address = ""
+    
+    finalize_time = ""
+    # Check if the domain is in transfer
+    if domain_info['info']['transfer'] != 0:
+        current_block = account_module.getBlockHeight()
+        finalize_valid = domain_info['info']['transfer']+288
+        finalize_blocks = finalize_valid - current_block
+        if finalize_blocks > 0:
+            finalize_time = "in "+ str(finalize_blocks) + " blocks (~" + str(round(finalize_blocks/6)) + " hours)"
+        else:
+            finalize_time = "now"
 
     return render_template("manage.html", account=account, sync=account_module.getNodeSync(),
-                           domain=domain,expiry=expiry, dns=dns,raw_dns=urllib.parse.quote(raw_dns))
+                           error=errorMessage, address=address,
+                           domain=domain,expiry=expiry, dns=dns,
+                           raw_dns=urllib.parse.quote(raw_dns),
+                           finalize_time=finalize_time)
 
+
+@app.route('/manage/<domain>/finalize')
+def finalize(domain: str):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    print(domain)
+    response = account_module.finalize(request.cookies.get("account"),domain)
+    if 'error' in response:
+        print(response)
+        return redirect("/manage/" + domain + "?error=" + response['error']['message'])
+
+    return redirect("/success?tx=" + response['hash'])
+
+@app.route('/manage/<domain>/cancel')
+def cancelTransfer(domain: str):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    print(domain)
+    response = account_module.cancelTransfer(request.cookies.get("account"),domain)
+    if 'error' in response:
+        if response['error'] != None:
+            print(response)
+            return redirect("/manage/" + domain + "?error=" + response['error']['message'])
+
+    return redirect("/success?tx=" + response['result']['hash'])
+
+@app.route('/manage/<domain>/revoke')
+def revokeInit(domain: str):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+
+    content = f"Are you sure you want to revoke {domain}/?<br>"
+    content += f"This will return the domain to the auction pool and you will lose any funds spent on the domain.<br>"
+    content += f"This cannot be undone after the transaction is sent.<br><br>"
+    content += f"Please enter your password to confirm."
+
+    cancel = f"/manage/{domain}"
+    confirm = f"/manage/{domain}/revoke/confirm"
+    action = f"Revoke {domain}/"   
+
+    
+    return render_template("confirm-password.html", account=account_module.check_account(request.cookies.get("account")),
+                            sync=account_module.getNodeSync(),action=action,
+                            content=content,cancel=cancel,confirm=confirm,check=revokeCheck)
+
+@app.route('/manage/<domain>/revoke/confirm', methods=["POST"])
+def revokeConfirm(domain: str):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    password = request.form.get("password")
+    check = request.form.get("check")
+    if check != str(revokeCheck):
+        return redirect("/manage/" + domain + "?error=An error occurred. Please try again.")
+
+    response = account_module.check_password(request.cookies.get("account"),password)
+    if response == False:
+        return redirect("/manage/" + domain + "?error=Invalid password")
+
+
+    response = account_module.revoke(request.cookies.get("account"),domain)
+    if 'error' in response:
+        print(response)
+        return redirect("/manage/" + domain + "?error=" + response['error']['message'])
+
+    return redirect("/success?tx=" + response['hash'])
 
 @app.route('/manage/<domain>/renew')
 def renew(domain: str):
@@ -364,7 +479,6 @@ def renew(domain: str):
     domain = domain.lower()
     response = account_module.renewDomain(request.cookies.get("account"),domain)
     return redirect("/success?tx=" + response['hash'])
-
 
 @app.route('/manage/<domain>/edit')
 def editPage(domain: str):
@@ -450,6 +564,61 @@ def editSave(domain: str):
         print(response)
         return redirect("/manage/" + domain + "/edit?dns="+raw_dns+"&error=" + str(response['error']))
     return redirect("/success?tx=" + response['hash'])
+
+@app.route('/manage/<domain>/transfer')
+def transfer(domain):
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    # Get the address and amount
+    address = request.args.get("address")
+
+    if address is None:
+        return redirect("/manage/" + domain + "?error=Invalid address")
+    
+    address_check = account_module.check_address(address,True,True)
+    if not address_check:
+        return redirect("/send?message=Invalid address&address=" + address)
+    
+    address = address_check
+        
+    toAddress = address
+    if request.form.get('address') != address:
+        toAddress = request.args.get('address') + "<br>" + address
+
+    action = f"Send {domain}/ to {request.form.get('address')}"
+    content = f"Are you sure you want to send {domain}/ to {toAddress}<br><br>"
+    content += f"This requires sending a finalize transaction 2 days after the transfer is initiated."
+
+    cancel = f"/manage/{domain}?address={address}"
+    confirm = f"/manage/{domain}/transfer/confirm?address={address}"
+
+
+    return render_template("confirm.html", account=account_module.check_account(request.cookies.get("account")),
+                            sync=account_module.getNodeSync(),action=action,
+                            content=content,cancel=cancel,confirm=confirm)
+
+@app.route('/manage/<domain>/transfer/confirm')
+def transferConfirm(domain):
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    # Get the address and amount
+    address = request.args.get("address")
+    response = account_module.transfer(request.cookies.get("account"),domain,address)
+    if 'error' in response:
+        return redirect("/manage/" + domain + "?error=" + response['error'])
+    
+    return redirect("/success?tx=" + response['hash'])
+
 
 @app.route('/auction/<domain>')
 def auction(domain):
@@ -681,6 +850,17 @@ def logout():
     response = make_response(redirect("/login"))
     response.set_cookie("account", "", expires=0)
     return response
+
+
+@app.route('/report')
+def report():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+
+    return jsonify(account_module.generateReport(account))
 
 #endregion
 

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from handywrapper import api
 import os
 import dotenv
@@ -34,6 +35,20 @@ def check_account(cookie: str):
 
     return account
 
+def check_password(cookie: str, password: str):
+    account = check_account(cookie)
+    if account == False:
+        return False
+    
+    # Check if the password is valid
+    info = hsw.rpc_selectWallet(account)
+    if info['error'] is not None:
+        return False
+    info = hsw.rpc_walletPassphrase(password,10)
+    if info['error'] is not None:
+        return False
+    return True
+
 
 def getBalance(account: str):
     # Get the total balance
@@ -53,6 +68,13 @@ def getBalance(account: str):
     available = round(available, 2)
 
     return {'available': available, 'total': total}
+
+def getBlockHeight():
+    # Get the block height
+    info = hsd.getInfo()
+    if 'error' in info:
+        return 0
+    return info['chain']['height']
 
 def getAddress(account: str):
     # Get the address
@@ -149,7 +171,9 @@ def send(account,address,amount):
     response = hsw.rpc_selectWallet(account_name)
     if response['error'] is not None:
         return {
-            "error": response['error']['message']
+            "error": {
+                "message": response['error']['message']
+            }
         }
 
     response = hsw.rpc_walletPassphrase(password,10)
@@ -158,13 +182,17 @@ def send(account,address,amount):
         # json={"passphrase": password,"timeout": 10})
     if response['error'] is not None:
         return {
-            "error": response['error']['message']
+            "error": {
+                "message": response['error']['message']
+            }
         }
 
     response = hsw.rpc_sendToAddress(address,amount)
     if response['error'] is not None:
         return {
-            "error": response['error']['message']
+            "error": {
+                "message": response['error']['message']
+            }
         }
     return {
         "tx": response['result']
@@ -175,7 +203,9 @@ def getDomain(domain: str):
     response = hsd.rpc_getNameInfo(domain)
     if response['error'] is not None:
         return {
-            "error": response['error']['message']
+            "error": {
+                "message": response['error']['message']
+            }
         }
     return response['result']
 
@@ -185,7 +215,9 @@ def renewDomain(account,domain):
 
     if account_name == False:
         return {
-            "error": "Invalid account"
+            "error": {
+                "message": "Invalid account"
+            }
         }
 
     response = hsw.sendRENEW(account_name,password,domain)
@@ -207,7 +239,9 @@ def setDNS(account,domain,records):
 
     if account_name == False:
         return {
-            "error": "Invalid account"
+            "error": {
+                "message": "Invalid account"
+            }
         }
 
     records = json.loads(records)
@@ -270,7 +304,9 @@ def revealAuction(account,domain):
 
     if account_name == False:
         return {
-            "error": "Invalid account"
+            "error": {
+                "message": "Invalid account"
+            }
         }
 
     try:
@@ -304,7 +340,9 @@ def bid(account,domain,bid,blind):
 
     if account_name == False:
         return {
-            "error": "Invalid account"
+            "error": {
+                "message": "Invalid account"
+            }
         }
     
     bid = int(bid)*1000000
@@ -315,7 +353,9 @@ def bid(account,domain,bid,blind):
         return response
     except Exception as e:
         return {
-            "error": str(e)
+            "error": {
+                "message": str(e)
+            }
         }
     
 
@@ -325,7 +365,9 @@ def openAuction(account,domain):
 
     if account_name == False:
         return {
-            "error": "Invalid account"
+            "error": {
+                "message": "Invalid account"
+            }
         }
 
     try:
@@ -333,5 +375,133 @@ def openAuction(account,domain):
         return response
     except Exception as e:
         return {
-            "error": str(e)
+            "error": {
+                "message": str(e)   
+            }
         }
+    
+
+
+def transfer(account,domain,address):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        response = hsw.sendTRANSFER(account_name,password,domain,address)
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+    
+def finalize(account,domain):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        response = hsw.sendFINALIZE(account_name,password,domain)
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+    
+def cancelTransfer(account,domain):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_sendCANCEL(domain)
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+    
+def revoke(account,domain):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        response = hsw.sendREVOKE(account_name,password,domain)
+        return response       
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+
+def generateReport(account):
+    domains = getDomains(account)
+    format = str('{name},{expiry},{value},{maxBid}')
+
+    lines = [format.replace("{","").replace("}","")]
+    for domain in domains:
+        line = format.replace("{name}",domain['name'])
+        expiry = "N/A"
+        expiryBlock = "N/A"
+        if 'daysUntilExpire' in domain['stats']:
+            days = domain['stats']['daysUntilExpire']
+            # Convert to dateTime
+            expiry = datetime.now() + timedelta(days=days)
+            expiry = expiry.strftime("%d/%m/%Y %H:%M:%S")
+            expiryBlock = str(domain['stats']['renewalPeriodEnd'])
+
+        line = line.replace("{expiry}",expiry)
+        line = line.replace("{state}",domain['state'])
+        line = line.replace("{expiryBlock}",expiryBlock)
+        line = line.replace("{value}",str(domain['value']/1000000))
+        line = line.replace("{maxBid}",str(domain['highest']/1000000))
+        line = line.replace("{openHeight}",str(domain['height']))
+        lines.append(line)
+
+    return lines
