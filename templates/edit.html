@@ -63,18 +63,18 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">{{domain}}/<a class="btn btn-primary stick-right" role="button" href="/manage/{{domain}}/renew">Renew</a></h4>
-                            <h6 class="text-muted card-subtitle mb-2">Expires in {{expiry}} days</h6>
+                            <h4 class="card-title">{{domain}}/</h4>
                         </div>
                     </div>
                 </div>
                 <div class="container-fluid" style="margin-top: 50px;">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title" style="display: inline-block;">DNS</h4><a class="btn btn-primary" role="button" style="position: absolute; right:16px;" href="/manage/{{domain}}/edit?dns={{raw_dns}}">Edit</a><div class="table-responsive">
+                            <h4 class="card-title" style="display: inline-block;">DNS</h4><div class="table-responsive">
     <table class="table">
         <thead>
             <tr>
+                <th></th>
                 <th></th>
                 <th></th>
             </tr>
@@ -84,6 +84,36 @@
         </tbody>
     </table>
 </div>
+                            <form style="width: 100%;">
+                                <div>
+                                    <div class="table-responsive">
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Type</th>
+                                                    <th>Value</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><select class="form-select" name="type">
+                                                            <option value="TXT" selected="">TXT</option>
+                                                            <option value="NS">NS</option>
+                                                            <option value="DS">DS</option>
+                                                            <option value="GLUE4">GLUE4</option>
+                                                            <option value="GLUE6">GLUE6</option>
+                                                            <option value="SYNTH4">SYNTH4</option>
+                                                            <option value="SYNTH6">SYNTH6</option>
+                                                        </select></td>
+                                                    <td><input class="form-control" type="text" name="value"></td>
+                                                    <td><input class="btn btn-primary" type="submit" value="Add"></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div><input class="form-control" type="hidden" name="dns" value="{{raw_dns}}">
+                            </form><a class="btn btn-primary" role="button" href="edit/save?dns={{raw_dns}}">Save DNS</a>
                         </div>
                     </div>
                 </div>

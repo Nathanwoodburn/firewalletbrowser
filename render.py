@@ -1,6 +1,6 @@
 import datetime
 import json
-
+import urllib.parse
 
 def domains(domains):
     html = ''
@@ -71,9 +71,9 @@ def transactions(txs):
     return html
 
 
-def dns(data):
+def dns(data, edit=False):
     html_output = ""
-    
+    index = 0
     for entry in data:
         html_output += f"<tr><td>{entry['type']}</td>\n"
         
@@ -101,7 +101,14 @@ def dns(data):
                     value += str(val) + " "
             html_output += f"<td>{value}</td>\n"
             
+        if edit:
+            # Remove the current entry from the list
+            keptRecords = str(data[:index] + data[index+1:]).replace("'", '"')
+            keptRecords = urllib.parse.quote(keptRecords)
+            html_output += f"<td><a href='edit?dns={keptRecords}'>Remove</a></td>\n"
+
         html_output += "  </tr>\n"    
+        index += 1
     return html_output
 
 def txs(data):

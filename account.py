@@ -201,6 +201,46 @@ def getDNS(domain: str):
     return response['result']['records']
 
 
+def setDNS(account,domain,records):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": "Invalid account"
+        }
+
+    records = json.loads(records)
+    newRecords = []
+    TXTRecords = []
+    for record in records:
+        if record['type'] == 'TXT':
+            TXTRecords.append(record['value'])
+        elif record['type'] == 'NS':
+            newRecords.append({
+                'type': 'NS',
+                'ns': record['value']
+            })
+        elif record['type'] in ['GLUE4','GLUE6',"SYNTH4","SYNTH6"]:
+            newRecords.append({
+                'type': record['type'],
+                'ns': str(record['value']).split(' ')[0],
+                'address': str(record['value']).split(' ')[1]
+            })
+        else:
+            newRecords.append(record)
+    
+    if len(TXTRecords) > 0:
+        newRecords.append({
+            'type': 'TXT',
+            'txt': TXTRecords
+        })        
+
+    data = '{"records":'+str(newRecords).replace("'","\"")+'}'
+    response = hsw.sendUPDATE(account_name,password,domain,data)
+    return response
+
+
 def getNodeSync():
     response = hsd.getInfo()
     sync = response['chain']['progress']*100

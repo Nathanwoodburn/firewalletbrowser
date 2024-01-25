@@ -1,3 +1,4 @@
+import json
 from flask import Flask, make_response, redirect, request, jsonify, render_template, send_from_directory,send_file
 import os
 import dotenv
@@ -7,6 +8,7 @@ import render
 import re
 from flask_qrcode import QRcode
 import domainLookup
+import urllib.parse
 
 dotenv.load_dotenv()
 
@@ -317,7 +319,7 @@ def search():
                            dns=dns, txs=txs)
     
 @app.route('/manage/<domain>')
-def manage(domain):
+def manage(domain: str):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -341,15 +343,16 @@ def manage(domain):
     
     expiry = domain_info['info']['stats']['daysUntilExpire']
     dns = account_module.getDNS(domain)
+    raw_dns = str(dns).replace("'",'"')
     dns = render.dns(dns)
 
 
     return render_template("manage.html", account=account, sync=account_module.getNodeSync(),
-                           domain=domain,expiry=expiry, dns=dns)
+                           domain=domain,expiry=expiry, dns=dns,raw_dns=urllib.parse.quote(raw_dns))
 
 
 @app.route('/manage/<domain>/renew')
-def renew(domain):
+def renew(domain: str):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -363,6 +366,90 @@ def renew(domain):
     return redirect("/success?tx=" + response['hash'])
 
 
+@app.route('/manage/<domain>/edit')
+def editPage(domain: str):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    
+    own_domains = account_module.getDomains(account)
+    own_domains = [x['name'] for x in own_domains]
+    own_domains = [x.lower() for x in own_domains]
+    if domain not in own_domains:
+        return redirect("/search?q=" + domain)
+       
+
+    user_edits = request.args.get("dns")
+    if user_edits != None:
+        dns = urllib.parse.unquote(user_edits)
+    else:
+        dns = account_module.getDNS(domain)
+    
+    dns = json.loads(dns)
+
+    # Check if new records have been added
+    dnsType = request.args.get("type")
+    dnsValue = request.args.get("value")
+    if dnsType != None and dnsValue != None:
+        if dnsType != "DS":
+            dns.append({"type": dnsType, "value": dnsValue})
+        else:
+            # Verify the DS record
+            ds = dnsValue.split(" ")
+            if len(ds) != 4:
+                raw_dns = str(dns).replace("'",'"')
+                return redirect("/manage/" + domain + "/edit?dns=" + urllib.parse.quote(str(raw_dns)) + "&error=Invalid DS record")
+            
+            try:
+                ds[0] = int(ds[0])
+                ds[1] = int(ds[1])
+                ds[2] = int(ds[2])
+            except:
+                raw_dns = str(dns).replace("'",'"')
+                return redirect("/manage/" + domain + "/edit?dns=" + urllib.parse.quote(str(raw_dns)) + "&error=Invalid DS record")
+            finally:
+                dns.append({"type": dnsType, "keyTag": ds[0], "algorithm": ds[1], "digestType": ds[2], "digest": ds[3]})
+
+        dns = json.dumps(dns).replace("'",'"')
+        return redirect("/manage/" + domain + "/edit?dns=" + urllib.parse.quote(dns))
+
+    raw_dns = str(dns).replace("'",'"')
+    dns = render.dns(dns,True)
+    errorMessage = request.args.get("error")
+    if errorMessage == None:
+        errorMessage = ""
+
+    
+    return render_template("edit.html", account=account, sync=account_module.getNodeSync(),
+                           domain=domain, error=errorMessage,
+                           dns=dns,raw_dns=urllib.parse.quote(raw_dns))
+
+
+@app.route('/manage/<domain>/edit/save')
+def editSave(domain: str):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    dns = request.args.get("dns")
+    raw_dns = dns
+    dns = urllib.parse.unquote(dns)
+    response = account_module.setDNS(request.cookies.get("account"),domain,dns)
+    if 'error' in response:
+        print(response)
+        return redirect("/manage/" + domain + "/edit?dns="+raw_dns+"&error=" + str(response['error']))
+    return redirect("/success?tx=" + response['hash'])
 
 @app.route('/auction/<domain>')
 def auction(domain):
