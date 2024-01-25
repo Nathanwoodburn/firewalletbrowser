@@ -38,6 +38,49 @@ def index():
 
     pending = account_module.getPendingTX(account)
     domains = account_module.getDomains(account)
+
+    # Sort
+    sort = request.args.get("sort")
+    if sort == None:
+        sort = "domain"
+    sort = sort.lower()
+    sort_price = ""
+    sort_price_next = "⬇"
+    sort_expiry = ""
+    sort_expiry_next = "⬇"
+    sort_domain = ""
+    sort_domain_next = "⬇"
+    reverse = False
+
+    direction = request.args.get("direction")
+    if direction == None:
+        direction = "⬇"
+
+    if direction == "⬆":
+        reverse = True
+
+    if sort == "expiry":
+        # Sort by next expiry
+        domains = sorted(domains, key=lambda k: k['renewal'],reverse=reverse)
+        sort_expiry = direction
+        sort_expiry_next = reverseDirection(direction)
+
+    
+    elif sort == "price":
+        # Sort by price
+        domains = sorted(domains, key=lambda k: k['value'],reverse=reverse)
+        sort_price = direction
+        sort_price_next = reverseDirection(direction)
+    else:
+        # Sort by domain
+        domains = sorted(domains, key=lambda k: k['name'],reverse=reverse)
+        sort_domain = direction
+        sort_domain_next = reverseDirection(direction)
+        
+    
+    
+
+    
     domain_count = len(domains)
     domains = render.domains(domains)
     
@@ -45,8 +88,18 @@ def index():
 
     return render_template("index.html", account=account, available=available,
                            total=total, pending=pending, domains=domains,
-                           domain_count=domain_count, sync=account_module.getNodeSync())
+                           domain_count=domain_count, sync=account_module.getNodeSync(),
+                           sort_price=sort_price,sort_expiry=sort_expiry,
+                           sort_domain=sort_domain,sort_price_next=sort_price_next,
+                           sort_expiry_next=sort_expiry_next,sort_domain_next=sort_domain_next)
  
+def reverseDirection(direction: str):
+    if direction == "⬆":
+        return "⬇"
+    else:
+        return "⬆"
+
+
 #region Transactions
 @app.route('/tx')
 def transactions():
@@ -124,12 +177,35 @@ def send():
     if amount > account_module.getBalance(account)['available'] - fees:
         return redirect("/send?message=Not enough funds to transfer&address=" + address + "&amount=" + str(amount))
     
-    # Send the transaction
+    toAddress = address
+    if request.form.get('address') != address:
+        toAddress = request.form.get('address') + "<br>" + address
+
+    action = f"Send HNS to {request.form.get('address')}"
+    content = f"Are you sure you want to send {amount} HNS to {toAddress}<br><br>"
+    content += f"This will cost {amount} HNS + mining fees and is not able to be undone."
+
+    cancel = f"/send"
+    confirm = f"/send/confirm?address={address}&amount={amount}"
+
+
+    return render_template("confirm.html", account=account_module.check_account(request.cookies.get("account")),
+                            sync=account_module.getNodeSync(),action=action,
+                            content=content,cancel=cancel,confirm=confirm)
+    
+
+@app.route('/send/confirm')
+def sendConfirmed():
+
+    address = request.args.get("address")
+    amount = float(request.args.get("amount"))
     response = account_module.send(request.cookies.get("account"),address,amount)
     if 'error' in response:
         return redirect("/send?message=" + response['error'] + "&address=" + address + "&amount=" + str(amount))
     
     return redirect("/success?tx=" + response['tx'])
+    
+
 
 @app.route('/receive')
 def receive():
@@ -410,7 +486,7 @@ def bid(domain):
 
     action = f"Bid on {domain}/"
     content = f"Are you sure you want to bid on {domain}/?"
-    content = "You are about to bid with the following details:<br><br>"
+    content += "You are about to bid with the following details:<br><br>"
     content += f"Bid: {request.args.get('bid')} HNS<br>"
     content += f"Blind: {request.args.get('blind')} HNS<br>"
     content += f"Total: {total} HNS (excluding fees)<br><br>"
