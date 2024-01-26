@@ -73,7 +73,7 @@
                     <div class="card">
                         <div class="card-body">
                             <h4 class="card-title">Bid</h4>
-                            <form action="/auction/{{search_term}}/bid"><label class="form-label">Bid</label><input class="form-control" type="number" placeholder="0.00" min="0" name="bid"><label class="form-label" style="margin-top: 10px;">Optional blind</label><input class="form-control" type="number" name="blind" placeholder="0.00" min="0">
+                            <form action="/auction/{{search_term}}/bid"><label class="form-label">Bid</label><input class="form-control" type="number" placeholder="0.00" min="0" name="bid" step="any"><label class="form-label" style="margin-top: 10px;">Optional blind</label><input class="form-control" type="number" name="blind" placeholder="0.00" min="0" step="any">
                                 <div class="text-end" style="margin-top: 10px;"><input class="btn btn-primary" type="submit" value="Bid"></div>
                             </form>
                         </div>

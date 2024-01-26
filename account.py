@@ -471,8 +471,22 @@ def revoke(account,domain):
         }
 
     try:
-        response = hsw.sendREVOKE(account_name,password,domain)
-        return response       
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_sendREVOKE(domain)
+        return response
     except Exception as e:
         return {
             "error": {

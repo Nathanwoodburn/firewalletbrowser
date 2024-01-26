@@ -281,13 +281,16 @@ def search():
 
     state = domain['info']['state']
     if state == 'CLOSED':
-        if not domain['info']['registered']:
-            state = 'AVAILABLE'
-            next = "Available Now"
-        else:
+        if domain['info']['registered']:
             state = 'REGISTERED'
             expires = domain['info']['stats']['daysUntilExpire']
             next = f"Expires in ~{expires} days"
+        else:
+            state = 'AVAILABLE'
+            next = "Available Now"
+    elif state == "REVOKED":
+            state = 'AVAILABLE'
+            next = "Available Now"
     elif state == 'OPENING':
         next = "Bidding opens in ~" + str(domain['info']['stats']['blocksUntilBidding']) + " blocks"
     elif state == 'BIDDING':
@@ -461,8 +464,9 @@ def revokeConfirm(domain: str):
 
     response = account_module.revoke(request.cookies.get("account"),domain)
     if 'error' in response:
-        print(response)
-        return redirect("/manage/" + domain + "?error=" + response['error']['message'])
+        if response['error'] != None:
+            print(response)
+            return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
     return redirect("/success?tx=" + response['hash'])
 
@@ -680,6 +684,10 @@ def auction(domain):
             own_domains = [x.lower() for x in own_domains]
             if search_term in own_domains:
                 next_action = f'<a href="/manage/{domain}">Manage</a>'
+    elif state == "REVOKED":
+        state = 'AVAILABLE'
+        next = "Available Now"
+        next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
     elif state == 'OPENING':
         next = "Bidding opens in ~" + str(domainInfo['info']['stats']['blocksUntilBidding']) + " blocks"
     elif state == 'BIDDING':
@@ -790,6 +798,11 @@ def open_auction(domain):
     
     domain = domain.lower()
     response = account_module.openAuction(request.cookies.get("account"),domain)
+
+    if 'error' in response:
+        if response['error'] != None:
+            return redirect("/auction/" + domain + "?message=" + response['error']['message'])
+    print(response)
     return redirect("/success?tx=" + response['hash'])
 
 @app.route('/auction/<domain>/reveal')
