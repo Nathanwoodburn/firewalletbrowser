@@ -39,3 +39,38 @@ If you have HSD running on a different IP/container
 ```bash
 sudo docker run -p 5000:5000 -e hsd_api=yourapikeyhere -e hsd_ip=hsdcontainer git.woodburn.au/nathanwoodburn/firewallet:latest
 ```
+
+
+## Images
+Login page  
+![Login page](assets/login.png)
+
+Home page  
+![Home page](assets/home.png)
+
+Transactions page  
+![Transactions page](assets/transactions.png)
+
+Send page  
+![Send page](assets/send.png)
+
+Transaction confirmation  
+![Confirmation page](assets/confirmation.png)
+
+Receive page  
+![Receive page](assets/receive.png)
+
+Settings page  
+![Settings page](assets/settings.png)
+
+Domain page  
+![Domain page](assets/domain.png)
+
+Domain management page  
+![Domain management page](assets/domainmanage.png)
+
+DNS Editor page
+![DNS Editor page](assets/dnseditor.png)
+
+Auction page
+![Auction page](assets/auction.png)
