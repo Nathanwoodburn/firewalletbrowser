@@ -11,8 +11,13 @@ import json
 dotenv.load_dotenv()
 
 APIKEY = os.getenv("hsd_api")
-hsd = api.hsd(APIKEY,'localhost')
-hsw = api.hsw(APIKEY,'localhost')
+ip = os.getenv("hsd_ip")
+if ip is None:
+    ip = "localhost"
+
+
+hsd = api.hsd(APIKEY,ip)
+hsw = api.hsw(APIKEY,ip)
 
 
 # Verify the connection
@@ -52,7 +57,7 @@ def check_password(cookie: str, password: str):
 def createWallet(account: str, password: str):
     # Create the account
     # Python wrapper doesn't support this yet
-    response = requests.put(f"http://x:{APIKEY}@localhost:12039/wallet/{account}")
+    response = requests.put(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}")
     print(response)
     print(response.json())
 
@@ -69,7 +74,7 @@ def createWallet(account: str, password: str):
 
     
     # Encrypt the wallet (python wrapper doesn't support this yet)
-    response = requests.post(f"http://x:{APIKEY}@localhost:12039/wallet/{account}/passphrase",
+    response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/passphrase",
         json={"passphrase": password})
     print(response)
 
@@ -136,7 +141,7 @@ def getDomains(account):
     #     return []
 
     # use requests to get the domains
-    response = requests.get(f"http://x:{APIKEY}@localhost:12039/wallet/{account}/name?own=true")
+    response = requests.get(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/name?own=true")
     info = response.json()
     return info
 
@@ -159,7 +164,7 @@ def check_address(address: str, allow_name: bool = True, return_address: bool = 
         return check_hip2(address[1:])
     
     # Check if the address is a valid HNS address
-    response = requests.post(f"http://x:{APIKEY}@localhost:12037",json={
+    response = requests.post(f"http://x:{APIKEY}@{ip}:12037",json={
         "method": "validateaddress",
         "params": [address]
     }).json()
@@ -212,7 +217,7 @@ def send(account,address,amount):
 
     response = hsw.rpc_walletPassphrase(password,10)
     # Unlock the account
-    # response = requests.post(f"http://x:{APIKEY}@localhost:12039/wallet/{account_name}/unlock",
+    # response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{account_name}/unlock",
         # json={"passphrase": password,"timeout": 10})
     if response['error'] is not None:
         return {
@@ -568,7 +573,7 @@ def zapTXs(account):
         }   
 
     try:
-        response = requests.post(f"http://x:{APIKEY}@localhost:12039/wallet/{account_name}/zap",
+        response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{account_name}/zap",
             json={"age": age,
                   "account": "default"
                   })
