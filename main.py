@@ -881,12 +881,16 @@ def settings_action(action):
 #region Account
 @app.route('/login')
 def login():
+    wallets = account_module.listWallets()
+    wallets = render.wallets(wallets)
+
+
     if 'message' in request.args:
         return render_template("login.html", sync=account_module.getNodeSync(),
-                               error=request.args.get("message"))
+                               error=request.args.get("message"),wallets=wallets)
 
-
-    return render_template("login.html")
+    return render_template("login.html", sync=account_module.getNodeSync(),
+                           wallets=wallets)
 
 @app.route('/login', methods=["POST"])
 def login_post():

@@ -172,3 +172,10 @@ def bids(bids,reveals):
             html += "<td>Unknown</td>"
         html += "</tr>"
     return html
+
+
+def wallets(wallets):
+    html = ''
+    for wallet in wallets:
+        html += f'<option value="{wallet}">{wallet}</option>'
+    return html

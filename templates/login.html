@@ -31,7 +31,9 @@
                                         <h4 class="text-dark mb-4">Welcome Back!</h4>
                                     </div>
                                     <form class="user" method="post">
-                                        <div class="mb-3"><input class="form-control form-control-user" type="text" placeholder="Enter Wallet Name..." name="account"></div>
+                                        <div class="mb-3"><select class="form-control form-select form-select-lg form-control-user" name="account" value="default">
+    {{wallets|safe}}
+</select></div>
                                         <div class="mb-3"><input class="form-control form-control-user" type="password" id="exampleInputPassword" placeholder="Password" name="password"></div><button class="btn btn-primary d-block btn-user w-100" type="submit">Login</button>
                                         <hr>
                                     </form>
