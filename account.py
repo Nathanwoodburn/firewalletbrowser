@@ -32,7 +32,6 @@ def check_account(cookie: str):
     info = hsw.getAccountInfo(account, 'default')
     if 'error' in info:
         return False
-
     return account
 
 def check_password(cookie: str, password: str):
@@ -49,6 +48,40 @@ def check_password(cookie: str, password: str):
         return False
     return True
 
+def createWallet(account: str, password: str):
+    # Create the account
+    # Python wrapper doesn't support this yet
+    response = requests.put(f"http://x:{APIKEY}@localhost:12039/wallet/{account}")
+    print(response)
+    print(response.json())
+
+    if response.status_code != 200:
+        return {
+            "error": {
+                "message": "Error creating account"
+            }
+        }
+    
+    # Get seed
+    seed = hsw.getMasterHDKey(account)
+    seed = seed['mnemonic']['phrase']
+
+    
+    # Encrypt the wallet (python wrapper doesn't support this yet)
+    response = requests.post(f"http://x:{APIKEY}@localhost:12039/wallet/{account}/passphrase",
+        json={"passphrase": password})
+    print(response)
+
+    return {
+        "seed": seed,
+        "account": account,
+        "password": password
+    }
+
+def listWallets():
+    # List the wallets
+    response = hsw.listWallets()
+    return response
 
 def getBalance(account: str):
     # Get the total balance
@@ -493,6 +526,92 @@ def revoke(account,domain):
                 "message": str(e)
             }
         }
+    
+
+
+#region settingsAPIs
+def rescan():
+    try:
+        response = hsw.walletRescan(0)
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+
+def resendTXs():
+    try:
+        response = hsw.walletResend()
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+
+
+
+def zapTXs(account):
+    age = 60 * 20 # 20 minutes
+
+    account_name = check_account(account)
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }   
+
+    try:
+        response = requests.post(f"http://x:{APIKEY}@localhost:12039/wallet/{account_name}/zap",
+            json={"age": age,
+                  "account": "default"
+                  })
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+
+
+def getxPub(account):
+    account_name = check_account(account)
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+    
+
+    try:
+        print(account_name)
+        response = hsw.getAccountInfo(account_name,"default")
+        if 'error' in response:
+            return {
+                "error": {
+                    "message": response['error']['message']
+                }
+            }
+        return response['accountKey']
+
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+    
+
+#endregion
 
 def generateReport(account):
     domains = getDomains(account)

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html data-bs-theme="dark" lang="en-au">
+<html data-bs-theme="dark" lang="en">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Transactions - FireWallet</title>
+    <title>FireWallet</title>
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
@@ -61,37 +61,8 @@
                     </div>
                 </nav>
                 <div class="container-fluid">
-                    <h3 class="text-dark mb-4">Transactions</h3>
-                    <div class="card shadow">
-                        <div class="card-header py-3">
-                            <p class="text-primary m-0 fw-bold">Transactions</p>
-                        </div>
-                        <div class="card-body"><div id="dataTable" class="table-responsive table mt-2" role="grid" aria-describedby="dataTable_info">
-    <table id="dataTable" class="table my-0">
-        <thead>
-            <tr>
-                <th>Action</th>
-                <th>Address</th>
-                <th>Tx</th>
-                <th>Confirmations</th>
-                <th>Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{tx|safe}}
-        </tbody>
-        <tfoot>
-            <tr>
-                <td><strong>Action</strong></td>
-                <td><strong>Address</strong></td>
-                <td><strong>Tx</strong></td>
-                <td><strong>Confirmations</strong></td>
-                <td><strong>Amount</strong></td>
-            </tr>
-        </tfoot>
-    </table>
-</div></div>
-                    </div>
+                    <h3 class="text-dark mb-1" style="text-align: center;">{{title}}</h3>
+                    <p style="text-align: center;">{{content|safe}}</p>
                 </div>
             </div>
             <footer class="sticky-footer" style="background: var(--bs-primary-text-emphasis);">

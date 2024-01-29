@@ -289,7 +289,6 @@ def search():
             state = 'AVAILABLE'
             next = "Available Now"
     elif state == "REVOKED":
-            state = 'AVAILABLE'
             next = "Available Now"
     elif state == 'OPENING':
         next = "Bidding opens in ~" + str(domain['info']['stats']['blocksUntilBidding']) + " blocks"
@@ -685,7 +684,6 @@ def auction(domain):
             if search_term in own_domains:
                 next_action = f'<a href="/manage/{domain}">Manage</a>'
     elif state == "REVOKED":
-        state = 'AVAILABLE'
         next = "Available Now"
         next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
     elif state == 'OPENING':
@@ -821,6 +819,62 @@ def reveal_auction(domain):
     return redirect("/success?tx=" + response['hash'])
 
 
+#region settings
+@app.route('/settings')
+def settings():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    error = request.args.get("error")
+    if error == None:
+        error = ""
+    success = request.args.get("success")
+    if success == None:
+        success = ""
+
+    return render_template("settings.html", account=account,sync=account_module.getNodeSync(),
+                           error=error,success=success)
+
+@app.route('/settings/<action>')
+def settings_action(action):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    if action == "rescan":
+        resp = account_module.rescan()
+        if 'error' in resp:
+            return redirect("/settings?error=" + str(resp['error']))
+        return redirect("/settings?success=Resent transactions")
+    elif action == "resend":
+        resp = account_module.resendTXs()
+        if 'error' in resp:
+            return redirect("/settings?error=" + str(resp['error']))
+        return redirect("/settings?success=Resent transactions")
+
+
+    elif action == "zap":
+        resp = account_module.zapTXs(request.cookies.get("account"))
+        if 'error' in resp:
+            return redirect("/settings?error=" + str(resp['error']))
+        return redirect("/settings?success=Zapped transactions")
+    elif action == "xpub":
+        return render_template("message.html", account=account,sync=account_module.getNodeSync(),
+                               title="xPub Key",content=account_module.getxPub(request.cookies.get("account")))
+
+    return redirect("/settings?error=Invalid action")
+
+
+#endregion
 #endregion
 
 
@@ -862,6 +916,48 @@ def login_post():
 def logout():
     response = make_response(redirect("/login"))
     response.set_cookie("account", "", expires=0)
+    return response
+
+@app.route('/register', methods=["POST"])
+def register():
+    # Get the account and password
+    account = request.form.get("name")
+    password = request.form.get("password")
+    repeatPassword = request.form.get("password_repeat")
+
+    # Check if the passwords match
+    if password != repeatPassword:
+        return render_template("register.html",
+                               error="Passwords do not match",
+                               name=account,password=password,password_repeat=repeatPassword)
+
+    # Check if the account is valid
+    if account.count(":") > 0:
+        return render_template("register.html",
+                               error="Invalid account",
+                               name=account,password=password,password_repeat=repeatPassword)
+
+    # List wallets
+    wallets = account_module.listWallets()
+    if account in wallets:
+        return render_template("register.html",
+                               error="Account already exists",
+                               name=account,password=password,password_repeat=repeatPassword)
+
+    # Create the account
+    response = account_module.createWallet(account,password)
+
+    if 'error' in response:
+        return render_template("register.html",
+                               error=response['error'],
+                               name=account,password=password,password_repeat=repeatPassword)
+    
+    
+    # Set the cookie
+    response = make_response(render_template("message.html", sync=account_module.getNodeSync(),
+                                              title="Account Created",
+                                              content="Your account has been created. Here is your seed phrase. Please write it down and keep it safe as it will not be shown again<br><br>" + response['seed']))
+    response.set_cookie("account", account+":"+password)
     return response
 
 
