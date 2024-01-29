@@ -22,3 +22,12 @@ python3 main.py
 ```
 
 Then access the wallet at http://localhost:5000
+
+
+Also available as a docker image:
+
+To run using a HSD running directly on the host:
+
+```bash
+sudo docker run --network=host -e HSD_API_KEY=yourapikeyhere git.woodburn.au/nathanwoodburn/firewallet:latest
+```
