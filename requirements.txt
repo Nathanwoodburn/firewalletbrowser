@@ -7,3 +7,4 @@ dnspython
 cryptography
 requests-doh
 Flask-QRcode
+PySocks
