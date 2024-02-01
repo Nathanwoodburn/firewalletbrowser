@@ -22,6 +22,8 @@ fees = 0.02
 revokeCheck = random.randint(100000,999999)
 
 
+theme = os.getenv("theme")
+
 @app.route('/')
 def index():
     # Check if the user is logged in
@@ -981,6 +983,12 @@ def report():
 @app.route('/qr/<data>')
 def qr(data):
     return send_file(qrcode(data, mode="raw"), mimetype="image/png")
+
+# Theme
+@app.route('/assets/css/styles.min.css')
+def send_css():
+    print("Using theme: " + theme)
+    return send_from_directory('themes', f'{theme}.css')
 
 @app.route('/assets/<path:path>')
 def send_assets(path):

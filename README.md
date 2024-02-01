@@ -40,6 +40,11 @@ If you have HSD running on a different IP/container
 sudo docker run -p 5000:5000 -e hsd_api=yourapikeyhere -e hsd_ip=hsdcontainer git.woodburn.au/nathanwoodburn/firewallet:latest
 ```
 
+## Themes
+Set a theme in the .env file  
+**Available themes**  
+- dark-purple
+- black
 
 ## Images
 Login page  
