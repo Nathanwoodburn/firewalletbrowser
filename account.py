@@ -87,7 +87,11 @@ def createWallet(account: str, password: str):
 def listWallets():
     # List the wallets
     response = hsw.listWallets()
-    return response
+
+    # Check if response is json or an array
+    if isinstance(response, list):
+        return response
+    return ['Wallet not connected']
 
 def getBalance(account: str):
     # Get the total balance
@@ -316,6 +320,9 @@ def setDNS(account,domain,records):
 
 def getNodeSync():
     response = hsd.getInfo()
+    if 'error' in response:
+        return 0
+
     sync = response['chain']['progress']*100
     sync = round(sync, 2)
     return sync
