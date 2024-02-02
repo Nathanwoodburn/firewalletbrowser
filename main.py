@@ -10,6 +10,7 @@ import re
 from flask_qrcode import QRcode
 import domainLookup
 import urllib.parse
+import importlib
 
 dotenv.load_dotenv()
 
@@ -820,8 +821,8 @@ def reveal_auction(domain):
         return redirect("/auction/" + domain + "?message=" + response['error']['message'])
     return redirect("/success?tx=" + response['hash'])
 
-
-#region settings
+#endregion
+#region Settings
 @app.route('/settings')
 def settings():
     # Check if the user is logged in
@@ -876,7 +877,6 @@ def settings_action(action):
     return redirect("/settings?error=Invalid action")
 
 
-#endregion
 #endregion
 
 
@@ -978,6 +978,132 @@ def report():
     return jsonify(account_module.generateReport(account))
 
 #endregion
+
+#region Plugins
+@app.route('/plugins')
+def plugins_index():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    plugin_links = os.listdir("plugins")
+    plugins = []
+    for plugin in plugin_links:
+        if os.path.isdir("plugins/" + plugin):
+            if os.path.isfile("plugins/" + plugin + "/"+plugin+".json"):
+                with open("plugins/" + plugin + "/"+plugin+".json") as f:
+                    data = json.load(f)
+                    data['link'] = plugin
+                    if 'name' not in data:
+                        data['name'] = plugin
+                    if 'description' not in data:
+                        data['description'] = "No description provided"
+                    plugins.append(data)
+
+    plugins = render.plugins(plugins)
+
+    return render_template("plugins.html", account=account, sync=account_module.getNodeSync(),
+                           plugins=plugins)
+
+@app.route('/plugin/<plugin>')
+def plugin(plugin):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    if not os.path.isdir("plugins/" + plugin):
+        return redirect("/plugins")
+
+    if not os.path.isfile("plugins/" + plugin + "/"+plugin+".json"):
+        return redirect("/plugins")
+
+    with open("plugins/" + plugin + "/"+plugin+".json") as f:
+        data = json.load(f)
+        data['link'] = plugin
+        if 'name' not in data:
+            data['name'] = plugin
+        if 'description' not in data:
+            data['description'] = "No description provided"
+
+
+    functions = []
+
+    if os.path.isfile("plugins/" + plugin + "/main.py"):
+        # Get plugin/main.py listfunctions()
+        print("Loading plugin: " + plugin)
+        module = importlib.import_module("plugins." + plugin + ".main")
+        functions = module.listFunctions()
+        functions = render.plugin_functions(functions,plugin)
+    
+    error = request.args.get("error")
+    if error == None:
+        error = ""
+
+    return render_template("plugin.html", account=account, sync=account_module.getNodeSync(),
+                           name=data['name'],description=data['description'],functions=functions,
+                           error=error)
+
+@app.route('/plugin/<plugin>/<function>', methods=["POST"])
+def plugin_function(plugin,function):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    if not os.path.isdir("plugins/" + plugin):
+        return redirect("/plugins")
+
+    if not os.path.isfile("plugins/" + plugin + "/"+plugin+".json"):
+        return redirect("/plugins")
+
+    with open("plugins/" + plugin + "/"+plugin+".json") as f:
+        data = json.load(f)
+        data['link'] = plugin
+        if 'name' not in data:
+            data['name'] = plugin
+        if 'description' not in data:
+            data['description'] = "No description provided"
+
+    if os.path.isfile("plugins/" + plugin + "/main.py"):
+        # Get plugin/main.py listfunctions()
+        print("Loading plugin: " + plugin)
+        module = importlib.import_module("plugins." + plugin + ".main")
+        if function in module.listFunctions():
+            inputs = module.listFunctions()[function]["params"]
+            request_data = {}
+            for input in inputs:
+                request_data[input] = request.form.get(input)            
+
+            response = module.runFunction(function,request_data,request.cookies.get("account"))
+            if not response:
+                return redirect("/plugin/" + plugin + "?error=An error occurred")
+            if 'error' in response:
+                return redirect("/plugin/" + plugin + "?error=" + response['error'])
+            
+            response = render.plugin_output(response,module.listFunctions()[function]["returns"])
+
+            return render_template("plugin-output.html", account=account, sync=account_module.getNodeSync(),
+                                      name=data['name'],description=data['description'],output=response)
+
+
+        else:
+            return jsonify({"error": "Function not found"})
+
+    return jsonify({"error": "Plugin not found"})
+
+#endregion
+
 
 #region Assets and default pages
 @app.route('/qr/<data>')
