@@ -1,6 +1,7 @@
 import datetime
 import json
 import urllib.parse
+from flask import render_template
 
 def domains(domains):
     html = ''
@@ -218,6 +219,15 @@ def plugin_functions(functions, pluginName):
                 html += f'<input class="form-control" type="number" name="{param}" />'
             elif paramType == "checkbox":
                 html += f'<div class="form-check"><input id="{param}" class="form-check-input" type="checkbox" name="{param}" /><label class="form-check-label" for="{param}">{paramName}</label></div>'
+            elif paramType == "address":
+                # render components/address.html
+                address = render_template('components/address.html', paramName=paramName, param=param)
+                html += address
+            elif paramType == "dns":
+                html += render_template('components/dns-input.html', paramName=paramName, param=param)
+
+
+                
             
             html += f'</div>'
         
@@ -236,8 +246,6 @@ def plugin_output(outputs, returns):
     html = ''
     
     for returnOutput in returns:
-        print(returns)
-
         html += f'<div class="card" style="margin-top: 50px; margin-bottom: 50px;">'
         html += f'<div class="card-body">'
         html += f'<h4 class="card-title">{returns[returnOutput]["name"]}</h4>'
@@ -251,6 +259,11 @@ def plugin_output(outputs, returns):
             html += f'</ul>'
         elif returns[returnOutput]["type"] == "text":
             html += f'<p>{output}</p>'
+        elif returns[returnOutput]["type"] == "tx":
+            html += render_template('components/tx.html', tx=output)
+        elif returns[returnOutput]["type"] == "dns":
+            output = json.loads(output)
+            html += render_template('components/dns-output.html', dns=dns(output))
 
 
         html += f'</div>'

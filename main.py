@@ -1083,7 +1083,20 @@ def plugin_function(plugin,function):
             inputs = module.listFunctions()[function]["params"]
             request_data = {}
             for input in inputs:
-                request_data[input] = request.form.get(input)            
+                request_data[input] = request.form.get(input)
+                
+                if inputs[input]['type'] == "address":
+                    # Handle hip2
+                    address_check = account_module.check_address(request_data[input],True,True)
+                    if not address_check:
+                        return redirect("/plugin/" + plugin + "?error=Invalid address")
+                    request_data[input] = address_check
+                elif inputs[input]['type'] == "dns":
+                    # Handle URL encoding of DNS
+                    request_data[input] = urllib.parse.unquote(request_data[input])
+
+
+
 
             response = module.runFunction(function,request_data,request.cookies.get("account"))
             if not response:
