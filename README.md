@@ -42,6 +42,8 @@ sudo docker run -p 5000:5000 -e hsd_api=yourapikeyhere -e hsd_ip=hsdcontainer gi
 
 ## Features
 - Basic wallet functionality
+  - Create new wallet
+  - Import wallet from seed
   - Send HNS
   - Receive HNS
   - Have multiple wallets

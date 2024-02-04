@@ -391,11 +391,11 @@ def finalize(domain: str):
     domain = domain.lower()
     print(domain)
     response = account_module.finalize(request.cookies.get("account"),domain)
-    if 'error' in response:
+    if response['error'] != None:
         print(response)
         return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
-    return redirect("/success?tx=" + response['hash'])
+    return redirect("/success?tx=" + response['result']['hash'])
 
 @app.route('/manage/<domain>/cancel')
 def cancelTransfer(domain: str):
@@ -966,6 +966,50 @@ def register():
     response.set_cookie("account", account+":"+password)
     return response
 
+@app.route('/import-wallet', methods=["POST"])
+def import_wallet():
+    # Get the account and password
+    account = request.form.get("name")
+    password = request.form.get("password")
+    repeatPassword = request.form.get("password_repeat")
+    seed = request.form.get("seed")
+
+    # Check if the passwords match
+    if password != repeatPassword:
+        return render_template("import-wallet.html",
+                               error="Passwords do not match",
+                               name=account,password=password,password_repeat=repeatPassword,
+                               seed=seed)
+
+    # Check if the account is valid
+    if account.count(":") > 0:
+        return render_template("import-wallet.html",
+                               error="Invalid account",
+                               name=account,password=password,password_repeat=repeatPassword,
+                               seed=seed)
+
+    # List wallets
+    wallets = account_module.listWallets()
+    if account in wallets:
+        return render_template("import-wallet.html",
+                               error="Account already exists",
+                               name=account,password=password,password_repeat=repeatPassword,
+                               seed=seed)
+    
+    # Create the account
+    response = account_module.importWallet(account,password,seed)
+
+    if 'error' in response:
+        return render_template("import-wallet.html",
+                               error=response['error'],
+                               name=account,password=password,password_repeat=repeatPassword,
+                               seed=seed)
+    
+    
+    # Set the cookie
+    response = make_response(redirect("/"))
+    response.set_cookie("account", account+":"+password)
+    return response
 
 @app.route('/report')
 def report():

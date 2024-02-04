@@ -84,6 +84,31 @@ def createWallet(account: str, password: str):
         "password": password
     }
 
+def importWallet(account: str, password: str,seed: str):
+    # Import the wallet
+    data = {
+        "passphrase": password,
+        "mnemonic": seed,
+    }
+
+    response = requests.put(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}",json=data)
+    print(response)
+    print(response.json())
+
+    if response.status_code != 200:
+        return {
+            "error": {
+                "message": "Error creating account"
+            }
+        }
+    
+    return {
+        "seed": seed,
+        "account": account,
+        "password": password
+    }
+
+
 def listWallets():
     # List the wallets
     response = hsw.listWallets()
@@ -461,7 +486,21 @@ def finalize(account,domain):
         }
 
     try:
-        response = hsw.sendFINALIZE(account_name,password,domain)
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_sendFINALIZE(domain)
         return response
     except Exception as e:
         return {
