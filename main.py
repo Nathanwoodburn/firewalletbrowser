@@ -371,11 +371,30 @@ def manage(domain: str):
         else:
             finalize_time = "now"
 
+    plugins = "<div class='container-fluid'>"
+    # Execute domain plugins
+    plugin_links = os.listdir("plugins")
+    for plugin in plugin_links:
+        if os.path.isdir("plugins/" + plugin):
+            module = importlib.import_module("plugins." + plugin + ".main")
+            moduleFunctions = module.listFunctions()
+            for moduleFunction in moduleFunctions:
+                data = moduleFunctions[moduleFunction]
+                if "type" in data:
+                    if data["type"] == "domain":
+                        # Run function
+                        print(data)
+                        functionOutput = module.runFunction(moduleFunction,{"domain":domain},account_module.check_account(request.cookies.get("account")))
+                        print(functionOutput)
+                        plugins += render.plugin_output(functionOutput,data['returns'])
+    plugins += "</div>"
+
+
     return render_template("manage.html", account=account, sync=account_module.getNodeSync(),
                            error=errorMessage, address=address,
                            domain=domain,expiry=expiry, dns=dns,
                            raw_dns=urllib.parse.quote(raw_dns),
-                           finalize_time=finalize_time)
+                           finalize_time=finalize_time,plugins=plugins)
 
 
 @app.route('/manage/<domain>/finalize')

@@ -196,11 +196,30 @@ def plugin_functions(functions, pluginName):
         name = functions[function]['name']
         description = functions[function]['description']
         params = functions[function]['params']
-        returns = functions[function]['returns']
+        returnsRaw = functions[function]['returns']
+
+        returns = ""
+        for output in returnsRaw:
+            returns += f"{returnsRaw[output]['name']}, "
+
+        returns = returns.removesuffix(', ')
+
+        functionType = "manual"
+        if "type" in functions[function]:
+            functionType = functions[function]["type"]
+
+
         html += f'<div class="card" style="margin-top: 50px;">'
         html += f'<div class="card-body">'
         html += f'<h4 class="card-title">{name}</h4>'
         html += f'<h6 class="text-muted card-subtitle mb-2">{description}</h6>'
+        html += f'<h6 class="text-muted card-subtitle mb-2">Function type: {functionType.capitalize()}</h6>'
+
+        if functionType != "manual":
+            html += f'<p class="card-text">Returns: {returns}</p>'
+            html += f'</div>'
+            html += f'</div>'
+            continue
 
         # Form
         html += f'<form method="post" style="padding: 20px;" action="/plugin/{pluginName}/{function}">'
@@ -272,5 +291,3 @@ def plugin_output(outputs, returns):
 
         
     return html
-    
-        

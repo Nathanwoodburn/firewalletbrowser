@@ -665,9 +665,8 @@ def getxPub(account):
 
 #endregion
 
-def generateReport(account):
+def generateReport(account,format="{name},{expiry},{value},{maxBid}"):
     domains = getDomains(account)
-    format = str('{name},{expiry},{value},{maxBid}')
 
     lines = [format.replace("{","").replace("}","")]
     for domain in domains:
@@ -690,3 +689,6 @@ def generateReport(account):
         lines.append(line)
 
     return lines
+
+def convertHNS(value: int):
+    return value/1000000
