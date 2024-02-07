@@ -1,5 +1,53 @@
 # Plugins
 
+Plugins can be created to add more functionality to FireWallet Browser
+
+
+## Format
+They are created in python and use the format:
+
+```python
+info = {
+    "name": "Plugin Name",
+    "description": "Plugin Description",
+    "version": "Version number",
+    "author": "Your Name",
+}
+functions = {
+    "internalName":{
+        "name": "Human readable name",
+        "type": "Type of plugin",
+        "description": "Function description",
+        "params": { # For plugins other than default use {} for no params
+            "paramName": {
+                "name":"Human readable paramiter name",
+                "type":"type of paramiter", 
+            }
+        },
+        "returns": {
+            "returnName": 
+            {
+                "name": "Human readable return name",
+                "type": "type of return"
+            }
+        }
+    }
+}
+
+def internalName(params, authentication): # This should always have the same inputs
+    paramName = params["paramName"]
+    wallet = authentication.split(":")[0]
+    
+    # Do stuff
+    output = "Return value of stuff: " + paramName
+    
+    
+
+    return {"returnName": output}
+
+```
+
+
 ## Types
 ### Default
 Type: `default`
@@ -15,6 +63,7 @@ This type is used for domain plugins. It shows in the manage domain page or the 
 It gets the `domain` paramater as the only input (in addition to authentication)
 
 ### Dashboard
+Type: `dashboard`
 This type is used for dashboard plugins.
 It shows in the dashboard page. It doesn't get any inputs other than the authentication
 
