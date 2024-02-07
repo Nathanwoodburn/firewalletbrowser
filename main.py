@@ -673,8 +673,8 @@ def signMessage(domain):
 
     content += "<textarea style='display: none;' id='data' rows='4' cols='50'>"+json.dumps(data)+"</textarea>"
 
-    copyScript = "<script>function copyToClipboard() {var copyText = document.getElementById('data');copyText.style.display = 'block';copyText.select();copyText.setSelectionRange(0, 99999);document.execCommand('copy');copyText.style.display = 'none';}</script>"
-    content += "<button onclick='copyToClipboard()'>Copy to clipboard</button>" + copyScript
+    copyScript = "<script>function copyToClipboard() {var copyText = document.getElementById('data');copyText.style.display = 'block';copyText.select();copyText.setSelectionRange(0, 99999);document.execCommand('copy');copyText.style.display = 'none';var copyButton = document.getElementById('copyButton');copyButton.innerHTML='Copied';}</script>"
+    content += "<button id='copyButton' onclick='copyToClipboard()' class='btn btn-secondary'>Copy to clipboard</button>" + copyScript
 
     
 
@@ -959,9 +959,15 @@ def settings_action(action):
             return redirect("/settings?error=" + str(resp['error']))
         return redirect("/settings?success=Zapped transactions")
     elif action == "xpub":
+        xpub = account_module.getxPub(request.cookies.get("account"))
+        content = "<br><br>"
+        content += "<textarea style='display: none;' id='data' rows='4' cols='50'>"+xpub+"</textarea>"
+        content += "<script>function copyToClipboard() {var copyText = document.getElementById('data');copyText.style.display = 'block';copyText.select();copyText.setSelectionRange(0, 99999);document.execCommand('copy');copyText.style.display = 'none';var copyButton = document.getElementById('copyButton');copyButton.innerHTML='Copied';}</script>"
+        content += "<button id='copyButton' onclick='copyToClipboard()' class='btn btn-secondary'>Copy to clipboard</button>"
+
         return render_template("message.html", account=account,sync=account_module.getNodeSync(),
                                title="xPub Key",
-                               content="<code>"+account_module.getxPub(request.cookies.get("account"))+"</code>")
+                               content="<code>"+xpub+"</code>" + content)
 
     return redirect("/settings?error=Invalid action")
 
