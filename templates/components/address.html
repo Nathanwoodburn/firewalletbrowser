@@ -1,0 +1,40 @@
+<div style="margin-top: 25px;">
+    <label class="form-label">{{paramName}}</label>
+    <input id="{{param}}" class="form-control" type="text" placeholder="Address or @domain" name="{{param}}" value="{{address}}" />
+    <span id="addressValid"></span>
+    <script>
+        function checkAddress(inputValue) {
+            // Make API request to "/checkaddress"
+            var apiUrl = '/checkaddress?address=' + encodeURIComponent(inputValue);
+            
+            fetch(apiUrl)
+              .then(response => response.json())
+              .then(data => {
+                // Update the content of the span with the response data
+                var addressCheckSpan = document.getElementById('addressValid');
+                addressCheckSpan.textContent = data.result; // You can replace 'addressInfo' with the actual property you receive from the API
+              })
+              .catch(error => {
+                console.error('Error fetching data:', error);
+              });
+          }
+        
+          // Function to handle input field blur event
+          function handleBlur() {
+            var inputField = document.getElementById('{{param}}');
+            var inputValue = inputField.value;
+        
+            // Check if the input value is not empty
+            if (inputValue.trim() !== '') {
+              checkAddress(inputValue);
+            } else {
+                var addressCheckSpan = document.getElementById('addressValid');
+                addressCheckSpan.textContent = 'Invalid address';
+            }
+          }
+        
+          // Add a blur event listener to the input field
+          var inputField = document.getElementById('{{param}}');
+          inputField.addEventListener('blur', handleBlur);
+    </script>
+</div>

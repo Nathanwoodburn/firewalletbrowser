@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Register - FireWallet</title>
+    <title>Import Wallet - FireWallet</title>
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
@@ -27,14 +27,15 @@
                         <div class="p-5">
                             <h1 class="text-center" style="color: rgb(255,0,0);">{{error}}</h1>
                             <div class="text-center">
-                                <h4 class="text-dark mb-4">Create a new wallet!</h4>
+                                <h4 class="text-dark mb-4">Import a wallet!</h4>
                             </div>
                             <form class="user" method="post">
                                 <div class="row mb-3" style="padding-right: 16px;padding-left: 16px;"><input class="form-control form-control-user" type="text" id="exampleLastName" placeholder="Wallet name" name="name" value="{{name}}"></div>
                                 <div class="row mb-3">
                                     <div class="col-sm-6 mb-3 mb-sm-0"><input class="form-control form-control-user" type="password" id="examplePasswordInput" placeholder="Password" name="password" required="" value="{{password}}"></div>
                                     <div class="col-sm-6"><input class="form-control form-control-user" type="password" id="exampleRepeatPasswordInput" placeholder="Repeat Password" name="password_repeat" required="" value="{{password_repeat}}"></div>
-                                </div><button class="btn btn-primary d-block btn-user w-100" type="submit">Create Wallet</button>
+                                </div>
+                                <div style="margin-bottom: 16px;"><textarea class="form-control form-control-lg" placeholder="Seed Phrase" name="seed" rows="1" style="height: 7em;">{{seed}}</textarea></div><button class="btn btn-primary d-block btn-user w-100" type="submit">Import Wallet</button>
                                 <hr>
                             </form>
                             <div class="text-center"><a class="small" href="/login">Didn't mean to create a new wallet? Login!</a></div>

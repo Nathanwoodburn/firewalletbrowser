@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>FireWallet</title>
+    <title>Plugins - FireWallet</title>
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
@@ -61,8 +61,9 @@
                     </div>
                 </nav>
                 <div class="container-fluid">
-                    <h3 class="text-dark mb-1" style="text-align: center;">{{title}}</h3>
-                    <p style="text-align: center;">{{content|safe}}</p>
+                    <h3 class="text-dark mb-1">Plugins</h3><ul class="list-group">
+    {{plugins | safe}}
+</ul>
                 </div>
             </div>
             <footer class="sticky-footer" style="background: var(--bs-primary-text-emphasis);">
