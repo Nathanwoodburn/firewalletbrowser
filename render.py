@@ -301,9 +301,5 @@ def plugin_output_dash(outputs, returns):
     html = ''
     
     for returnOutput in returns:
-        html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])
-
-
-        html += f'</div>'
-        html += f'</div>'        
+        html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])         
     return html

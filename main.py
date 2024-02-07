@@ -96,7 +96,7 @@ def index():
     plugins = ""
     dashFunctions = plugins_module.getDashboardFunctions()
     for function in dashFunctions:
-        functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},account_module.check_account(request.cookies.get("account")))
+        functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
         plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
 
 
