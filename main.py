@@ -1222,7 +1222,8 @@ def qr(data):
 # Theme
 @app.route('/assets/css/styles.min.css')
 def send_css():
-    print("Using theme: " + theme)
+    if theme == "live":
+        return send_from_directory('templates/assets/css', 'styles.min.css')
     return send_from_directory('themes', f'{theme}.css')
 
 @app.route('/assets/<path:path>')

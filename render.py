@@ -189,7 +189,7 @@ def plugins(plugins):
         name = plugin['name']
         link = plugin['link']
 
-        html += f'<li class="list-group-item"><a class="btn btn-primary" style="width:100%;height:100%;margin:0px;font-size: x-large;" role="button" href="/plugin/{link}">{name}</a></li>'
+        html += f'<li class="list-group-item"><a class="btn btn-secondary" style="width:100%;height:100%;margin:0px;font-size: x-large;" role="button" href="/plugin/{link}">{name}</a></li>'
     return html
 
 def plugin_functions(functions, pluginName):
