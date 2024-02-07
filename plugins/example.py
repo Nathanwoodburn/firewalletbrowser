@@ -1,27 +1,22 @@
 import json
 import account
+import requests
 
 
+# Plugin Data
+info = {
+    "name": "Example Plugin",
+    "description": "This is a plugin to be used as an example",
+    "version": "1.0",
+    "author": "Nathan.Woodburn/"
+}
+
+
+# Functions
 functions = {
-    "check": {
-        "name": "Domain Check",
-        "description": "Check if domains in file are owned by the wallet",
-        "params": {
-            "domains": {
-                "name":"List of domains to check",
-                "type":"longText"
-            }
-        },
-        "returns": {
-            "domains": 
-            {
-                "name": "List of owned domains",
-                "type": "list"
-            }
-        }
-    },
     "search":{
         "name": "Search Owned",
+        "type": "default",
         "description": "Search for owned domains containing a string",
         "params": {
             "search": {
@@ -39,6 +34,7 @@ functions = {
     },
     "transfer":{
         "name": "Bulk Transfer Domains",
+        "type": "default",
         "description": "Transfer domains to another wallet",
         "params": {
             "address": {
@@ -63,6 +59,7 @@ functions = {
     },
     "dns":{
         "name": "Set DNS for Domains",
+        "type": "default",
         "description": "Set DNS for domains",
         "params": {
             "domains": {
@@ -84,26 +81,50 @@ functions = {
                 "type": "dns"
             }
         }
+    },
+    "niami": {
+        "name": "Niami info",
+        "type": "domain",
+        "description": "Check the domains niami rating",
+        "params": {},
+        "returns": {
+            "rating": 
+            {
+                "name": "Niami Rating",
+                "type": "text"
+            }
+        }
+    },
+    "niamiSearch": {
+        "name": "Niami info",
+        "type": "search",
+        "description": "Check the domains niami rating",
+        "params": {},
+        "returns": {
+            "rating": 
+            {
+                "name": "Niami Rating",
+                "type": "text"
+            }
+        }
+    },
+    "connections":{
+        "name": "HSD Connections",
+        "type": "dashboard",
+        "description": "Show the number of connections the HSD node is connected to",
+        "params": {},
+        "returns": {
+            "connections": 
+            {
+                "name": "HSD Connections",
+                "type": "text"
+            }
+        }
     }
 }
 
-def listFunctions():
-    return functions
-
-def runFunction(function, params, authentication):
-    if function == "check":
-        return check(params['domains'], authentication)
-    elif function == "search":
-        return search(params['search'], authentication)
-    elif function == "transfer":
-        return transfer(params['address'], params['domains'], authentication)
-    elif function == "dns":
-        return dns(params['domains'],params['dns'],authentication)
-    else:
-        return "Function not found"
-
-
-def check(domains, authentication):
+def check(params, authentication):
+    domains = params["domains"]
     domains = domains.splitlines()
 
     wallet = authentication.split(":")[0]
@@ -116,7 +137,8 @@ def check(domains, authentication):
 
     return {"domains": domains}
 
-def search(search, authentication):
+def search(params, authentication):
+    search = params["search"]
     wallet = authentication.split(":")[0]
     owned = account.getDomains(wallet)
     # Only keep owned domains ["name"]
@@ -127,8 +149,27 @@ def search(search, authentication):
     return {"domains": domains}
 
 
-def transfer(address, domains, authentication):
+def transfer(params, authentication):
+    address = params["address"]
     return {"hash":"f921ffe1bb01884bf515a8079073ee9381cb93a56b486694eda2cce0719f27c0","address":address}
 
-def dns(domains,dns,authentication):
+def dns(params,authentication):
+    dns = params["dns"]
     return {"hash":"f921ffe1bb01884bf515a8079073ee9381cb93a56b486694eda2cce0719f27c0","dns":dns}
+
+def niami(params, authentication):
+    domain = params["domain"]
+    print(domain)
+    response = requests.get(f"https://api.handshake.niami.io/domain/{domain}")
+    print(response.text)
+    data = response.json()["data"]
+    rating = str(data["rating"]["score"]) + " (" + data["rating"]["rarity"] + ")"
+    return {"rating":rating}
+
+def niamiSearch(params, authentication):
+    return niami(params, authentication)
+
+
+def connections(params,authentication):
+    outbound = account.hsd.getInfo()['pool']['outbound']
+    return {"connections": outbound}

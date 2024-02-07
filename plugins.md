@@ -1,5 +1,24 @@
 # Plugins
 
+## Types
+### Default
+Type: `default`
+This is the default type and is used when no type is specified.  
+This type is displayed in the plugin page only.  
+This is the onlu type of plugin that takes user input
+
+### Manage & Search
+For manage page use type: `domain`
+For search page use type: `search`
+
+This type is used for domain plugins. It shows in the manage domain page or the search page.
+It gets the `domain` paramater as the only input (in addition to authentication)
+
+### Dashboard
+This type is used for dashboard plugins.
+It shows in the dashboard page. It doesn't get any inputs other than the authentication
+
+
 ## Inputs
 
 ### Plain Text

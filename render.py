@@ -204,7 +204,7 @@ def plugin_functions(functions, pluginName):
 
         returns = returns.removesuffix(', ')
 
-        functionType = "manual"
+        functionType = "default"
         if "type" in functions[function]:
             functionType = functions[function]["type"]
 
@@ -215,7 +215,7 @@ def plugin_functions(functions, pluginName):
         html += f'<h6 class="text-muted card-subtitle mb-2">{description}</h6>'
         html += f'<h6 class="text-muted card-subtitle mb-2">Function type: {functionType.capitalize()}</h6>'
 
-        if functionType != "manual":
+        if functionType != "default":
             html += f'<p class="card-text">Returns: {returns}</p>'
             html += f'</div>'
             html += f'</div>'
@@ -286,8 +286,17 @@ def plugin_output(outputs, returns):
 
 
         html += f'</div>'
+        html += f'</div>'        
+    return html
+
+def plugin_output_dash(outputs, returns):
+
+    html = ''
+    
+    for returnOutput in returns:
+        html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])
+
+
         html += f'</div>'
-
-
-        
+        html += f'</div>'        
     return html
