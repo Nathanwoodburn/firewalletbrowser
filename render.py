@@ -272,6 +272,11 @@ def plugin_output(outputs, returns):
         html += f'<h4 class="card-title">{returns[returnOutput]["name"]}</h4>'
         
         # Get the output
+        if returnOutput not in outputs:
+            html += f'<p>No output</p>'
+            html += f'</div>'
+            html += f'</div>'
+            continue
         output = outputs[returnOutput]
         if returns[returnOutput]["type"] == "list":
             html += f'<ul>'
