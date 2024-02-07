@@ -90,6 +90,7 @@ def index():
 
     
     domain_count = len(domains)
+    domainsMobile = render.domains(domains,True)
     domains = render.domains(domains)
     
     plugins = ""
@@ -102,7 +103,8 @@ def index():
 
 
     return render_template("index.html", account=account, available=available,
-                           total=total, pending=pending, domains=domains, plugins=plugins,
+                           total=total, pending=pending, domains=domains,
+                           domainsMobile=domainsMobile, plugins=plugins,
                            domain_count=domain_count, sync=account_module.getNodeSync(),
                            sort_price=sort_price,sort_expiry=sort_expiry,
                            sort_domain=sort_domain,sort_price_next=sort_price_next,
@@ -273,6 +275,9 @@ def search():
     
     search_term = request.args.get("q")
     search_term = search_term.lower().strip()
+
+    # Replace spaces with hyphens
+    search_term = search_term.replace(" ","-")
     
     # Convert emoji to punycode
     search_term = domainLookup.emoji_to_punycode(search_term)
@@ -281,14 +286,23 @@ def search():
 
     domain = account_module.getDomain(search_term)
     
+    plugins = "<div class='container-fluid'>"
+    # Execute domain plugins
+    searchFunctions = plugins_module.getSearchFunctions()
+    for function in searchFunctions:
+        functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{"domain":search_term},account_module.check_account(request.cookies.get("account")))
+        plugins += render.plugin_output(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
+
+    plugins += "</div>"
+
     if 'error' in domain:
         return render_template("search.html", account=account,sync=account_module.getNodeSync(),
-                               search_term=search_term, domain=domain['error'])
+                               search_term=search_term, domain=domain['error'],plugins=plugins)
     
     if domain['info'] is None:
         return render_template("search.html", account=account, sync=account_module.getNodeSync(),
                                search_term=search_term,domain=search_term,
-                               state="AVAILABLE", next="Available Now")
+                               state="AVAILABLE", next="Available Now",plugins=plugins)
 
     state = domain['info']['state']
     if state == 'CLOSED':
@@ -328,15 +342,6 @@ def search():
 
     dns = render.dns(dns)
     txs = render.txs(txs)
-
-    plugins = "<div class='container-fluid'>"
-    # Execute domain plugins
-    searchFunctions = plugins_module.getSearchFunctions()
-    for function in searchFunctions:
-        functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{"domain":search_term},account_module.check_account(request.cookies.get("account")))
-        plugins += render.plugin_output(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
-
-    plugins += "</div>"
 
     return render_template("search.html", account=account, sync=account_module.getNodeSync(),
                            search_term=search_term,domain=domain['info']['name'],
@@ -636,6 +641,47 @@ def transfer(domain):
                             sync=account_module.getNodeSync(),action=action,
                             content=content,cancel=cancel,confirm=confirm)
 
+@app.route('/manage/<domain>/sign')
+def signMessage(domain):
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    # Get the address and amount
+    message = request.args.get("message")
+
+    if message is None:
+        return redirect("/manage/" + domain + "?error=Invalid message")
+    
+
+    content = "Message to sign:<br><code>" + message + "</code><br><br>"
+    signedMessage = account_module.signMessage(request.cookies.get("account"),domain,message)
+    if signedMessage["error"] != None:
+        return redirect("/manage/" + domain + "?error=" + signedMessage["error"])
+    content += "Signature:<br><code>" + signedMessage["result"] + "</code><br><br>"
+
+    data = {
+        "domain": domain,
+        "message": message,
+        "signature": signedMessage["result"]
+    }
+
+    content += "Full information:<br><code style='text-align:left;display: block;'>" + json.dumps(data,indent=4).replace('\n',"<br>") + "</code><br><br>"
+
+    content += "<textarea style='display: none;' id='data' rows='4' cols='50'>"+json.dumps(data)+"</textarea>"
+
+    copyScript = "<script>function copyToClipboard() {var copyText = document.getElementById('data');copyText.style.display = 'block';copyText.select();copyText.setSelectionRange(0, 99999);document.execCommand('copy');copyText.style.display = 'none';}</script>"
+    content += "<button onclick='copyToClipboard()'>Copy to clipboard</button>" + copyScript
+
+    
+
+    return render_template("message.html", account=account,sync=account_module.getNodeSync(),
+                               title="Sign Message",content=content)
+    
+
 @app.route('/manage/<domain>/transfer/confirm')
 def transferConfirm(domain):
     if request.cookies.get("account") is None:
@@ -770,18 +816,21 @@ def bid(domain):
     if blind == "":
         blind = 0
 
+    bid = float(bid)
+    blind = float(blind)
+
     if bid+blind == 0:
         return redirect("/auction/" + domain+ "?message=Invalid bid amount")
 
     
     # Show confirm page
-    total = float(bid) + float(blind)
+    total = bid + blind
 
     action = f"Bid on {domain}/"
     content = f"Are you sure you want to bid on {domain}/?"
     content += "You are about to bid with the following details:<br><br>"
-    content += f"Bid: {request.args.get('bid')} HNS<br>"
-    content += f"Blind: {request.args.get('blind')} HNS<br>"
+    content += f"Bid: {str(bid)} HNS<br>"
+    content += f"Blind: {str(blind)} HNS<br>"
     content += f"Total: {total} HNS (excluding fees)<br><br>"
 
     cancel = f"/auction/{domain}"
@@ -804,11 +853,22 @@ def bid_confirm(domain):
         return redirect("/logout")
     
     domain = domain.lower()
+    bid = request.args.get("bid")
+    blind = request.args.get("blind")
+
+    if bid == "":
+        bid = 0
+    if blind == "":
+        blind = 0
+
+    bid = float(bid)
+    blind = float(blind)
+
     
     # Send the bid
     response = account_module.bid(request.cookies.get("account"),domain,
-                                  float(request.args.get('bid')),
-                                  float(request.args.get('blind')))
+                                  float(bid),
+                                  float(blind))
     print(response)
     if 'error' in response:
         return redirect("/auction/" + domain + "?message=" + response['error']['message'])
@@ -900,7 +960,8 @@ def settings_action(action):
         return redirect("/settings?success=Zapped transactions")
     elif action == "xpub":
         return render_template("message.html", account=account,sync=account_module.getNodeSync(),
-                               title="xPub Key",content=account_module.getxPub(request.cookies.get("account")))
+                               title="xPub Key",
+                               content="<code>"+account_module.getxPub(request.cookies.get("account"))+"</code>")
 
     return redirect("/settings?error=Invalid action")
 

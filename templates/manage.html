@@ -19,7 +19,7 @@
 
 <body id="page-top">
     <div id="wrapper">
-        <nav class="navbar align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0 navbar-dark" style="background: var(--bs-primary-border-subtle);">
+        <nav class="navbar align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0 navbar-dark toggled" style="background: var(--bs-primary-border-subtle);">
             <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="/">
                     <div class="sidebar-brand-icon"><img src="/assets/img/favicon.png" width="44"></div>
                     <div class="sidebar-brand-text mx-3"><span>FireWallet</span></div>
@@ -36,7 +36,7 @@
             </div>
         </nav>
         <div class="d-flex flex-column" id="content-wrapper" style="background: var(--bs-primary);">
-            <div id="content">
+            <div id="content" style="padding-bottom: 25px;">
                 <nav class="navbar navbar-expand shadow mb-4 topbar static-top navbar-light" style="background: var(--bs-primary-text-emphasis);">
                     <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
                         <form class="d-none d-sm-inline-block me-auto ms-md-3 my-2 my-md-0 mw-100 navbar-search" action="/search" method="get">
@@ -45,8 +45,8 @@
                         <ul class="navbar-nav flex-nowrap ms-auto">
                             <li class="nav-item dropdown d-sm-none no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><i class="fas fa-search"></i></a>
                                 <div class="dropdown-menu dropdown-menu-end p-3 animated--grow-in" aria-labelledby="searchDropdown">
-                                    <form class="me-auto navbar-search w-100">
-                                        <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for ...">
+                                    <form class="me-auto navbar-search w-100" action="/search" method="get">
+                                        <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for ..." name="q" value="{{search_term}}">
                                             <div class="input-group-append"><button class="btn btn-primary py-0" type="button"><i class="fas fa-search"></i></button></div>
                                         </div>
                                     </form>
@@ -133,6 +133,16 @@ function checkAddress(inputValue) {
                                 <h5>{{domain}}/ is transferring. You can finalize your transfer {{finalize_time}}.&nbsp;</h5>
                                 <div class="btn-group btn-group-lg" role="group"><a class="btn btn-primary" role="button" style="margin-right: 8px;margin-left: 8px;" href="/manage/{{domain}}/finalize">Finalize</a><a class="btn btn-primary" role="button" style="margin-right: 8px;margin-left: 8px;" href="/manage/{{domain}}/cancel">Cancel</a><a class="btn btn-primary" role="button" style="margin-right: 8px;margin-left: 8px;" href="/manage/{{domain}}/revoke">Revoke</a></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="container-fluid" style="margin-top: 50px;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title" style="display: inline-block;">Sign Message</h4>
+                            <form action="/manage/{{domain}}/sign" style="display: {% if finalize_time=='' %} block {% else %} none {% endif %};">
+                                <div style="margin-top: 25px;"><label class="form-label">Message</label><input class="form-control" type="text" placeholder="Message to sign" name="message" value="{{message}}"></div><input class="btn btn-primary" type="submit" value="Sign" style="margin-top: 16px;">
+                            </form>
                         </div>
                     </div>
                 </div>

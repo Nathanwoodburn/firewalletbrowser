@@ -138,7 +138,7 @@ def check(params, authentication):
     return {"domains": domains}
 
 def search(params, authentication):
-    search = params["search"]
+    search = params["search"].lower()
     wallet = authentication.split(":")[0]
     owned = account.getDomains(wallet)
     # Only keep owned domains ["name"]
@@ -159,9 +159,12 @@ def dns(params,authentication):
 
 def niami(params, authentication):
     domain = params["domain"]
-    print(domain)
     response = requests.get(f"https://api.handshake.niami.io/domain/{domain}")
     print(response.text)
+    if response.status_code != 200:
+        return {"rating":"Error fetching rating from Niami.io"}
+    if response.json()["success"] == False:
+        return {"rating":"Error fetching rating from Niami.io"}
     data = response.json()["data"]
     rating = str(data["rating"]["score"]) + " (" + data["rating"]["rarity"] + ")"
     return {"rating":rating}

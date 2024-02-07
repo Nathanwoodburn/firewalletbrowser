@@ -3,7 +3,7 @@ import json
 import urllib.parse
 from flask import render_template
 
-def domains(domains):
+def domains(domains, mobile=False):
     html = ''
     for domain in domains:
         owner = domain['owner']
@@ -17,8 +17,10 @@ def domains(domains):
         paid = paid / 1000000
 
 
-
-        html += f'<tr><td>{domain["name"]}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/manage/{domain["name"]}">Manage</a></td></tr>'
+        if not mobile:
+            html += f'<tr><td>{domain["name"]}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/manage/{domain["name"]}">Manage</a></td></tr>'
+        else:
+            html += f'<tr><td><a href="/manage/{domain["name"]}">{domain["name"]}</a></td><td>{expires} days</td></tr>'
     
     return html
 

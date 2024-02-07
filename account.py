@@ -317,7 +317,11 @@ def setDNS(account,domain,records):
     TXTRecords = []
     for record in records:
         if record['type'] == 'TXT':
-            TXTRecords.append(record['value'])
+            if 'txt' not in record:
+                TXTRecords.append(record['value'])
+            else:
+                for txt in record['txt']:
+                    TXTRecords.append(txt)
         elif record['type'] == 'NS':
             newRecords.append({
                 'type': 'NS',
@@ -662,6 +666,42 @@ def getxPub(account):
             }
         }
     
+
+def signMessage(account,domain,message):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+    
+
+    try:
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_signMessageWithName(domain,message)
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
 
 #endregion
 
