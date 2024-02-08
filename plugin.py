@@ -13,6 +13,27 @@ def listPlugins():
                 details = plugin.info
                 details["link"] = file[:-3]
                 plugins.append(details)
+
+    # Verify plugin signature
+    signatures = []
+    try:
+        with open("plugins/signatures.json", "r") as f:
+            signatures = json.load(f)
+    except:
+        # Write a new signatures file
+        with open("plugins/signatures.json", "w") as f:
+            json.dump(signatures, f)
+    
+    for plugin in plugins:
+        # Hash the plugin file
+        with open(f"plugins/{plugin['link']}.py", "r") as f:
+            file = f.read()
+            plugin_hash = hash(file)
+            if plugin_hash not in signatures:
+                plugin["verified"] = False
+            else:
+                plugin["verified"] = True
+
     return plugins
 
 
@@ -22,9 +43,49 @@ def pluginExists(plugin: str):
             return True
     return False
 
-def getPluginData(plugin: str):
-    plugin = importlib.import_module("plugins."+plugin)
-    return plugin.info
+def verifyPlugin(plugin: str):
+    signatures = []
+    try:
+        with open("plugins/signatures.json", "r") as f:
+            signatures = json.load(f)
+    except:
+        # Write a new signatures file
+        with open("plugins/signatures.json", "w") as f:
+            json.dump(signatures, f)
+
+    # Hash the plugin file
+    with open(f"plugins/{plugin}.py", "r") as f:
+        file = f.read()
+        plugin_hash = hash(file)
+        if plugin_hash not in signatures:
+            signatures.append(plugin_hash)
+            with open("plugins/signatures.json", "w") as f:
+                json.dump(signatures, f)
+
+def getPluginData(pluginStr: str):
+    plugin = importlib.import_module("plugins."+pluginStr)
+
+    # Check if the plugin is verified
+    signatures = []
+    try:
+        with open("plugins/signatures.json", "r") as f:
+            signatures = json.load(f)
+    except:
+        # Write a new signatures file
+        with open("plugins/signatures.json", "w") as f:
+            json.dump(signatures, f)
+
+    info = plugin.info
+    # Hash the plugin file
+    with open(f"plugins/{pluginStr}.py", "r") as f:
+        file = f.read()
+        plugin_hash = hash(file)
+        if plugin_hash not in signatures:
+            info["verified"] = False
+        else:
+            info["verified"] = True
+            
+    return info 
 
 def getPluginFunctions(plugin: str):
     plugin = importlib.import_module("plugins."+plugin)
@@ -40,6 +101,24 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
 
     # Get the function object from the plugin module
     plugin_function = getattr(plugin_module, function)
+
+    # Check if the function is in the signature list
+    signatures = []
+    try:
+        with open("plugins/signatures.json", "r") as f:
+            signatures = json.load(f)
+    except:
+        # Write a new signatures file
+        with open("plugins/signatures.json", "w") as f:
+            json.dump(signatures, f)
+
+    # Hash the plugin file
+    with open(f"plugins/{plugin}.py", "r") as f:
+        file = f.read()
+        plugin_hash = hash(file)
+        if plugin_hash not in signatures:
+            return {"error": "Plugin not verified"}
+
 
     # Call the function with provided parameters
     try:

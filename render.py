@@ -189,7 +189,10 @@ def plugins(plugins):
         name = plugin['name']
         link = plugin['link']
 
-        html += f'<li class="list-group-item"><a class="btn btn-secondary" style="width:100%;height:100%;margin:0px;font-size: x-large;" role="button" href="/plugin/{link}">{name}</a></li>'
+        if plugin['verified']:
+            html += f'<li class="list-group-item"><a class="btn btn-secondary" style="width:100%;height:100%;margin:0px;font-size: x-large;" role="button" href="/plugin/{link}">{name}</a></li>'
+        else:
+            html += f'<li class="list-group-item"><a class="btn btn-danger" style="width:100%;height:100%;margin:0px;font-size: x-large;" role="button" href="/plugin/{link}">{name} (Not verified)</a></li>'
     return html
 
 def plugin_functions(functions, pluginName):
@@ -301,5 +304,8 @@ def plugin_output_dash(outputs, returns):
     html = ''
     
     for returnOutput in returns:
+        if returnOutput not in outputs:
+            html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output="No output")
+            continue
         html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])         
     return html

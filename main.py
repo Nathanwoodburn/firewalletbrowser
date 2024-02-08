@@ -1151,6 +1151,10 @@ def plugin(plugin):
 
     functions = plugins_module.getPluginFunctions(plugin)
     functions = render.plugin_functions(functions,plugin)
+
+    if data['verified'] == False:
+        functions = "<div class='container-fluid'><div class='alert alert-warning' role='alert'>This plugin is not verified and is disabled for your protection. Please check the code before marking the plugin as verified <a href='/plugin/" + plugin + "/verify' class='btn btn-danger'>Verify</a></div></div>" + functions
+
     
     error = request.args.get("error")
     if error == None:
@@ -1160,6 +1164,26 @@ def plugin(plugin):
                            name=data['name'],description=data['description'],
                            author=data['author'],version=data['version'],
                            functions=functions,error=error)
+
+@app.route('/plugin/<plugin>/verify')
+def plugin_verify(plugin):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    if not plugins_module.pluginExists(plugin):
+        return redirect("/plugins")
+
+    data = plugins_module.getPluginData(plugin)
+
+    if data['verified'] == False:
+        plugins_module.verifyPlugin(plugin)
+
+    return redirect("/plugin/" + plugin)
 
 @app.route('/plugin/<plugin>/<function>', methods=["POST"])
 def plugin_function(plugin,function):
