@@ -1,6 +1,8 @@
 import os
 import json
 import importlib
+import sys
+import hashlib
 
 
 
@@ -26,13 +28,11 @@ def listPlugins():
     
     for plugin in plugins:
         # Hash the plugin file
-        with open(f"plugins/{plugin['link']}.py", "r") as f:
-            file = f.read()
-            plugin_hash = hash(file)
-            if plugin_hash not in signatures:
-                plugin["verified"] = False
-            else:
-                plugin["verified"] = True
+        pluginHash = hashPlugin(plugin["link"])
+        if pluginHash not in signatures:
+            plugin["verified"] = False
+        else:
+            plugin["verified"] = True
 
     return plugins
 
@@ -54,13 +54,49 @@ def verifyPlugin(plugin: str):
             json.dump(signatures, f)
 
     # Hash the plugin file
-    with open(f"plugins/{plugin}.py", "r") as f:
-        file = f.read()
-        plugin_hash = hash(file)
-        if plugin_hash not in signatures:
-            signatures.append(plugin_hash)
-            with open("plugins/signatures.json", "w") as f:
-                json.dump(signatures, f)
+    pluginHash = hashPlugin(plugin)
+    if pluginHash not in signatures:
+        signatures.append(pluginHash)
+        with open("plugins/signatures.json", "w") as f:
+            json.dump(signatures, f)
+
+
+def hashPlugin(plugin: str):
+    BUF_SIZE = 65536
+ 
+    # Initializing the sha256() method
+    sha256 = hashlib.sha256()
+ 
+    # Opening the file provided as the first 
+    # commandline argument
+    with open("plugins/"+plugin+".py", 'rb') as f:
+        while True:
+            # reading data = BUF_SIZE from the 
+            # file and saving it in a variable
+            data = f.read(BUF_SIZE)
+ 
+            # True if eof = 1
+            if not data:
+                break
+ 
+            # Passing that data to that sh256 hash 
+            # function (updating the function with that data)
+            sha256.update(data)
+ 
+    # sha256.hexdigest() hashes all the input data passed
+    # to the sha256() via sha256.update()
+    # Acts as a finalize method, after which 
+    # all the input data gets hashed
+    # hexdigest() hashes the data, and returns 
+    # the output in hexadecimal format
+    return sha256.hexdigest()
+ 
+
+
+
+    
+
+
 
 def getPluginData(pluginStr: str):
     plugin = importlib.import_module("plugins."+pluginStr)
@@ -77,13 +113,13 @@ def getPluginData(pluginStr: str):
 
     info = plugin.info
     # Hash the plugin file
-    with open(f"plugins/{pluginStr}.py", "r") as f:
-        file = f.read()
-        plugin_hash = hash(file)
-        if plugin_hash not in signatures:
-            info["verified"] = False
-        else:
-            info["verified"] = True
+    pluginHash = hashPlugin(pluginStr)
+    print(pluginHash)
+    print(signatures)
+    if pluginHash not in signatures:
+        info["verified"] = False
+    else:
+        info["verified"] = True
             
     return info 
 
@@ -113,11 +149,9 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
             json.dump(signatures, f)
 
     # Hash the plugin file
-    with open(f"plugins/{plugin}.py", "r") as f:
-        file = f.read()
-        plugin_hash = hash(file)
-        if plugin_hash not in signatures:
-            return {"error": "Plugin not verified"}
+    pluginHash = hashPlugin(plugin)
+    if pluginHash not in signatures:
+        return {"error": "Plugin not verified"}
 
 
     # Call the function with provided parameters
