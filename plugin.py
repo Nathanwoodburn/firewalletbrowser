@@ -63,32 +63,13 @@ def verifyPlugin(plugin: str):
 
 def hashPlugin(plugin: str):
     BUF_SIZE = 65536
- 
-    # Initializing the sha256() method
     sha256 = hashlib.sha256()
- 
-    # Opening the file provided as the first 
-    # commandline argument
     with open("plugins/"+plugin+".py", 'rb') as f:
         while True:
-            # reading data = BUF_SIZE from the 
-            # file and saving it in a variable
             data = f.read(BUF_SIZE)
- 
-            # True if eof = 1
             if not data:
                 break
- 
-            # Passing that data to that sh256 hash 
-            # function (updating the function with that data)
             sha256.update(data)
- 
-    # sha256.hexdigest() hashes all the input data passed
-    # to the sha256() via sha256.update()
-    # Acts as a finalize method, after which 
-    # all the input data gets hashed
-    # hexdigest() hashes the data, and returns 
-    # the output in hexadecimal format
     return sha256.hexdigest()
  
 
@@ -114,8 +95,6 @@ def getPluginData(pluginStr: str):
     info = plugin.info
     # Hash the plugin file
     pluginHash = hashPlugin(pluginStr)
-    print(pluginHash)
-    print(signatures)
     if pluginHash not in signatures:
         info["verified"] = False
     else:
