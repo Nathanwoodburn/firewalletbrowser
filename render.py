@@ -270,16 +270,12 @@ def plugin_output(outputs, returns):
     html = ''
     
     for returnOutput in returns:
+        if returnOutput not in outputs:
+            continue
         html += f'<div class="card" style="margin-top: 50px; margin-bottom: 50px;">'
         html += f'<div class="card-body">'
         html += f'<h4 class="card-title">{returns[returnOutput]["name"]}</h4>'
         
-        # Get the output
-        if returnOutput not in outputs:
-            html += f'<p>No output</p>'
-            html += f'</div>'
-            html += f'</div>'
-            continue
         output = outputs[returnOutput]
         if returns[returnOutput]["type"] == "list":
             html += f'<ul>'
@@ -305,7 +301,6 @@ def plugin_output_dash(outputs, returns):
     
     for returnOutput in returns:
         if returnOutput not in outputs:
-            html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output="No output")
             continue
         html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])         
     return html
