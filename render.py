@@ -66,11 +66,6 @@ def transactions(txs):
 
 
         html += f'<tr><td>{action}</td><td>{address}</td><td>{hash}</td>{confirmations}<td>{amount} HNS</td></tr>'
-
-            
-
-
-
     return html
 
 

@@ -161,6 +161,8 @@ def niami(params, authentication):
     domain = params["domain"]
     response = requests.get(f"https://api.handshake.niami.io/domain/{domain}")
     data = response.json()["data"]
+    if 'rating' not in data:
+        return {"rating":"No rating found."}
     rating = str(data["rating"]["score"]) + " (" + data["rating"]["rarity"] + ")"
     return {"rating":rating}
 
