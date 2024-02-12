@@ -2,3 +2,9 @@
 .env
 
 __pycache__/
+
+templates/assets/css/styles.min.css
+
+ignore/
+
+plugins/signatures.json

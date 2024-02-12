@@ -10,6 +10,8 @@ import re
 from flask_qrcode import QRcode
 import domainLookup
 import urllib.parse
+import importlib
+import plugin as plugins_module
 
 dotenv.load_dotenv()
 
@@ -88,12 +90,21 @@ def index():
 
     
     domain_count = len(domains)
+    domainsMobile = render.domains(domains,True)
     domains = render.domains(domains)
     
+    plugins = ""
+    dashFunctions = plugins_module.getDashboardFunctions()
+    for function in dashFunctions:
+        functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
+        plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
+
+
 
 
     return render_template("index.html", account=account, available=available,
                            total=total, pending=pending, domains=domains,
+                           domainsMobile=domainsMobile, plugins=plugins,
                            domain_count=domain_count, sync=account_module.getNodeSync(),
                            sort_price=sort_price,sort_expiry=sort_expiry,
                            sort_domain=sort_domain,sort_price_next=sort_price_next,
@@ -264,6 +275,9 @@ def search():
     
     search_term = request.args.get("q")
     search_term = search_term.lower().strip()
+
+    # Replace spaces with hyphens
+    search_term = search_term.replace(" ","-")
     
     # Convert emoji to punycode
     search_term = domainLookup.emoji_to_punycode(search_term)
@@ -272,14 +286,23 @@ def search():
 
     domain = account_module.getDomain(search_term)
     
+    plugins = "<div class='container-fluid'>"
+    # Execute domain plugins
+    searchFunctions = plugins_module.getSearchFunctions()
+    for function in searchFunctions:
+        functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{"domain":search_term},account_module.check_account(request.cookies.get("account")))
+        plugins += render.plugin_output(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
+
+    plugins += "</div>"
+
     if 'error' in domain:
         return render_template("search.html", account=account,sync=account_module.getNodeSync(),
-                               search_term=search_term, domain=domain['error'])
+                               search_term=search_term, domain=domain['error'],plugins=plugins)
     
     if domain['info'] is None:
         return render_template("search.html", account=account, sync=account_module.getNodeSync(),
                                search_term=search_term,domain=search_term,
-                               state="AVAILABLE", next="Available Now")
+                               state="AVAILABLE", next="Available Now",plugins=plugins)
 
     state = domain['info']['state']
     if state == 'CLOSED':
@@ -319,10 +342,11 @@ def search():
 
     dns = render.dns(dns)
     txs = render.txs(txs)
+
     return render_template("search.html", account=account, sync=account_module.getNodeSync(),
                            search_term=search_term,domain=domain['info']['name'],
                            raw=domain,state=state, next=next, owner=owner,
-                           dns=dns, txs=txs)
+                           dns=dns, txs=txs,plugins=plugins)
     
 @app.route('/manage/<domain>')
 def manage(domain: str):
@@ -370,11 +394,21 @@ def manage(domain: str):
         else:
             finalize_time = "now"
 
+    plugins = "<div class='container-fluid'>"
+    # Execute domain plugins
+    domainFunctions = plugins_module.getDomainFunctions()
+    for function in domainFunctions:
+        functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{"domain":domain},account_module.check_account(request.cookies.get("account")))
+        plugins += render.plugin_output(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
+
+    plugins += "</div>"
+
+
     return render_template("manage.html", account=account, sync=account_module.getNodeSync(),
                            error=errorMessage, address=address,
                            domain=domain,expiry=expiry, dns=dns,
                            raw_dns=urllib.parse.quote(raw_dns),
-                           finalize_time=finalize_time)
+                           finalize_time=finalize_time,plugins=plugins)
 
 
 @app.route('/manage/<domain>/finalize')
@@ -390,11 +424,11 @@ def finalize(domain: str):
     domain = domain.lower()
     print(domain)
     response = account_module.finalize(request.cookies.get("account"),domain)
-    if 'error' in response:
+    if response['error'] != None:
         print(response)
         return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
-    return redirect("/success?tx=" + response['hash'])
+    return redirect("/success?tx=" + response['result']['hash'])
 
 @app.route('/manage/<domain>/cancel')
 def cancelTransfer(domain: str):
@@ -607,6 +641,47 @@ def transfer(domain):
                             sync=account_module.getNodeSync(),action=action,
                             content=content,cancel=cancel,confirm=confirm)
 
+@app.route('/manage/<domain>/sign')
+def signMessage(domain):
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+    
+    # Get the address and amount
+    message = request.args.get("message")
+
+    if message is None:
+        return redirect("/manage/" + domain + "?error=Invalid message")
+    
+
+    content = "Message to sign:<br><code>" + message + "</code><br><br>"
+    signedMessage = account_module.signMessage(request.cookies.get("account"),domain,message)
+    if signedMessage["error"] != None:
+        return redirect("/manage/" + domain + "?error=" + signedMessage["error"])
+    content += "Signature:<br><code>" + signedMessage["result"] + "</code><br><br>"
+
+    data = {
+        "domain": domain,
+        "message": message,
+        "signature": signedMessage["result"]
+    }
+
+    content += "Full information:<br><code style='text-align:left;display: block;'>" + json.dumps(data,indent=4).replace('\n',"<br>") + "</code><br><br>"
+
+    content += "<textarea style='display: none;' id='data' rows='4' cols='50'>"+json.dumps(data)+"</textarea>"
+
+    copyScript = "<script>function copyToClipboard() {var copyText = document.getElementById('data');copyText.style.display = 'block';copyText.select();copyText.setSelectionRange(0, 99999);document.execCommand('copy');copyText.style.display = 'none';var copyButton = document.getElementById('copyButton');copyButton.innerHTML='Copied';}</script>"
+    content += "<button id='copyButton' onclick='copyToClipboard()' class='btn btn-secondary'>Copy to clipboard</button>" + copyScript
+
+    
+
+    return render_template("message.html", account=account,sync=account_module.getNodeSync(),
+                               title="Sign Message",content=content)
+    
+
 @app.route('/manage/<domain>/transfer/confirm')
 def transferConfirm(domain):
     if request.cookies.get("account") is None:
@@ -741,18 +816,21 @@ def bid(domain):
     if blind == "":
         blind = 0
 
+    bid = float(bid)
+    blind = float(blind)
+
     if bid+blind == 0:
         return redirect("/auction/" + domain+ "?message=Invalid bid amount")
 
     
     # Show confirm page
-    total = float(bid) + float(blind)
+    total = bid + blind
 
     action = f"Bid on {domain}/"
     content = f"Are you sure you want to bid on {domain}/?"
     content += "You are about to bid with the following details:<br><br>"
-    content += f"Bid: {request.args.get('bid')} HNS<br>"
-    content += f"Blind: {request.args.get('blind')} HNS<br>"
+    content += f"Bid: {str(bid)} HNS<br>"
+    content += f"Blind: {str(blind)} HNS<br>"
     content += f"Total: {total} HNS (excluding fees)<br><br>"
 
     cancel = f"/auction/{domain}"
@@ -775,11 +853,22 @@ def bid_confirm(domain):
         return redirect("/logout")
     
     domain = domain.lower()
+    bid = request.args.get("bid")
+    blind = request.args.get("blind")
+
+    if bid == "":
+        bid = 0
+    if blind == "":
+        blind = 0
+
+    bid = float(bid)
+    blind = float(blind)
+
     
     # Send the bid
     response = account_module.bid(request.cookies.get("account"),domain,
-                                  float(request.args.get('bid')),
-                                  float(request.args.get('blind')))
+                                  float(bid),
+                                  float(blind))
     print(response)
     if 'error' in response:
         return redirect("/auction/" + domain + "?message=" + response['error']['message'])
@@ -820,8 +909,8 @@ def reveal_auction(domain):
         return redirect("/auction/" + domain + "?message=" + response['error']['message'])
     return redirect("/success?tx=" + response['hash'])
 
-
-#region settings
+#endregion
+#region Settings
 @app.route('/settings')
 def settings():
     # Check if the user is logged in
@@ -870,13 +959,19 @@ def settings_action(action):
             return redirect("/settings?error=" + str(resp['error']))
         return redirect("/settings?success=Zapped transactions")
     elif action == "xpub":
+        xpub = account_module.getxPub(request.cookies.get("account"))
+        content = "<br><br>"
+        content += "<textarea style='display: none;' id='data' rows='4' cols='50'>"+xpub+"</textarea>"
+        content += "<script>function copyToClipboard() {var copyText = document.getElementById('data');copyText.style.display = 'block';copyText.select();copyText.setSelectionRange(0, 99999);document.execCommand('copy');copyText.style.display = 'none';var copyButton = document.getElementById('copyButton');copyButton.innerHTML='Copied';}</script>"
+        content += "<button id='copyButton' onclick='copyToClipboard()' class='btn btn-secondary'>Copy to clipboard</button>"
+
         return render_template("message.html", account=account,sync=account_module.getNodeSync(),
-                               title="xPub Key",content=account_module.getxPub(request.cookies.get("account")))
+                               title="xPub Key",
+                               content="<code>"+xpub+"</code>" + content)
 
     return redirect("/settings?error=Invalid action")
 
 
-#endregion
 #endregion
 
 
@@ -966,6 +1061,50 @@ def register():
     response.set_cookie("account", account+":"+password)
     return response
 
+@app.route('/import-wallet', methods=["POST"])
+def import_wallet():
+    # Get the account and password
+    account = request.form.get("name")
+    password = request.form.get("password")
+    repeatPassword = request.form.get("password_repeat")
+    seed = request.form.get("seed")
+
+    # Check if the passwords match
+    if password != repeatPassword:
+        return render_template("import-wallet.html",
+                               error="Passwords do not match",
+                               name=account,password=password,password_repeat=repeatPassword,
+                               seed=seed)
+
+    # Check if the account is valid
+    if account.count(":") > 0:
+        return render_template("import-wallet.html",
+                               error="Invalid account",
+                               name=account,password=password,password_repeat=repeatPassword,
+                               seed=seed)
+
+    # List wallets
+    wallets = account_module.listWallets()
+    if account in wallets:
+        return render_template("import-wallet.html",
+                               error="Account already exists",
+                               name=account,password=password,password_repeat=repeatPassword,
+                               seed=seed)
+    
+    # Create the account
+    response = account_module.importWallet(account,password,seed)
+
+    if 'error' in response:
+        return render_template("import-wallet.html",
+                               error=response['error'],
+                               name=account,password=password,password_repeat=repeatPassword,
+                               seed=seed)
+    
+    
+    # Set the cookie
+    response = make_response(redirect("/"))
+    response.set_cookie("account", account+":"+password)
+    return response
 
 @app.route('/report')
 def report():
@@ -979,6 +1118,126 @@ def report():
 
 #endregion
 
+#region Plugins
+@app.route('/plugins')
+def plugins_index():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    plugins = render.plugins(plugins_module.listPlugins())
+
+    return render_template("plugins.html", account=account, sync=account_module.getNodeSync(),
+                           plugins=plugins)
+
+@app.route('/plugin/<plugin>')
+def plugin(plugin):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    if not plugins_module.pluginExists(plugin):
+        return redirect("/plugins")
+
+    data = plugins_module.getPluginData(plugin)
+
+    functions = plugins_module.getPluginFunctions(plugin)
+    functions = render.plugin_functions(functions,plugin)
+
+    if data['verified'] == False:
+        functions = "<div class='container-fluid'><div class='alert alert-warning' role='alert'>This plugin is not verified and is disabled for your protection. Please check the code before marking the plugin as verified <a href='/plugin/" + plugin + "/verify' class='btn btn-danger'>Verify</a></div></div>" + functions
+
+    
+    error = request.args.get("error")
+    if error == None:
+        error = ""
+
+    return render_template("plugin.html", account=account, sync=account_module.getNodeSync(),
+                           name=data['name'],description=data['description'],
+                           author=data['author'],version=data['version'],
+                           functions=functions,error=error)
+
+@app.route('/plugin/<plugin>/verify')
+def plugin_verify(plugin):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    if not plugins_module.pluginExists(plugin):
+        return redirect("/plugins")
+
+    data = plugins_module.getPluginData(plugin)
+
+    if data['verified'] == False:
+        plugins_module.verifyPlugin(plugin)
+
+    return redirect("/plugin/" + plugin)
+
+@app.route('/plugin/<plugin>/<function>', methods=["POST"])
+def plugin_function(plugin,function):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    if not plugins_module.pluginExists(plugin):
+        return redirect("/plugins")
+
+    data = plugins_module.getPluginData(plugin)
+
+    # Get plugin/main.py listfunctions()
+    if function in plugins_module.getPluginFunctions(plugin):
+        inputs = plugins_module.getPluginFunctionInputs(plugin,function)
+        request_data = {}
+        for input in inputs:
+            request_data[input] = request.form.get(input)
+            
+            if inputs[input]['type'] == "address":
+                # Handle hip2
+                address_check = account_module.check_address(request_data[input],True,True)
+                if not address_check:
+                    return redirect("/plugin/" + plugin + "?error=Invalid address")
+                request_data[input] = address_check
+            elif inputs[input]['type'] == "dns":
+                # Handle URL encoding of DNS
+                request_data[input] = urllib.parse.unquote(request_data[input])
+
+
+
+
+        response = plugins_module.runPluginFunction(plugin,function,request_data,request.cookies.get("account"))
+        if not response:
+            return redirect("/plugin/" + plugin + "?error=An error occurred")
+        if 'error' in response:
+            return redirect("/plugin/" + plugin + "?error=" + response['error'])
+        
+        response = render.plugin_output(response,plugins_module.getPluginFunctionReturns(plugin,function))
+
+        return render_template("plugin-output.html", account=account, sync=account_module.getNodeSync(),
+                                    name=data['name'],description=data['description'],output=response)
+
+
+    else:
+        return jsonify({"error": "Function not found"})
+
+#endregion
+
+
 #region Assets and default pages
 @app.route('/qr/<data>')
 def qr(data):
@@ -987,7 +1246,8 @@ def qr(data):
 # Theme
 @app.route('/assets/css/styles.min.css')
 def send_css():
-    print("Using theme: " + theme)
+    if theme == "live":
+        return send_from_directory('templates/assets/css', 'styles.min.css')
     return send_from_directory('themes', f'{theme}.css')
 
 @app.route('/assets/<path:path>')

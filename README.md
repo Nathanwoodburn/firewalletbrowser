@@ -40,6 +40,32 @@ If you have HSD running on a different IP/container
 sudo docker run -p 5000:5000 -e hsd_api=yourapikeyhere -e hsd_ip=hsdcontainer git.woodburn.au/nathanwoodburn/firewallet:latest
 ```
 
+## Features
+- Basic wallet functionality
+  - Create new wallet
+  - Import wallet from seed
+  - Send HNS
+  - Receive HNS
+  - Have multiple wallets
+  - View transactions
+  - View balance
+  - View wallet domains
+- Domain management
+  - Transfer domains
+  - DNS Editor
+  - Renew domains
+- Auctions
+  - Send open
+  - Send bid
+  - Send reveal
+  - Send redeem
+- Download a list of all domains
+- Resend all pending transactions
+- Rescan
+- Zap pending transactions
+- View xPub
+- Custom plugin support
+
 ## Themes
 Set a theme in the .env file  
 **Available themes**  

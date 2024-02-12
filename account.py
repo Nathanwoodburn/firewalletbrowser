@@ -84,6 +84,31 @@ def createWallet(account: str, password: str):
         "password": password
     }
 
+def importWallet(account: str, password: str,seed: str):
+    # Import the wallet
+    data = {
+        "passphrase": password,
+        "mnemonic": seed,
+    }
+
+    response = requests.put(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}",json=data)
+    print(response)
+    print(response.json())
+
+    if response.status_code != 200:
+        return {
+            "error": {
+                "message": "Error creating account"
+            }
+        }
+    
+    return {
+        "seed": seed,
+        "account": account,
+        "password": password
+    }
+
+
 def listWallets():
     # List the wallets
     response = hsw.listWallets()
@@ -105,6 +130,12 @@ def getBalance(account: str):
     # Convert to HNS
     total = total / 1000000
     available = available / 1000000
+
+    domains = getDomains(account)
+    domainValue = 0
+    for domain in domains:
+        domainValue += domain['value']
+    total = total - (domainValue/1000000)
 
     # Only keep 2 decimal places
     total = round(total, 2)
@@ -292,7 +323,11 @@ def setDNS(account,domain,records):
     TXTRecords = []
     for record in records:
         if record['type'] == 'TXT':
-            TXTRecords.append(record['value'])
+            if 'txt' not in record:
+                TXTRecords.append(record['value'])
+            else:
+                for txt in record['txt']:
+                    TXTRecords.append(txt)
         elif record['type'] == 'NS':
             newRecords.append({
                 'type': 'NS',
@@ -461,7 +496,21 @@ def finalize(account,domain):
         }
 
     try:
-        response = hsw.sendFINALIZE(account_name,password,domain)
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_sendFINALIZE(domain)
         return response
     except Exception as e:
         return {
@@ -624,11 +673,46 @@ def getxPub(account):
         }
     
 
+def signMessage(account,domain,message):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+    
+
+    try:
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_signMessageWithName(domain,message)
+        return response
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+
 #endregion
 
-def generateReport(account):
+def generateReport(account,format="{name},{expiry},{value},{maxBid}"):
     domains = getDomains(account)
-    format = str('{name},{expiry},{value},{maxBid}')
 
     lines = [format.replace("{","").replace("}","")]
     for domain in domains:
@@ -651,3 +735,6 @@ def generateReport(account):
         lines.append(line)
 
     return lines
+
+def convertHNS(value: int):
+    return value/1000000

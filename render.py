@@ -1,8 +1,9 @@
 import datetime
 import json
 import urllib.parse
+from flask import render_template
 
-def domains(domains):
+def domains(domains, mobile=False):
     html = ''
     for domain in domains:
         owner = domain['owner']
@@ -16,8 +17,10 @@ def domains(domains):
         paid = paid / 1000000
 
 
-
-        html += f'<tr><td>{domain["name"]}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/manage/{domain["name"]}">Manage</a></td></tr>'
+        if not mobile:
+            html += f'<tr><td>{domain["name"]}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/manage/{domain["name"]}">Manage</a></td></tr>'
+        else:
+            html += f'<tr><td><a href="/manage/{domain["name"]}">{domain["name"]}</a></td><td>{expires} days</td></tr>'
     
     return html
 
@@ -63,11 +66,6 @@ def transactions(txs):
 
 
         html += f'<tr><td>{action}</td><td>{address}</td><td>{hash}</td>{confirmations}<td>{amount} HNS</td></tr>'
-
-            
-
-
-
     return html
 
 
@@ -178,4 +176,126 @@ def wallets(wallets):
     html = ''
     for wallet in wallets:
         html += f'<option value="{wallet}">{wallet}</option>'
+    return html
+
+def plugins(plugins):
+    html = ''
+    for plugin in plugins:
+        name = plugin['name']
+        link = plugin['link']
+
+        if plugin['verified']:
+            html += f'<li class="list-group-item"><a class="btn btn-secondary" style="width:100%;height:100%;margin:0px;font-size: x-large;" role="button" href="/plugin/{link}">{name}</a></li>'
+        else:
+            html += f'<li class="list-group-item"><a class="btn btn-danger" style="width:100%;height:100%;margin:0px;font-size: x-large;" role="button" href="/plugin/{link}">{name} (Not verified)</a></li>'
+    return html
+
+def plugin_functions(functions, pluginName):
+    html = ''
+    for function in functions:
+        name = functions[function]['name']
+        description = functions[function]['description']
+        params = functions[function]['params']
+        returnsRaw = functions[function]['returns']
+
+        returns = ""
+        for output in returnsRaw:
+            returns += f"{returnsRaw[output]['name']}, "
+
+        returns = returns.removesuffix(', ')
+
+        functionType = "default"
+        if "type" in functions[function]:
+            functionType = functions[function]["type"]
+
+
+        html += f'<div class="card" style="margin-top: 50px;">'
+        html += f'<div class="card-body">'
+        html += f'<h4 class="card-title">{name}</h4>'
+        html += f'<h6 class="text-muted card-subtitle mb-2">{description}</h6>'
+        html += f'<h6 class="text-muted card-subtitle mb-2">Function type: {functionType.capitalize()}</h6>'
+
+        if functionType != "default":
+            html += f'<p class="card-text">Returns: {returns}</p>'
+            html += f'</div>'
+            html += f'</div>'
+            continue
+
+        # Form
+        html += f'<form method="post" style="padding: 20px;" action="/plugin/{pluginName}/{function}">'
+        for param in params:
+            html += f'<div style="margin-bottom: 20px;">'
+            paramName = params[param]["name"]
+            paramType = params[param]["type"]
+            if paramType == "text":
+                html += f'<label for="{param}">{paramName}</label>'
+                html += f'<input class="form-control" type="text" name="{param}" />'
+            elif paramType == "longText":
+                html += f'<label for="{param}">{paramName}</label>'
+                html += f'<textarea class="form-control" name="{param}" rows="4" cols="50"></textarea>'
+            elif paramType == "number":
+                html += f'<label for="{param}">{paramName}</label>'
+                html += f'<input class="form-control" type="number" name="{param}" />'
+            elif paramType == "checkbox":
+                html += f'<div class="form-check"><input id="{param}" class="form-check-input" type="checkbox" name="{param}" /><label class="form-check-label" for="{param}">{paramName}</label></div>'
+            elif paramType == "address":
+                # render components/address.html
+                address = render_template('components/address.html', paramName=paramName, param=param)
+                html += address
+            elif paramType == "dns":
+                html += render_template('components/dns-input.html', paramName=paramName, param=param)
+
+
+                
+            
+            html += f'</div>'
+        
+        html += f'<button type="submit" class="btn btn-primary">Submit</button>'        
+        html += f'</form>'
+        # For debugging
+        html += f'<p class="card-text">Returns: {returns}</p>'
+        html += f'</div>'
+        html += f'</div>'
+        
+        
+    return html
+
+def plugin_output(outputs, returns):
+
+    html = ''
+    
+    for returnOutput in returns:
+        if returnOutput not in outputs:
+            continue
+        html += f'<div class="card" style="margin-top: 50px; margin-bottom: 50px;">'
+        html += f'<div class="card-body">'
+        html += f'<h4 class="card-title">{returns[returnOutput]["name"]}</h4>'
+        
+        output = outputs[returnOutput]
+        if returns[returnOutput]["type"] == "list":
+            html += f'<ul>'
+            for item in output:
+                html += f'<li>{item}</li>'
+            html += f'</ul>'
+        elif returns[returnOutput]["type"] == "text":
+            html += f'<p>{output}</p>'
+        elif returns[returnOutput]["type"] == "tx":
+            html += render_template('components/tx.html', tx=output)
+        elif returns[returnOutput]["type"] == "dns":
+            output = json.loads(output)
+            html += render_template('components/dns-output.html', dns=dns(output))
+
+
+        html += f'</div>'
+        html += f'</div>'        
+    return html
+
+def plugin_output_dash(outputs, returns):
+
+    html = ''
+    
+    for returnOutput in returns:
+        if returnOutput not in outputs:
+            continue
+        html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])         
     return html

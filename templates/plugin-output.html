@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Send - FireWallet</title>
+    <title>{{name}} - FireWallet</title>
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
@@ -60,59 +60,10 @@
                         </ul>
                     </div>
                 </nav>
-                <div class="container-fluid text-center">
-                    <h3 class="text-center text-dark mb-1">Send HNS</h3><span style="color: rgb(255,0,0);">{{message}}</span>
+                <div class="container-fluid" style="margin-bottom: 20px;">
+                    <h3 class="text-dark mb-1">{{name}}</h3>
+                    <h4 class="text-dark mb-1">{{description}}</h4>{{output|safe}}
                 </div>
-                <form style="margin: auto;max-width: 400px;margin-top: 50px;" method="post">
-                    <div style="margin-top: 25px;"><label class="form-label">Send to</label><input class="form-control" type="text" id="address" placeholder="Address or @domain" name="address" value="{{address}}"><span id="addressValid"></span><script>
-function checkAddress(inputValue) {
-    // Make API request to "/checkaddress"
-    var apiUrl = '/checkaddress?address=' + encodeURIComponent(inputValue);
-    
-    fetch(apiUrl)
-      .then(response => response.json())
-      .then(data => {
-        // Update the content of the span with the response data
-        var addressCheckSpan = document.getElementById('addressValid');
-        addressCheckSpan.textContent = data.result; // You can replace 'addressInfo' with the actual property you receive from the API
-      })
-      .catch(error => {
-        console.error('Error fetching data:', error);
-      });
-  }
-
-  // Function to handle input field blur event
-  function handleBlur() {
-    var inputField = document.getElementById('address');
-    var inputValue = inputField.value;
-
-    // Check if the input value is not empty
-    if (inputValue.trim() !== '') {
-      checkAddress(inputValue);
-    } else {
-        var addressCheckSpan = document.getElementById('addressValid');
-        addressCheckSpan.textContent = 'Invalid address';
-    }
-  }
-
-  // Add a blur event listener to the input field
-  var inputField = document.getElementById('address');
-  inputField.addEventListener('blur', handleBlur);
-</script></div>
-                    <div style="margin-top: 25px;"><label class="form-label">Amount</label><input class="form-control" type="text" id="amount" placeholder="0.00000" name="amount" style="margin-bottom: 10px;" value="{{amount}}"><span>Available to send: {{max}} HNS</span><button class="btn btn-secondary btn-sm" id="maxButton" type="button" style="margin-left: 25px;">Send Max</button><script>
-    // Function to fill in the form input
-    function fillInput() {
-      // Get the input field and set its value
-      var inputField = document.getElementById('amount');
-      inputField.value = '{{max}}';
-    }
-
-    // Add a click event listener to the button
-    var fillButton = document.getElementById('maxButton');
-    fillButton.addEventListener('click', fillInput);
-  </script></div>
-                    <div class="text-center" style="margin-top: 25px;"><input class="btn btn-secondary" type="submit" value="Send"></div>
-                </form>
             </div>
             <footer class="sticky-footer" style="background: var(--bs-primary-text-emphasis);">
                 <div class="container my-auto">
