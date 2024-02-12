@@ -134,7 +134,8 @@ def getBalance(account: str):
     domains = getDomains(account)
     domainValue = 0
     for domain in domains:
-        domainValue += domain['value']
+        if domain['state'] == "CLOSED":
+            domainValue += domain['value']
     total = total - (domainValue/1000000)
 
     # Only keep 2 decimal places

@@ -17,11 +17,18 @@ If you have HSD runnning on a separate computer also add the IP here
 
 Make sure HSD is running then run the following commands:
 
+On Linux:
 ```bash
 python3 server.py
 # Or for more verbose output
 python3 main.py
 ```
+
+On Windows:
+```bash
+python main.py
+```
+
 
 Then access the wallet at http://localhost:5000
 
