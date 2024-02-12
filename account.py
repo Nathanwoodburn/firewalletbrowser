@@ -131,6 +131,12 @@ def getBalance(account: str):
     total = total / 1000000
     available = available / 1000000
 
+    domains = getDomains(account)
+    domainValue = 0
+    for domain in domains:
+        domainValue += domain['value']
+    total = total - (domainValue/1000000)
+
     # Only keep 2 decimal places
     total = round(total, 2)
     available = round(available, 2)
