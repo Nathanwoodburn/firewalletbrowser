@@ -13,7 +13,10 @@
     <link rel="stylesheet" href="/assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i&amp;display=swap">
     <link rel="stylesheet" href="/assets/fonts/fontawesome-all.min.css">
+    <link rel="stylesheet" href="/assets/fonts/font-awesome.min.css">
+    <link rel="stylesheet" href="/assets/fonts/ionicons.min.css">
     <link rel="stylesheet" href="/assets/fonts/material-icons.min.css">
+    <link rel="stylesheet" href="/assets/fonts/fontawesome5-overrides.min.css">
     <link rel="stylesheet" href="/assets/css/styles.min.css">
 </head>
 
@@ -28,6 +31,7 @@
                 <ul class="navbar-nav text-light" id="accordionSidebar">
                     <li class="nav-item"><a class="nav-link" href="/"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a></li>
                     <li class="nav-item"><a class="nav-link" href="/tx"><i class="fas fa-table"></i><span>Transactions</span></a></li>
+                    <li class="nav-item"><a class="nav-link" href="/auctions"><i class="fa fa-gavel"></i><span>Bids</span></a></li>
                     <li class="nav-item"><a class="nav-link" href="/send"><i class="material-icons">send</i><span>Send HNS</span></a></li>
                     <li class="nav-item"><a class="nav-link" href="/receive"><i class="material-icons">call_received</i><span>Receive</span></a></li>
                     <li class="nav-item"><a class="nav-link" href="/plugins"><i class="material-icons">code</i><span>Plugins</span></a><a class="nav-link" href="/settings"><i class="material-icons">settings</i><span>Settings</span></a></li>
@@ -99,6 +103,15 @@
                                     </div>
                                 </li>
                             </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="container-fluid" style="margin-top: 50px;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title">About</h4>
+                            <h6 class="text-muted card-subtitle mb-2">FireWallet version: <code>{{version}}</code></h6>
+                            <div class="text-center"><a href="https://github.com/nathanwoodburn/firewalletbrowser" style="margin: 15px;color: var(--bs-emphasis-color);text-decoration:none;" target="_blank"><i class="icon ion-social-github" style="color: var(--bs-emphasis-color);"></i>&nbsp;Github</a><a href="https://firewallet.au" style="margin: 15px;color: var(--bs-emphasis-color);text-decoration:none;" target="_blank"><i class="icon ion-ios-information" style="color: var(--bs-emphasis-color);"></i>&nbsp;Website</a><a href="https://l.woodburn.au/donate" style="margin: 15px;color: var(--bs-emphasis-color);text-decoration:none;" target="_blank"><i class="icon ion-social-usd" style="color: var(--bs-emphasis-color);"></i>&nbsp;Donate</a></div>
                         </div>
                     </div>
                 </div>

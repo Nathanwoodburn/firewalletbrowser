@@ -8,3 +8,4 @@ cryptography
 requests-doh
 Flask-QRcode
 PySocks
+python-git-info

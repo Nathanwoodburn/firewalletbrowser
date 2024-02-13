@@ -12,6 +12,8 @@ import domainLookup
 import urllib.parse
 import importlib
 import plugin as plugins_module
+import gitinfo
+import datetime
 
 dotenv.load_dotenv()
 
@@ -263,6 +265,119 @@ def check_address():
 #endregion
 
 #region Domains
+@app.route('/auctions')
+def auctions():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    balance = account_module.getBalance(account)
+    locked = balance['locked']
+
+    # Add commas to the numbers
+    locked = "{:,}".format(locked)
+
+
+    bids = account_module.getBids(account)
+    domains = account_module.getDomains(account,False)
+    
+    # Sort
+    sort = request.args.get("sort")
+    if sort == None:
+        sort = "domain"
+    sort = sort.lower()
+    sort_price = ""
+    sort_price_next = "⬇"
+    sort_state = ""
+    sort_state_next = "⬇"
+    sort_domain = ""
+    sort_domain_next = "⬇"
+    reverse = False
+
+    direction = request.args.get("direction")
+    if direction == None:
+        direction = "⬇"
+
+    if direction == "⬆":
+        reverse = True
+
+    if sort == "price":
+        # Sort by price
+        bids = sorted(bids, key=lambda k: k['value'],reverse=reverse)
+        sort_price = direction
+        sort_price_next = reverseDirection(direction)
+    elif sort == "state":
+        sort_state = direction
+        sort_state_next = reverseDirection(direction)
+        domains = sorted(domains, key=lambda k: k['state'],reverse=reverse)
+    else:
+        # Sort by domain
+        bids = sorted(bids, key=lambda k: k['name'],reverse=reverse)
+        sort_domain = direction
+        sort_domain_next = reverseDirection(direction)
+    
+    if sort == "state":
+        bidsHtml = render.bidDomains(bids,domains,True)
+    else:
+        bidsHtml = render.bidDomains(bids,domains)
+    
+
+    pending_reveals = 0
+    for domain in domains:
+        if domain['state'] == "REVEAL":
+            for bid in bids:
+                if bid['name'] == domain['name']:
+                    bid_found = False
+                    reveals = account_module.getReveals(account,domain['name'])
+                    for reveal in reveals:
+                        if reveal['own'] == True:
+                            if bid['value'] == reveal['value']:
+                                bid_found = True
+                    if not bid_found:
+                        pending_reveals += 1
+
+    plugins = ""
+    # dashFunctions = plugins_module.getDashboardFunctions()
+    # for function in dashFunctions:
+    #     functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
+        # plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
+
+    message = ''
+    if 'message' in request.args:
+        message = request.args.get("message")
+    return render_template("auctions.html", account=account, locked=locked, domains=bidsHtml,
+                           domainsMobile=bidsHtml, plugins=plugins,
+                           domain_count=bidsHtml, sync=account_module.getNodeSync(),
+                           sort_price=sort_price,sort_state=sort_state,
+                           sort_domain=sort_domain,sort_price_next=sort_price_next,
+                           sort_state_next=sort_state_next,sort_domain_next=sort_domain_next,
+                           bids=len(bids),reveal=pending_reveals,message=message)
+
+@app.route('/reveal')
+def revealAllBids():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    response = account_module.revealAll(request.cookies.get("account"))
+    if 'error' in response:
+        print(response)
+        if response['error'] != None:
+            if response['error']['message'] == "Nothing to do.":
+                return redirect("/auctions?message=No reveals pending")
+            return redirect("/auctions?message=" + response['error']['message'])
+            
+    return redirect("/success?tx=" + response['hash'])
+
+
 @app.route('/search')
 def search():
     # Check if the user is logged in
@@ -928,8 +1043,17 @@ def settings():
     if success == None:
         success = ""
 
+    info = gitinfo.get_git_info()
+    branch = info['refs']
+    if branch == "main":
+        branch = ""
+    last_commit = info['author_date']
+    # import to time from format "2024-02-13 11:24:03"
+    last_commit = datetime.datetime.strptime(last_commit, "%Y-%m-%d %H:%M:%S")
+    version = f'{last_commit.strftime("%y-%m-%d")} ({branch})'
+
     return render_template("settings.html", account=account,sync=account_module.getNodeSync(),
-                           error=error,success=success)
+                           error=error,success=success,version=version)
 
 @app.route('/settings/<action>')
 def settings_action(action):
