@@ -12,6 +12,8 @@ import domainLookup
 import urllib.parse
 import importlib
 import plugin as plugins_module
+import gitinfo
+import datetime
 
 dotenv.load_dotenv()
 
@@ -1041,8 +1043,17 @@ def settings():
     if success == None:
         success = ""
 
+    info = gitinfo.get_git_info()
+    branch = info['refs']
+    if branch == "main":
+        branch = ""
+    last_commit = info['author_date']
+    # import to time from format "2024-02-13 11:24:03"
+    last_commit = datetime.datetime.strptime(last_commit, "%Y-%m-%d %H:%M:%S")
+    version = f'{last_commit.strftime("%y-%m-%d")} ({branch})'
+
     return render_template("settings.html", account=account,sync=account_module.getNodeSync(),
-                           error=error,success=success)
+                           error=error,success=success,version=version)
 
 @app.route('/settings/<action>')
 def settings_action(action):
