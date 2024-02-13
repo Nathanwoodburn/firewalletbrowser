@@ -345,8 +345,7 @@ def setDNS(account,domain,records):
         newRecords.append({
             'type': 'TXT',
             'txt': TXTRecords
-        })        
-
+        })
     data = '{"records":'+str(newRecords).replace("'","\"")+'}'
     response = hsw.sendUPDATE(account_name,password,domain,data)
     return response

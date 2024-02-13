@@ -12,6 +12,8 @@ def listPlugins():
         if file.endswith(".py"):
             if file != "main.py":
                 plugin = importlib.import_module("plugins."+file[:-3])
+                if "info" not in dir(plugin):
+                    continue
                 details = plugin.info
                 details["link"] = file[:-3]
                 plugins.append(details)
