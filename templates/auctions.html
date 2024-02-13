@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html data-bs-theme="dark" lang="en">
+<html data-bs-theme="dark" lang="en-au">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Confirm - FireWallet</title>
+    <title>Dashboard - FireWallet</title>
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
     <link rel="icon" type="image/png" sizes="900x768" href="/assets/img/favicon.png">
@@ -63,12 +63,98 @@
                     </div>
                 </nav>
                 <div class="container-fluid">
-                    <h3 class="text-dark mb-1">Are you sure you want to do this?</h3>
-                    <div class="card" style="margin-top: 50px;">
-                        <div class="card-body">
-                            <h4 class="card-title">{{action}}</h4>
-                            <h6 class="text-muted card-subtitle mb-2">{{subtitle}}</h6>
-                            <p class="card-text">{{content|safe}}</p><a class="card-link" href="{{cancel}}">Cancel</a><a class="card-link" href="{{confirm}}">Confirm</a>
+                    <div class="d-sm-flex justify-content-between align-items-center mb-4">
+                        <h3 class="text-dark mb-0">Dashboard</h3><a class="btn btn-primary btn-sm d-none d-sm-inline-block" role="button" href="/report"><i class="fas fa-download fa-sm text-white-50"></i>&nbsp;Generate Report</a>
+                    </div>
+                    <h1 class="text-center">{{message}}</h1>
+                    <div class="row">
+                        <div class="col-md-6 col-xl-3 mb-4">
+                            <div class="card shadow border-start-primary py-2">
+                                <div class="card-body">
+                                    <div class="row align-items-center no-gutters">
+                                        <div class="col me-2">
+                                            <div class="text-uppercase text-primary fw-bold text-xs mb-1"><span style="color: var(--bs-dark);">HNS Locked</span></div>
+                                            <div class="text-dark fw-bold h5 mb-0"><span><img src="/assets/img/HNS.png" width="20px">&nbsp;{{locked}}</span></div>
+                                        </div>
+                                        <div class="col-auto"><i class="fas fa-dollar-sign fa-2x text-gray-300"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-xl-3 mb-4">
+                            <div class="card shadow border-start-success py-2">
+                                <div class="card-body">
+                                    <div class="row align-items-center no-gutters">
+                                        <div class="col me-2">
+                                            <div class="text-uppercase text-success fw-bold text-xs mb-1"><span>Total Bids</span></div>
+                                            <div class="text-dark fw-bold h5 mb-0"><span>{{bids}}</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-xl-3 mb-4">
+                            <div class="card shadow border-start-info py-2">
+                                <div class="card-body">
+                                    <div class="row align-items-center no-gutters">
+                                        <div class="col me-2">
+                                            <div class="text-uppercase text-info fw-bold text-xs mb-1"><span>Pending Reveal</span></div>
+                                            <div class="row g-0 align-items-center">
+                                                <div class="col-auto">
+                                                    <div class="text-dark fw-bold h5 mb-0 me-3"><span>{{reveal}}</span></div>
+                                                </div>
+                                                <div class="col"><a class="btn btn-primary" role="button" href="/reveal">Reveal All</a></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>{{plugins|safe}}
+                    </div>
+                    <div class="row d-none d-sm-none d-md-block">
+                        <div class="col">
+                            <div class="card shadow mb-4">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="text-primary fw-bold m-0">Domains</h6>
+                                </div>
+                                <div class="card-body"><div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th><a href="/auctions?direction={{sort_domain_next}}">Domain{{sort_domain}}</a></th>
+                <th><a href="/auctions?sort=state&direction={{sort_state_next}}">State{{sort_state}}</a></th>
+                <th><a href="/auctions?sort=price&direction={{sort_price_next}}">Bid{{sort_price}}</a></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{domains | safe}}
+        </tbody>
+    </table>
+</div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row d-block d-sm-block d-md-none">
+                        <div class="col">
+                            <div class="card shadow mb-4">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="text-primary fw-bold m-0">Domains</h6>
+                                </div>
+                                <div class="card-body"><div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th><a href="/?direction={{sort_domain_next}}">Domain{{sort_domain}}</a></th>
+                <th><a href="/?sort=expiry&direction={{sort_expiry_next}}">Expires{{sort_expiry}}</a></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{domainsMobile | safe}}
+        </tbody>
+    </table>
+</div></div>
+                            </div>
                         </div>
                     </div>
                 </div>

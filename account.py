@@ -126,6 +126,7 @@ def getBalance(account: str):
 
     total = info['confirmed']
     available = total - info['lockedConfirmed']
+    locked = info['lockedConfirmed'] / 1000000
 
     # Convert to HNS
     total = total / 1000000
@@ -142,7 +143,7 @@ def getBalance(account: str):
     total = round(total, 2)
     available = round(available, 2)
 
-    return {'available': available, 'total': total}
+    return {'available': available, 'total': total, 'locked': locked}
 
 def getBlockHeight():
     # Get the block height
@@ -170,14 +171,11 @@ def getPendingTX(account: str):
 
     return pending
 
-def getDomains(account):
-    # Get the domains
-    # info = hsw.getWalletNames(account)
-    # if 'error' in info:
-    #     return []
-
-    # use requests to get the domains
-    response = requests.get(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/name?own=true")
+def getDomains(account,own=True):
+    if own:
+        response = requests.get(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/name?own=true")
+    else:
+        response = requests.get(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/name")
     info = response.json()
     return info
 
@@ -363,8 +361,11 @@ def getNodeSync():
     sync = round(sync, 2)
     return sync
 
+def getBids(account, domain="NONE"):
+    if domain == "NONE":
+        return hsw.getWalletBids(account)
 
-def getBids(account, domain):
+
     response = hsw.getWalletBidsByName(domain,account)
     return response
 
@@ -397,6 +398,35 @@ def revealAuction(account,domain):
     except Exception as e:
         return {
             "error": str(e)
+        }
+
+def revealAll(account):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        # Try to select and login to the wallet
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return
+        # Try to send the batch of all renew, reveal and redeem actions
+        
+        return requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REVEAL"]]]}).json()
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
         }
 
 def rescan_auction(account,domain):

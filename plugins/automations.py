@@ -74,10 +74,8 @@ def automations_background(authentication):
         if response['error'] is not None:
             return
         # Try to send the batch of all renew, reveal and redeem actions
-        response = requests.post(f"http://x:{APIKEY}@{ip}:12039",json={
-        "method": "sendbatch",
-        "params": [[["RENEW"], ["REVEAL"], ["REDEEM"]]]
-    }).json()
-        print(response)
+        requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["RENEW"]]]})
+        requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REVEAL"]]]})
+        requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REDEEM"]]]})
     except Exception as e:
         print(e)

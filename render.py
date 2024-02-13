@@ -13,6 +13,8 @@ def domains(domains, mobile=False):
         expires = domain['stats']
         if 'daysUntilExpire' in expires:
             expires = expires['daysUntilExpire']
+        else:
+            expires = "No expiration date"
         paid = domain['value']
         paid = paid / 1000000
 
@@ -169,6 +171,51 @@ def bids(bids,reveals):
         else:
             html += "<td>Unknown</td>"
         html += "</tr>"
+    return html
+
+
+def bidDomains(bids,domains, sortState=False):
+    html = ''
+    if not sortState:
+        for bid in bids:
+            for domain in domains:
+                if bid['name'] == domain['name']:
+                    lockup = bid['lockup']
+                    lockup = lockup / 1000000
+                    lockup = round(lockup, 2)
+                    bidValue = bid['value'] / 1000000
+                    bidValue = round(bidValue, 2)
+                    blind = lockup - bidValue
+                    bidValue = "{:,}".format(bidValue)
+                    blind = "{:,}".format(blind)
+
+                    bidDisplay = f'<b>{bidValue} HNS</b> + {blind} HNS blind'
+                    
+
+                    html += "<tr>"
+                    html += f"<td>{domain['name']}</td>"
+                    html += f"<td>{domain['state']}</td>"
+                    html += f"<td>{bidDisplay}</td>"
+                    html += "</tr>"
+    else:
+        for domain in domains:
+            for bid in bids:
+                if bid['name'] == domain['name']:
+                    lockup = bid['lockup']
+                    lockup = lockup / 1000000
+                    lockup = round(lockup, 2)
+                    bidValue = bid['value'] / 1000000
+                    bidValue = round(bidValue, 2)
+                    blind = lockup - bidValue
+                    bidValue = "{:,}".format(bidValue)
+                    blind = "{:,}".format(blind)
+
+                    bidDisplay = f'<b>{bidValue} HNS</b> + {blind} HNS blind'
+                    html += "<tr>"
+                    html += f"<td>{domain['name']}</td>"
+                    html += f"<td>{domain['state']}</td>"
+                    html += f"<td>{bidDisplay}</td>"
+                    html += "</tr>"
     return html
 
 
