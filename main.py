@@ -1237,8 +1237,14 @@ def report():
         return redirect("/login")
 
     account = account_module.check_account(request.cookies.get("account"))
+    csv = '\n'.join(account_module.generateReport(account))
+    # Create a download
 
-    return jsonify(account_module.generateReport(account))
+    response = make_response(csv)
+    response.headers["Content-Disposition"] = "attachment; filename=report.csv"
+    response.headers["Content-Type"] = "text/csv"
+    return response
+    
 
 #endregion
 

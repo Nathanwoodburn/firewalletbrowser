@@ -26,7 +26,7 @@ python3 main.py
 
 On Windows:
 ```bash
-python main.py
+python3 main.py
 ```
 
 
