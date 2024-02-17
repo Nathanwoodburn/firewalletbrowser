@@ -1047,6 +1047,8 @@ def settings():
     branch = info['refs']
     if branch != "main":
         branch = f"({branch})"
+    else:
+        branch = ""
     last_commit = info['author_date']
     # import to time from format "2024-02-13 11:24:03"
     last_commit = datetime.datetime.strptime(last_commit, "%Y-%m-%d %H:%M:%S")
