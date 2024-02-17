@@ -146,12 +146,14 @@
     <table class="table">
         <thead>
             <tr>
-                <th><a href="/?direction={{sort_domain_next}}">Domain{{sort_domain}}</a></th>
-                <th><a href="/?sort=expiry&direction={{sort_expiry_next}}">Expires{{sort_expiry}}</a></th>
+                <th><a href="/auctions?direction={{sort_domain_next}}">Domain{{sort_domain}}</a></th>
+                <th><a href="/auctions?sort=state&direction={{sort_state_next}}">State{{sort_state}}</a></th>
+                <th><a href="/auctions?sort=price&direction={{sort_price_next}}">Bid{{sort_price}}</a></th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
-            {{domainsMobile | safe}}
+            {{domains | safe}}
         </tbody>
     </table>
 </div></div>

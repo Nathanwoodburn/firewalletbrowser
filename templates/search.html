@@ -66,8 +66,9 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">{{domain}}/<span class="stick-right">{{next}}</span></h4>
-                            <h6 class="text-muted card-subtitle mb-2">{{state}}</h6>
+                            <h4 class="d-none d-sm-none d-md-none d-lg-inline-block d-xl-inline-block card-title">{{domain}}/<span class="stick-right">{{next}}</span></h4>
+                            <h4 class="d-print-none d-sm-inline-block d-md-inline-block d-lg-none d-xl-none d-xxl-none card-title">{{domain}}/<br><br><span class="stick-right">{{next}}</span></h4>
+                            <h6 class="text-muted card-subtitle mb-2"><br>{{state}}</h6>
                             <h6 class="text-muted card-subtitle mb-2">Owner: {{owner}}</h6><a class="btn btn-primary" role="button" style="margin-right: 25px;" href="/manage/{{domain}}">Manage</a><a class="btn btn-primary" role="button" href="/auction/{{domain}}">Auction</a>
                         </div>
                     </div>
