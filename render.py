@@ -6,10 +6,6 @@ from flask import render_template
 def domains(domains, mobile=False):
     html = ''
     for domain in domains:
-        owner = domain['owner']
-        if 'index' in owner:
-            if owner['index'] == 0:
-                continue
         expires = domain['stats']
         if 'daysUntilExpire' in expires:
             expires = expires['daysUntilExpire']
