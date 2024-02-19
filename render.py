@@ -2,6 +2,7 @@ import datetime
 import json
 import urllib.parse
 from flask import render_template
+from domainLookup import punycode_to_emoji
 
 def domains(domains, mobile=False):
     html = ''
@@ -13,12 +14,17 @@ def domains(domains, mobile=False):
             expires = "No expiration date"
         paid = domain['value']
         paid = paid / 1000000
-
+        
+        # Handle punycodes
+        name = domain['name']
+        emoji = punycode_to_emoji(name)
+        if emoji != name:
+            name = f'{emoji} ({name})'
 
         if not mobile:
-            html += f'<tr><td>{domain["name"]}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/manage/{domain["name"]}">Manage</a></td></tr>'
+            html += f'<tr><td>{name}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/manage/{domain["name"]}">Manage</a></td></tr>'
         else:
-            html += f'<tr><td><a href="/manage/{domain["name"]}">{domain["name"]}</a></td><td>{expires} days</td></tr>'
+            html += f'<tr><td><a href="/manage/{domain["name"]}">{name}</a></td><td>{expires} days</td></tr>'
     
     return html
 

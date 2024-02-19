@@ -168,4 +168,10 @@ def emoji_to_punycode(emoji):
     try:
         return emoji.encode("idna").decode("ascii")
     except Exception as e:
-        return ""
+        return emoji
+    
+def punycode_to_emoji(punycode):
+    try:
+        return punycode.encode("ascii").decode("idna")
+    except Exception as e:
+        return punycode
