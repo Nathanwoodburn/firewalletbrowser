@@ -3,7 +3,7 @@ import account
 import requests
 import threading
 import os
-import datetime
+import time
 
 APIKEY = os.environ.get("hsd_api")
 ip = os.getenv("hsd_ip")
@@ -37,45 +37,47 @@ functions = {
     }
 }
 
-started = 0
+started = False
 
 # Main entry point only lets the main function run every 5 mins
 def automation(params, authentication):
     global started
-    now = datetime.datetime.now().timestamp()
-    # Add 5 mins
-    now = now - 300
-    if now < started:
-        return {"Status": "Waiting before checking for new actions"}
-    started = datetime.datetime.now().timestamp()
+    
+    if started:
+        return {"Status": "Auto Renews running"}
+    started = True
     threading.Thread(target=automations_background, args=(authentication,)).start()
-    return {"Status": "Checking for actions"}
+    return {"Status": "Started Auto Renews"}
 
 # Background function to run the automations
 def automations_background(authentication):
-    print("Running automations")
-    # Get account details
-    account_name = account.check_account(authentication)
-    password = ":".join(authentication.split(":")[1:])
+    while True:
+        print("Running automations")
+        # Get account details
+        account_name = account.check_account(authentication)
+        password = ":".join(authentication.split(":")[1:])
 
-    if account_name == False:
-        return {
-            "error": {
-                "message": "Invalid account"
+        if account_name == False:
+            return {
+                "error": {
+                    "message": "Invalid account"
+                }
             }
-        }
 
-    try:
-        # Try to select and login to the wallet
-        response = account.hsw.rpc_selectWallet(account_name)
-        if response['error'] is not None:
-            return
-        response = account.hsw.rpc_walletPassphrase(password,10)
-        if response['error'] is not None:
-            return
-        # Try to send the batch of all renew, reveal and redeem actions
-        requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["RENEW"]]]})
-        requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REVEAL"]]]})
-        requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REDEEM"]]]})
-    except Exception as e:
-        print(e)
+        try:
+            # Try to select and login to the wallet
+            response = account.hsw.rpc_selectWallet(account_name)
+            if response['error'] is not None:
+                return
+            response = account.hsw.rpc_walletPassphrase(password,10)
+            if response['error'] is not None:
+                return
+            # Try to send the batch of all renew, reveal and redeem actions
+            requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["RENEW"]]]})
+            requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REVEAL"]]]})
+            requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REDEEM"]]]})
+        except Exception as e:
+            print(e)
+
+        # Sleep for 5 mins before running again
+        time.sleep(300)
