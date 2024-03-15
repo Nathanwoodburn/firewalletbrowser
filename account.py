@@ -138,6 +138,8 @@ def getBalance(account: str):
         if domain['state'] == "CLOSED":
             domainValue += domain['value']
     total = total - (domainValue/1000000)
+    locked = locked - (domainValue/1000000)
+    
 
     # Only keep 2 decimal places
     total = round(total, 2)
