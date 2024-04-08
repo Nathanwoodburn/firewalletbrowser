@@ -101,9 +101,6 @@ def index():
         functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
         plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
 
-
-
-
     return render_template("index.html", account=account, available=available,
                            total=total, pending=pending, domains=domains,
                            domainsMobile=domainsMobile, plugins=plugins,

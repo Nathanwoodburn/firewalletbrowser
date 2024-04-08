@@ -305,6 +305,12 @@ def getDNS(domain: str):
         return {
             "error": response['error']['message']
         }
+    if 'result' not in response:
+        return {
+            "error": "No DNS records"
+        }
+    if 'records' not in response['result']:
+        return []
     return response['result']['records']
 
 
