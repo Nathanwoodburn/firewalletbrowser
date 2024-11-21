@@ -5,7 +5,6 @@ import sys
 import hashlib
 
 
-
 def listPlugins():
     plugins = []
     for file in os.listdir("plugins"):
@@ -27,7 +26,7 @@ def listPlugins():
         # Write a new signatures file
         with open("plugins/signatures.json", "w") as f:
             json.dump(signatures, f)
-    
+
     for plugin in plugins:
         # Hash the plugin file
         pluginHash = hashPlugin(plugin["link"])
@@ -44,6 +43,7 @@ def pluginExists(plugin: str):
         if file == plugin+".py":
             return True
     return False
+
 
 def verifyPlugin(plugin: str):
     signatures = []
@@ -73,12 +73,6 @@ def hashPlugin(plugin: str):
                 break
             sha256.update(data)
     return sha256.hexdigest()
- 
-
-
-
-    
-
 
 
 def getPluginData(pluginStr: str):
@@ -101,18 +95,20 @@ def getPluginData(pluginStr: str):
         info["verified"] = False
     else:
         info["verified"] = True
-            
-    return info 
+
+    return info
+
 
 def getPluginFunctions(plugin: str):
     plugin = importlib.import_module("plugins."+plugin)
     return plugin.functions
 
+
 def runPluginFunction(plugin: str, function: str, params: dict, authentication: str):
     plugin_module = importlib.import_module("plugins."+plugin)
     if function not in plugin_module.functions:
         return {"error": "Function not found"}
-    
+
     if not hasattr(plugin_module, function):
         return {"error": "Function not found"}
 
@@ -134,7 +130,6 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
     if pluginHash not in signatures:
         return {"error": "Plugin not verified"}
 
-
     # Call the function with provided parameters
     try:
         result = plugin_function(params, authentication)
@@ -144,13 +139,16 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
         return {"error": str(e)}
     # return plugin.runFunction(function, params, authentication)
 
+
 def getPluginFunctionInputs(plugin: str, function: str):
     plugin = importlib.import_module("plugins."+plugin)
     return plugin.functions[function]["params"]
 
+
 def getPluginFunctionReturns(plugin: str, function: str):
     plugin = importlib.import_module("plugins."+plugin)
     return plugin.functions[function]["returns"]
+
 
 def getDomainFunctions():
     plugins = listPlugins()
@@ -166,6 +164,7 @@ def getDomainFunctions():
                 })
     return domainFunctions
 
+
 def getSearchFunctions():
     plugins = listPlugins()
     searchFunctions = []
@@ -179,6 +178,7 @@ def getSearchFunctions():
                     "description": functions[function]["description"]
                 })
     return searchFunctions
+
 
 def getDashboardFunctions():
     plugins = listPlugins()
