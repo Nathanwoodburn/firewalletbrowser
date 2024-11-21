@@ -2,8 +2,6 @@ import json
 import account
 import requests
 import os
-import sys
-import dotenv
 
 # Plugin Data
 info = {
