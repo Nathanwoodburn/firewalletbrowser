@@ -34,6 +34,45 @@ functions = {
                 "type": "text"
             }
         }
+    },
+    "disable":{
+        "name": "Disable Automations",
+        "type": "default",
+        "description": "Disable Automations for this wallet",
+        "params": {},
+        "returns": {
+            "Status": 
+            {
+                "name": "Status",
+                "type": "text"
+            }
+        }
+    },
+    "enable":{
+        "name": "Enable Automations",
+        "type": "default",
+        "description": "Enable Automations for this wallet",
+        "params": {},
+        "returns": {
+            "Status": 
+            {
+                "name": "Status",
+                "type": "text"
+            }
+        }
+    },
+    "list":{
+        "name": "List Disabled Wallets",
+        "type": "default",
+        "description": "List wallets with automations disabled",
+        "params": {},
+        "returns": {
+            "wallets": 
+            {
+                "name": "List of wallets",
+                "type": "list"
+            }
+        }
     }
 }
 
@@ -43,16 +82,43 @@ started = False
 def automation(params, authentication):
     global started
     
+    wallet = authentication.split(":")[0]
+    if os.path.exists(f"user_data/{wallet}.autoRenew"):
+        return {"Status": "Automations disabled"}
+    
     if started:
-        return {"Status": "Auto Renews running"}
-    started = True
+        return {"Status": "Automations running"}
+    started = True    
+
     threading.Thread(target=automations_background, args=(authentication,)).start()
-    return {"Status": "Started Auto Renews"}
+    return {"Status": "Starting Automations..."}
+
+def disable(params, authentication):
+    # Create walletname file in user_data
+    wallet = authentication.split(":")[0]
+    with open(f"user_data/{wallet}.autoRenew", "w") as f:
+        f.write("disabled")
+    return {"Status": "Disabled Automations"}
+
+def enable(params, authentication):
+    # Delete walletname file in user_data
+    wallet = authentication.split(":")[0]
+    if os.path.exists(f"user_data/{wallet}.autoRenew"):
+        os.remove(f"user_data/{wallet}.autoRenew")
+
+    return {"Status": "Enabled Automations"}
+
+def list(params, authentication):
+    wallets = []
+    for file in os.listdir("user_data"):
+        if file.endswith(".autoRenew"):
+            wallets.append(file[:-10])
+    return {"wallets": wallets}
 
 # Background function to run the automations
 def automations_background(authentication):
+
     while True:
-        print("Running automations")
         # Get account details
         account_name = account.check_account(authentication)
         password = ":".join(authentication.split(":")[1:])
@@ -63,13 +129,18 @@ def automations_background(authentication):
                     "message": "Invalid account"
                 }
             }
-
+        
+        if os.path.exists(f"user_data/{account_name}.autoRenew"):
+            print("Skipping Automations")
+            time.sleep(300)            
+            continue
+        print("Running automations")
         try:
             # Try to select and login to the wallet
             response = account.hsw.rpc_selectWallet(account_name)
             if response['error'] is not None:
                 return
-            response = account.hsw.rpc_walletPassphrase(password,10)
+            response = account.hsw.rpc_walletPassphrase(password,30)
             if response['error'] is not None:
                 return
             # Try to send the batch of all renew, reveal and redeem actions
