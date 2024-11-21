@@ -256,10 +256,6 @@ def check_hip2(domain: str):
 def send(account,address,amount):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
-
-
-
-
     response = hsw.rpc_selectWallet(account_name)
     if response['error'] is not None:
         return {
