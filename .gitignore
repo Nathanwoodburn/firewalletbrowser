@@ -8,3 +8,5 @@ templates/assets/css/styles.min.css
 ignore/
 
 plugins/signatures.json
+
+.venv/
