@@ -1040,6 +1040,9 @@ def settings():
     if success == None:
         success = ""
 
+    if not os.path.exists(".git"):
+        return render_template("settings.html", account=account,sync=account_module.getNodeSync(),
+                               error=error,success=success,version="Error")
     info = gitinfo.get_git_info()
     branch = info['refs']
     if branch != "main":

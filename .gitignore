@@ -10,3 +10,5 @@ ignore/
 plugins/signatures.json
 
 .venv/
+
+user_data/
