@@ -10,6 +10,8 @@ ip = os.getenv("hsd_ip")
 if ip is None:
     ip = "localhost"
 
+if not os.path.exists("user_data"):
+    os.mkdir("user_data")
 
 # Plugin Data
 info = {
@@ -96,6 +98,8 @@ def automation(params, authentication):
 def disable(params, authentication):
     # Create walletname file in user_data
     wallet = authentication.split(":")[0]
+    if not os.path.exists("user_data"):
+        os.mkdir("user_data")
     with open(f"user_data/{wallet}.autoRenew", "w") as f:
         f.write(f"This file is used to disable automations for '{wallet}' wallet.\nDelete this file to enable automations.")
     return {"Status": "Disabled Automations"}
