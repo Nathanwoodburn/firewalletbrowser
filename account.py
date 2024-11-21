@@ -15,6 +15,9 @@ ip = os.getenv("hsd_ip")
 if ip is None:
     ip = "localhost"
 
+show_expired = os.getenv("show_expired")
+if show_expired is None:
+    show_expired = False
 
 hsd = api.hsd(APIKEY,ip)
 hsw = api.hsw(APIKEY,ip)
@@ -179,7 +182,21 @@ def getDomains(account,own=True):
     else:
         response = requests.get(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/name")
     info = response.json()
-    return info
+
+    if show_expired:
+        return info
+    
+    # Remove any expired domains
+    domains = []    
+    for domain in info:
+        if 'stats' in domain:
+            if 'daysUntilExpire' in domain['stats']:
+                if domain['stats']['daysUntilExpire'] < 0:
+                    continue
+        domains.append(domain)
+
+
+    return domains
 
 def getTransactions(account):
     # Get the transactions
@@ -239,10 +256,6 @@ def check_hip2(domain: str):
 def send(account,address,amount):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
-
-
-
-
     response = hsw.rpc_selectWallet(account_name)
     if response['error'] is not None:
         return {
