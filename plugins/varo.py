@@ -17,7 +17,7 @@ functions = {
     "status":{
         "name": "Check connection",
         "type": "dashboard",
-        "description": "You need tp set varo_instance to the ICANN domain of the chosen Varo instance and varo_api to your varo API key before you can connect",
+        "description": "You need to set varo_instance to the ICANN domain of the chosen Varo instance and varo_api to your varo API key before you can connect",
         "params": {},
         "returns": {
             "status": 

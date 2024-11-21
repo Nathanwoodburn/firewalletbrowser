@@ -101,9 +101,6 @@ def index():
         functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
         plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
 
-
-
-
     return render_template("index.html", account=account, available=available,
                            total=total, pending=pending, domains=domains,
                            domainsMobile=domainsMobile, plugins=plugins,
@@ -1047,6 +1044,8 @@ def settings():
     branch = info['refs']
     if branch != "main":
         branch = f"({branch})"
+    else:
+        branch = ""
     last_commit = info['author_date']
     # import to time from format "2024-02-13 11:24:03"
     last_commit = datetime.datetime.strptime(last_commit, "%Y-%m-%d %H:%M:%S")
