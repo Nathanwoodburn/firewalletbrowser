@@ -97,7 +97,7 @@ def disable(params, authentication):
     # Create walletname file in user_data
     wallet = authentication.split(":")[0]
     with open(f"user_data/{wallet}.autoRenew", "w") as f:
-        f.write("disabled")
+        f.write(f"This file is used to disable automations for '{wallet}' wallet.\nDelete this file to enable automations.")
     return {"Status": "Disabled Automations"}
 
 def enable(params, authentication):
