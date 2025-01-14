@@ -2,7 +2,9 @@ import json
 import account
 import requests
 import os
-import dotenv
+
+if not os.path.exists("user_data"):
+    os.mkdir("user_data")
 
 # Plugin Data
 info = {
@@ -17,12 +19,34 @@ functions = {
     "status":{
         "name": "Check connection",
         "type": "dashboard",
-        "description": "You need to set varo_instance to the ICANN domain of the chosen Varo instance and varo_api to your varo API key before you can connect",
+        "description": "You need to login to the varo instance before you can use this function.",
         "params": {},
         "returns": {
             "status": 
             {
                 "name": "Status of varo connection",
+                "type": "text"
+            }
+        }
+    },
+    "login":{
+        "name": "Login to Varo",
+        "type": "default",
+        "description": "Login to Varo<br>Use the domain of the varo instance (eg. <a target='_blank' href='https://domains.hns.au'>domains.hns.au</a>) and API key from the dashboard.",
+        "params": {
+            "instance": {
+                "name":"Varo instance",
+                "type":"text"
+            },
+            "api": {
+                "name":"API key",
+                "type":"text"
+            }
+        },
+        "returns": {
+            "status": 
+            {
+                "name": "Status of the function",
                 "type": "text"
             }
         }
@@ -50,13 +74,18 @@ functions = {
 
 def status(params, authentication):
     # Try to connect to Varo
-    dotenv.load_dotenv()
-    api = os.getenv("varo_api")
-    instance = os.getenv("varo_instance")
-
-    if not api or not instance:
+    if not os.path.exists("user_data/varo.json"):
         return {"status": "Missing Varo API or instance"}
-    
+
+    with open("user_data/varo.json", "r") as f:
+        auth = json.load(f)
+        if not auth:
+            return {"status": "Missing Varo API or instance"}
+        if 'api' not in auth or 'instance' not in auth:
+            return {"status": "Missing Varo API or instance"}
+        api = auth["api"]
+        instance = auth["instance"]
+
     headers = {"Authorization": f"Bearer {api}"}
     data = {
         "action": "getInfo"
@@ -66,18 +95,49 @@ def status(params, authentication):
         return {"status": "Error connecting to Varo"}
     if response.json()["success"] != True:
         return {"status": "Error connecting to Varo"}
+    return {"status": f"Connected to {instance}"}
+
+def login(params, authentication):
+    # Verify the user has entered the correct details
+    instance = params["instance"]
+    api = params["api"]
+
+    # Strip the https:// from the instance
+    instance = instance.replace("https://", "")
+    instance = instance.replace("http://", "")
+
+    response = requests.post(f"https://{instance}/api", json={"action": "getInfo"}, headers={"Authorization": f"Bearer {api}"})
+    if response.status_code != 200:
+        return {"status": "Error connecting to Varo"}
+    
+    if response.json()["success"] != True:
+        return {"status": "Error connecting to Varo"}
+    
+    auth = {
+        "instance": instance,
+        "api": api
+    }
+    # Save the API key to the varo.json file
+    with open("user_data/varo.json", "w") as f:
+        json.dump(auth, f)
+    
     return {"status": "Success"}
 
 def addDomain(params, authentication):
     # Add a domain to Varo
     domain = params["domain"]
 
-    dotenv.load_dotenv()
-    api = os.getenv("varo_api")
-    instance = os.getenv("varo_instance")
-
-    if not api or not instance:
+    if not os.path.exists("user_data/varo.json"):
         return {"status": "Missing Varo API or instance"}
+
+    with open("user_data/varo.json", "r") as f:
+        auth = json.load(f)
+        if not auth:
+            return {"status": "Missing Varo API or instance"}
+        if 'api' not in auth or 'instance' not in auth:
+            return {"status": "Missing Varo API or instance"}
+        api = auth["api"]
+        instance = auth["instance"]
     
     headers = {"Authorization": f"Bearer {api}"}
     data = {

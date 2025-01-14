@@ -381,6 +381,25 @@ def getNodeSync():
     sync = round(sync, 2)
     return sync
 
+def getWalletStatus():
+    response = hsw.rpc_getWalletInfo()
+    if 'error' in response and response['error'] != None:
+        return "Error"
+    
+    # return response
+    walletHeight = response['result']['height']
+    # Get the current block height
+    nodeHeight = getBlockHeight()
+
+    if walletHeight < nodeHeight:
+        return f"Scanning {walletHeight/nodeHeight*100:.2f}%"
+    elif walletHeight == nodeHeight:
+        return "Ready"
+    else:
+        return "Error wallet ahead of node"
+    
+
+
 def getBids(account, domain="NONE"):
     if domain == "NONE":
         return hsw.getWalletBids(account)
