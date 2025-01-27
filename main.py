@@ -278,6 +278,8 @@ def auctions():
 
     balance = account_module.getBalance(account)
     locked = balance['locked']
+    # Round to 2 decimals
+    locked = round(locked, 2)
 
     # Add commas to the numbers
     locked = "{:,}".format(locked)
@@ -289,7 +291,7 @@ def auctions():
     # Sort
     sort = request.args.get("sort")
     if sort == None:
-        sort = "domain"
+        sort = "state"
     sort = sort.lower()
     sort_price = ""
     sort_price_next = "⬇"
@@ -301,7 +303,10 @@ def auctions():
 
     direction = request.args.get("direction")
     if direction == None:
-        direction = "⬇"
+        if sort == "state":
+            direction = "⬆"
+        else:
+            direction = "⬇"
 
     if direction == "⬆":
         reverse = True
@@ -342,10 +347,6 @@ def auctions():
                         pending_reveals += 1
 
     plugins = ""
-    # dashFunctions = plugins_module.getDashboardFunctions()
-    # for function in dashFunctions:
-    #     functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
-        # plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
 
     message = ''
     if 'message' in request.args:
@@ -377,7 +378,7 @@ def revealAllBids():
                 return redirect("/auctions?message=No reveals pending")
             return redirect("/auctions?message=" + response['error']['message'])
             
-    return redirect("/success?tx=" + response['hash'])
+    return redirect("/success?tx=" + response['result']['hash'])
 
 
 @app.route('/search')

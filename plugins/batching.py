@@ -290,6 +290,8 @@ def transfer(params, authentication):
     domains = params["domains"]
     address = params["address"]
     domains = domains.splitlines()
+    domains = [x.strip() for x in domains]
+    domains = [x for x in domains if x != ""]
 
     wallet = authentication.split(":")[0]
     owned = account.getDomains(wallet)
@@ -322,6 +324,8 @@ def transfer(params, authentication):
 def simple(batchType,params, authentication):
     domains = params["domains"]
     domains = domains.splitlines()
+    domains = [x.strip() for x in domains]
+    domains = [x for x in domains if x != ""]
 
     batch = []
     for domain in domains:
@@ -351,6 +355,9 @@ def open(params, authentication):
 def bid(params, authentication):
     domains = params["domains"]
     domains = domains.splitlines()
+    domains = [x.strip() for x in domains]
+    domains = [x for x in domains if x != ""]
+
     try:
         bid = float(params["bid"])
         blind = float(params["blind"])
@@ -387,6 +394,9 @@ def redeem(params, authentication):
 def register(params, authentication):
     domains = params["domains"]
     domains = domains.splitlines()
+    domains = [x.strip() for x in domains]
+    domains = [x for x in domains if x != ""]
+
     batch = []
     for domain in domains:
         batch.append(['UPDATE', domain,{"records": []}])
@@ -410,6 +420,8 @@ def renew(params, authentication):
 def advancedBid(params, authentication):
     bids = params["bids"]
     bids = bids.splitlines()
+    bids = [x.strip() for x in bids]
+    bids = [x for x in bids if x != ""]
     
     batch = []
     for bid in bids:
@@ -437,6 +449,8 @@ def advancedBid(params, authentication):
 def advancedBatch(params, authentication):
     transactions = params["transactions"]
     transactions = transactions.splitlines()
+    transactions = [x.strip() for x in transactions]
+    transactions = [x for x in transactions if x != ""]
     
     batch = []
     for transaction in transactions:
