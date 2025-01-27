@@ -211,6 +211,28 @@ functions = {
             }
         }
     },
+    "renew":{
+        "name": "Batch renew domains", 
+        "type": "default",
+        "description": "Renew a ton of domain",
+        "params": {
+            "domains": {
+                "name": "Domains to renew (one per line)",
+                "type": "longText"
+            }
+        },
+        "returns": {
+            "status": {
+                "name": "Status",
+                "type": "text"
+            },
+            "transaction": 
+            {
+                "name": "Hash of the transaction",
+                "type": "tx"
+            }
+        }
+    },
     "advancedBid":{
         "name": "Bid on domains with csv",
         "type": "default",
@@ -382,6 +404,8 @@ def register(params, authentication):
         "transaction":response['hash']
     }
 
+def renew(params, authentication):
+    return simple("RENEW", params, authentication)
 
 def advancedBid(params, authentication):
     bids = params["bids"]
