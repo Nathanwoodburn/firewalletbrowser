@@ -659,6 +659,56 @@ def revoke(account,domain):
             }
         }
     
+def sendBatch(account, batch):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = requests.post(f"http://x:{APIKEY}@{ip}:12039",json={
+            "method": "sendbatch",
+            "params": [batch]
+        }).json()
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        if 'result' not in response:
+            return {
+            "error": {
+                "message": "No result"
+            }
+        }
+
+        return response['result']
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
 
 
 #region settingsAPIs
