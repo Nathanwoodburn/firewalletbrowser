@@ -76,9 +76,9 @@ def main(params, authentication):
         responseContent = f'{{"method": "sendbatch","params":[ {batchTX} ]}}'
         response = requests.post(f'http://x:{api_key}@{ip}:12039', data=responseContent)
         if response.status_code != 200:
-            print("Failed to create batch")
-            print(f'Status code: {response.status_code}')
-            print(f'Response: {response.text}')
+            print("Failed to create batch",flush=True)
+            print(f'Status code: {response.status_code}',flush=True)
+            print(f'Response: {response.text}',flush=True)
             return {"status": "Failed", "transaction": "None"}
 
         batch = response.json()
@@ -86,8 +86,8 @@ def main(params, authentication):
         print("Verifying tx...")
         if batch["error"]:
             if batch["error"] != "":
-                print("Failed to verify batch")
-                print(batch["error"]["message"])
+                print("Failed to verify batch",flush=True)
+                print(batch["error"]["message"],flush=True)
                 return {"status": "Failed", "transaction": "None"}
         
         if 'result' in batch:
