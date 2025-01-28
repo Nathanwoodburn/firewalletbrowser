@@ -199,6 +199,7 @@ def bidDomains(bids,domains, sortState=False):
                     html += f"<td>{domain['name']}</td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
+                    html += f"<td>{bid['height']}</td>"
                     html += "</tr>"
     else:
         for domain in domains:

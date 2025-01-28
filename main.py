@@ -291,7 +291,7 @@ def auctions():
     # Sort
     sort = request.args.get("sort")
     if sort == None:
-        sort = "state"
+        sort = "time"
     sort = sort.lower()
     sort_price = ""
     sort_price_next = "⬇"
@@ -299,11 +299,13 @@ def auctions():
     sort_state_next = "⬇"
     sort_domain = ""
     sort_domain_next = "⬇"
+    sort_time = ""
+    sort_time_next = "⬇"
     reverse = False
 
     direction = request.args.get("direction")
     if direction == None:
-        if sort == "state":
+        if sort == "time":
             direction = "⬆"
         else:
             direction = "⬇"
@@ -320,6 +322,10 @@ def auctions():
         sort_state = direction
         sort_state_next = reverseDirection(direction)
         domains = sorted(domains, key=lambda k: k['state'],reverse=reverse)
+    elif sort == "time":
+        sort_time = direction
+        sort_time_next = reverseDirection(direction)
+        bids = sorted(bids, key=lambda k: k['height'],reverse=reverse)
     else:
         # Sort by domain
         bids = sorted(bids, key=lambda k: k['name'],reverse=reverse)
@@ -358,7 +364,8 @@ def auctions():
                            sort_price=sort_price,sort_state=sort_state,
                            sort_domain=sort_domain,sort_price_next=sort_price_next,
                            sort_state_next=sort_state_next,sort_domain_next=sort_domain_next,
-                           bids=len(bids),reveal=pending_reveals,message=message)
+                           bids=len(bids),reveal=pending_reveals,message=message,
+                           sort_time=sort_time,sort_time_next=sort_time_next)
 
 @app.route('/reveal')
 def revealAllBids():
@@ -1092,7 +1099,7 @@ def settings_action(action):
         resp = account_module.rescan()
         if 'error' in resp:
             return redirect("/settings?error=" + str(resp['error']))
-        return redirect("/settings?success=Resent transactions")
+        return redirect("/settings?success=Rescan started")
     elif action == "resend":
         resp = account_module.resendTXs()
         if 'error' in resp:
