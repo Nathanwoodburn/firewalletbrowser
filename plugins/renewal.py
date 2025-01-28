@@ -88,7 +88,7 @@ def main(params, authentication):
             if batch["error"] != "":
                 print("Failed to verify batch",flush=True)
                 print(batch["error"]["message"],flush=True)
-                return {"status": "Failed", "transaction": "None"}
+                return {"status": f"Failed: {batch['error']['message']}", "transaction": "None"}
         
         if 'result' in batch:
             if batch['result'] != None:
