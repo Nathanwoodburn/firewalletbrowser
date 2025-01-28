@@ -1401,7 +1401,6 @@ def plugin_function(ptype,plugin,function):
             return redirect("/plugin/" + plugin + "?error=" + response['error'])
         
         response = render.plugin_output(response,plugins_module.getPluginFunctionReturns(plugin,function))
-
         return render_template("plugin-output.html", account=account, sync=account_module.getNodeSync(),
                                wallet_status=account_module.getWalletStatus(),
                                     name=data['name'],description=data['description'],output=response)
