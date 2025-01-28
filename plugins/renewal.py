@@ -51,10 +51,11 @@ def main(params, authentication):
 
     # Unlock wallet
     api_key = os.getenv("hsd_api")
+    ip = os.getenv("hsd_ip")
     if api_key is None:
         print("API key not set")
         return {"status": "API key not set", "transaction": "None"}
-    response = requests.post(f'http://x:{api_key}@127.0.0.1:12039/wallet/{wallet}/unlock',
+    response = requests.post(f'http://x:{api_key}@{ip}:12039/wallet/{wallet}/unlock',
                              json={'passphrase': password, 'timeout': 600})
     if response.status_code != 200:
         print("Failed to unlock wallet")
@@ -73,7 +74,7 @@ def main(params, authentication):
         
         batchTX = "[" + ", ".join(batch) + "]"
         responseContent = f'{{"method": "sendbatch","params":[ {batchTX} ]}}'
-        response = requests.post(f'http://x:{api_key}@127.0.0.1:12039', data=responseContent)
+        response = requests.post(f'http://x:{api_key}@{ip}:12039', data=responseContent)
         if response.status_code != 200:
             print("Failed to create batch")
             print(f'Status code: {response.status_code}')

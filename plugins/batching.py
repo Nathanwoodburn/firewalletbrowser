@@ -500,10 +500,6 @@ def advancedChangeLookahead(params, authentication):
     lookahead = int(lookahead)
     wallet = authentication.split(":")[0]
     password = ":".join(authentication.split(":")[1:])
-    # curl http://x:api-key@127.0.0.1:14039/wallet/$id/account/$name \
-    # -X PATCH \
-    # --data '{"lookahead": $lookahead}'
-
     APIKEY = os.getenv("hsd_api")
     ip = os.getenv("hsd_ip")
     if ip is None:
