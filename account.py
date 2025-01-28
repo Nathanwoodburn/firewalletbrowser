@@ -690,11 +690,7 @@ def sendBatch(account, batch):
             "params": [batch]
         }).json()
         if response['error'] is not None:
-            return {
-            "error": {
-                "message": response['error']['message']
-            }
-        }
+            return response
         if 'result' not in response:
             return {
             "error": {

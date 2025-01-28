@@ -1,6 +1,8 @@
 import json
 import account
 import requests
+import os
+
 
 
 # Plugin Data
@@ -278,6 +280,24 @@ functions = {
                 "type": "tx"
             }
         }
+    },
+    "advancedChangeLookahead":{
+        "name": "Change wallet lookahead", 
+        "type": "default",
+        "description": "Change the lookahead of the wallet", 
+        "params": {
+            "lookahead": {
+                "name":"Lookahead (default 200)",
+                "type":"number"
+            }
+        },
+        "returns": {
+            "status":
+            {
+                "name": "Status",
+                "type": "text"
+            }
+        }
     }
 }
 
@@ -334,6 +354,7 @@ def simple(batchType,params, authentication):
     print(batch)
     response = sendBatch(batch, authentication)
     if 'error' in response:
+        print(response)
         return {
             "status":response['error']['message'],
             "transaction":None
@@ -471,4 +492,31 @@ def advancedBatch(params, authentication):
     return {
         "status":"Sent batch successfully",
         "transaction":response['hash']
+    }
+
+
+def advancedChangeLookahead(params, authentication):
+    lookahead = params["lookahead"]
+    lookahead = int(lookahead)
+    wallet = authentication.split(":")[0]
+    password = ":".join(authentication.split(":")[1:])
+    # curl http://x:api-key@127.0.0.1:14039/wallet/$id/account/$name \
+    # -X PATCH \
+    # --data '{"lookahead": $lookahead}'
+
+    APIKEY = os.getenv("hsd_api")
+    ip = os.getenv("hsd_ip")
+    if ip is None:
+        ip = "localhost"
+
+    # Unlock wallet
+    response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{wallet}/unlock",
+        json={"passphrase": password, "timeout": 10})
+
+    response = requests.patch(f"http://x:{APIKEY}@{ip}:12039/wallet/{wallet}/account/default",
+        json={"lookahead": lookahead})
+    
+
+    return {
+        "status":f"Status: {'Success' if response.status_code == 200 else 'Error'}"
     }
