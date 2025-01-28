@@ -12,3 +12,4 @@ plugins/signatures.json
 .venv/
 
 user_data/
+customPlugins/

@@ -1300,8 +1300,8 @@ def plugins_index():
                            wallet_status=account_module.getWalletStatus(),
                            plugins=plugins)
 
-@app.route('/plugin/<plugin>')
-def plugin(plugin):
+@app.route('/plugin/<ptype>/<path:plugin>')
+def plugin(ptype,plugin):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -1310,7 +1310,10 @@ def plugin(plugin):
     if not account:
         return redirect("/logout")
 
+    plugin = f"{ptype}/{plugin}"
+
     if not plugins_module.pluginExists(plugin):
+        print(f"Plugin {plugin} not found")
         return redirect("/plugins")
 
     data = plugins_module.getPluginData(plugin)
@@ -1330,10 +1333,10 @@ def plugin(plugin):
                            wallet_status=account_module.getWalletStatus(),
                            name=data['name'],description=data['description'],
                            author=data['author'],version=data['version'],
-                           functions=functions,error=error)
+                           source=data['source'],functions=functions,error=error)
 
-@app.route('/plugin/<plugin>/verify')
-def plugin_verify(plugin):
+@app.route('/plugin/<ptype>/<path:plugin>/verify')
+def plugin_verify(ptype,plugin):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -1341,6 +1344,8 @@ def plugin_verify(plugin):
     account = account_module.check_account(request.cookies.get("account"))
     if not account:
         return redirect("/logout")
+    
+    plugin = f"{ptype}/{plugin}"
 
     if not plugins_module.pluginExists(plugin):
         return redirect("/plugins")
@@ -1352,8 +1357,8 @@ def plugin_verify(plugin):
 
     return redirect("/plugin/" + plugin)
 
-@app.route('/plugin/<plugin>/<function>', methods=["POST"])
-def plugin_function(plugin,function):
+@app.route('/plugin/<ptype>/<path:plugin>/<function>', methods=["POST"])
+def plugin_function(ptype,plugin,function):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -1361,6 +1366,8 @@ def plugin_function(plugin,function):
     account = account_module.check_account(request.cookies.get("account"))
     if not account:
         return redirect("/logout")
+
+    plugin = f"{ptype}/{plugin}"
 
     if not plugins_module.pluginExists(plugin):
         return redirect("/plugins")
