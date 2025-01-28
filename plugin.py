@@ -34,9 +34,11 @@ def listPlugins():
 
         # Git clone into customPlugins/<importPath>
         if not os.path.exists(f"customPlugins/{importPath}"):
-            os.system(f"git clone {importurl} customPlugins/{importPath}")
+            if os.system(f"git clone {importurl} customPlugins/{importPath}") != 0:
+                continue
         else:
-            os.system(f"cd customPlugins/{importPath} && git pull")
+            if os.system(f"cd customPlugins/{importPath} && git pull") != 0:
+                continue
         
         # Import plugins from customPlugins/<importPath>
         for file in os.listdir(f"customPlugins/{importPath}"):
@@ -53,11 +55,11 @@ def listPlugins():
     # Verify plugin signature
     signatures = []
     try:
-        with open("plugins/signatures.json", "r") as f:
+        with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
     except:
         # Write a new signatures file
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
     for plugin in plugins:
@@ -78,18 +80,18 @@ def pluginExists(plugin: str):
 def verifyPlugin(plugin: str):
     signatures = []
     try:
-        with open("plugins/signatures.json", "r") as f:
+        with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
     except:
         # Write a new signatures file
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
     # Hash the plugin file
     pluginHash = hashPlugin(plugin)
     if pluginHash not in signatures:
         signatures.append(pluginHash)
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
 
@@ -111,11 +113,11 @@ def getPluginData(pluginStr: str):
     # Check if the plugin is verified
     signatures = []
     try:
-        with open("plugins/signatures.json", "r") as f:
+        with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
     except:
         # Write a new signatures file
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
     info = plugin.info
@@ -160,11 +162,11 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
     # Check if the function is in the signature list
     signatures = []
     try:
-        with open("plugins/signatures.json", "r") as f:
+        with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
     except:
         # Write a new signatures file
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
     # Hash the plugin file
