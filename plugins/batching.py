@@ -331,6 +331,7 @@ def simple(batchType,params, authentication):
     for domain in domains:
         batch.append([batchType, domain])
 
+    print(batch)
     response = sendBatch(batch, authentication)
     if 'error' in response:
         return {
