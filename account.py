@@ -402,11 +402,16 @@ def getWalletStatus():
 
 def getBids(account, domain="NONE"):
     if domain == "NONE":
-        return hsw.getWalletBids(account)
-
-
-    response = hsw.getWalletBidsByName(domain,account)
-    return response
+        response = hsw.getWalletBids(account)
+    else:
+        response = hsw.getWalletBidsByName(domain,account)
+    # Add backup for bids with no value
+    bids = []
+    for bid in response:
+        if 'value' not in bid:
+            bid['value'] = -1000000
+        bids.append(bid)
+    return bids
 
 def getReveals(account,domain):
     return hsw.getWalletRevealsByName(domain,account)
