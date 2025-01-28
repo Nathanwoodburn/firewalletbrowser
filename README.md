@@ -34,7 +34,6 @@ Then access the wallet at http://localhost:5000
 
 
 Also available as a docker image:
-
 To run using a HSD running directly on the host:
 
 ```bash
@@ -46,6 +45,8 @@ If you have HSD running on a different IP/container
 ```bash
 sudo docker run -p 5000:5000 -e hsd_api=yourapikeyhere -e hsd_ip=hsdcontainer git.woodburn.au/nathanwoodburn/firewallet:latest
 ```
+
+For Docker you can mount a volume to persist the user data (/app/user_data)
 
 ## Features
 - Basic wallet functionality
