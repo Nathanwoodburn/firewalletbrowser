@@ -35,7 +35,6 @@
                     <li class="nav-item"><a class="nav-link" href="/receive"><i class="material-icons">call_received</i><span>Receive</span></a></li>
                     <li class="nav-item"><a class="nav-link" href="/plugins"><i class="material-icons">code</i><span>Plugins</span></a><a class="nav-link" href="/settings"><i class="material-icons">settings</i><span>Settings</span></a></li>
                 </ul>
-                <div class="text-center d-none d-md-inline"><button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button></div>
             </div>
         </nav>
         <div class="d-flex flex-column" id="content-wrapper" style="background: var(--bs-primary);">
@@ -67,7 +66,7 @@
                 <div class="container-fluid" style="margin-bottom: 20px;">
                     <h3 class="text-dark mb-1">{{name}}</h3>
                     <h4 class="text-dark mb-1">{{description}}</h4>
-                    <h6 class="text-dark mb-1">Author: {{author}}<br>Version: {{version}}</h6>{{functions|safe}}
+                    <h6 class="text-dark mb-1">Author: {{author}}<br>Version: {{version}}<br>Source: {{source}}</h6>{{functions|safe}}
                 </div>
             </div>
             <footer class="sticky-footer" style="background: var(--bs-primary-text-emphasis);">

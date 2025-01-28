@@ -278,6 +278,8 @@ def auctions():
 
     balance = account_module.getBalance(account)
     locked = balance['locked']
+    # Round to 2 decimals
+    locked = round(locked, 2)
 
     # Add commas to the numbers
     locked = "{:,}".format(locked)
@@ -289,7 +291,7 @@ def auctions():
     # Sort
     sort = request.args.get("sort")
     if sort == None:
-        sort = "domain"
+        sort = "time"
     sort = sort.lower()
     sort_price = ""
     sort_price_next = "⬇"
@@ -297,11 +299,16 @@ def auctions():
     sort_state_next = "⬇"
     sort_domain = ""
     sort_domain_next = "⬇"
+    sort_time = ""
+    sort_time_next = "⬇"
     reverse = False
 
     direction = request.args.get("direction")
     if direction == None:
-        direction = "⬇"
+        if sort == "time":
+            direction = "⬆"
+        else:
+            direction = "⬇"
 
     if direction == "⬆":
         reverse = True
@@ -315,6 +322,10 @@ def auctions():
         sort_state = direction
         sort_state_next = reverseDirection(direction)
         domains = sorted(domains, key=lambda k: k['state'],reverse=reverse)
+    elif sort == "time":
+        sort_time = direction
+        sort_time_next = reverseDirection(direction)
+        bids = sorted(bids, key=lambda k: k['height'],reverse=reverse)
     else:
         # Sort by domain
         bids = sorted(bids, key=lambda k: k['name'],reverse=reverse)
@@ -342,10 +353,6 @@ def auctions():
                         pending_reveals += 1
 
     plugins = ""
-    # dashFunctions = plugins_module.getDashboardFunctions()
-    # for function in dashFunctions:
-    #     functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
-        # plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
 
     message = ''
     if 'message' in request.args:
@@ -357,7 +364,8 @@ def auctions():
                            sort_price=sort_price,sort_state=sort_state,
                            sort_domain=sort_domain,sort_price_next=sort_price_next,
                            sort_state_next=sort_state_next,sort_domain_next=sort_domain_next,
-                           bids=len(bids),reveal=pending_reveals,message=message)
+                           bids=len(bids),reveal=pending_reveals,message=message,
+                           sort_time=sort_time,sort_time_next=sort_time_next)
 
 @app.route('/reveal')
 def revealAllBids():
@@ -377,7 +385,7 @@ def revealAllBids():
                 return redirect("/auctions?message=No reveals pending")
             return redirect("/auctions?message=" + response['error']['message'])
             
-    return redirect("/success?tx=" + response['hash'])
+    return redirect("/success?tx=" + response['result']['hash'])
 
 
 @app.route('/search')
@@ -1091,7 +1099,7 @@ def settings_action(action):
         resp = account_module.rescan()
         if 'error' in resp:
             return redirect("/settings?error=" + str(resp['error']))
-        return redirect("/settings?success=Resent transactions")
+        return redirect("/settings?success=Rescan started")
     elif action == "resend":
         resp = account_module.resendTXs()
         if 'error' in resp:
@@ -1292,8 +1300,8 @@ def plugins_index():
                            wallet_status=account_module.getWalletStatus(),
                            plugins=plugins)
 
-@app.route('/plugin/<plugin>')
-def plugin(plugin):
+@app.route('/plugin/<ptype>/<path:plugin>')
+def plugin(ptype,plugin):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -1302,7 +1310,10 @@ def plugin(plugin):
     if not account:
         return redirect("/logout")
 
+    plugin = f"{ptype}/{plugin}"
+
     if not plugins_module.pluginExists(plugin):
+        print(f"Plugin {plugin} not found")
         return redirect("/plugins")
 
     data = plugins_module.getPluginData(plugin)
@@ -1322,10 +1333,10 @@ def plugin(plugin):
                            wallet_status=account_module.getWalletStatus(),
                            name=data['name'],description=data['description'],
                            author=data['author'],version=data['version'],
-                           functions=functions,error=error)
+                           source=data['source'],functions=functions,error=error)
 
-@app.route('/plugin/<plugin>/verify')
-def plugin_verify(plugin):
+@app.route('/plugin/<ptype>/<path:plugin>/verify')
+def plugin_verify(ptype,plugin):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -1333,6 +1344,8 @@ def plugin_verify(plugin):
     account = account_module.check_account(request.cookies.get("account"))
     if not account:
         return redirect("/logout")
+    
+    plugin = f"{ptype}/{plugin}"
 
     if not plugins_module.pluginExists(plugin):
         return redirect("/plugins")
@@ -1344,8 +1357,8 @@ def plugin_verify(plugin):
 
     return redirect("/plugin/" + plugin)
 
-@app.route('/plugin/<plugin>/<function>', methods=["POST"])
-def plugin_function(plugin,function):
+@app.route('/plugin/<ptype>/<path:plugin>/<function>', methods=["POST"])
+def plugin_function(ptype,plugin,function):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -1353,6 +1366,8 @@ def plugin_function(plugin,function):
     account = account_module.check_account(request.cookies.get("account"))
     if not account:
         return redirect("/logout")
+
+    plugin = f"{ptype}/{plugin}"
 
     if not plugins_module.pluginExists(plugin):
         return redirect("/plugins")
@@ -1386,7 +1401,6 @@ def plugin_function(plugin,function):
             return redirect("/plugin/" + plugin + "?error=" + response['error'])
         
         response = render.plugin_output(response,plugins_module.getPluginFunctionReturns(plugin,function))
-
         return render_template("plugin-output.html", account=account, sync=account_module.getNodeSync(),
                                wallet_status=account_module.getWalletStatus(),
                                     name=data['name'],description=data['description'],output=response)

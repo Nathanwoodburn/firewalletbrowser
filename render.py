@@ -189,6 +189,7 @@ def bidDomains(bids,domains, sortState=False):
                     bidValue = round(bidValue, 2)
                     blind = lockup - bidValue
                     bidValue = "{:,}".format(bidValue)
+                    blind = round(blind, 2)
                     blind = "{:,}".format(blind)
 
                     bidDisplay = f'<b>{bidValue} HNS</b> + {blind} HNS blind'
@@ -198,6 +199,7 @@ def bidDomains(bids,domains, sortState=False):
                     html += f"<td>{domain['name']}</td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
+                    html += f"<td>{bid['height']}</td>"
                     html += "</tr>"
     else:
         for domain in domains:

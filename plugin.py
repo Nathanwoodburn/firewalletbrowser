@@ -3,10 +3,12 @@ import json
 import importlib
 import sys
 import hashlib
+import subprocess
 
 
 def listPlugins():
     plugins = []
+    customPlugins = []
     for file in os.listdir("plugins"):
         if file.endswith(".py"):
             if file != "main.py":
@@ -14,17 +16,50 @@ def listPlugins():
                 if "info" not in dir(plugin):
                     continue
                 details = plugin.info
-                details["link"] = file[:-3]
+                details["source"] = "built-in"
+                details["link"] = f"plugins/{file[:-3]}"
                 plugins.append(details)
+
+    # Check for imported plugins
+    if not os.path.exists("user_data/plugins.json"):
+        with open("user_data/plugins.json", "w") as f:
+            json.dump([], f)
+
+    with open("user_data/plugins.json", "r") as f:
+        importurls = json.load(f)
+
+    for importurl in importurls:
+        # Get only repo name
+        importPath = importurl.split("/")[-1].removesuffix(".git")
+
+        # Git clone into customPlugins/<importPath>
+        if not os.path.exists(f"customPlugins/{importPath}"):
+            if os.system(f"git clone {importurl} customPlugins/{importPath}") != 0:
+                continue
+        else:
+            if os.system(f"cd customPlugins/{importPath} && git pull") != 0:
+                continue
+        
+        # Import plugins from customPlugins/<importPath>
+        for file in os.listdir(f"customPlugins/{importPath}"):
+            if file.endswith(".py"):
+                if file != "main.py":
+                    plugin = importlib.import_module(f"customPlugins.{importPath}."+file[:-3])
+                    if "info" not in dir(plugin):
+                        continue
+                    details = plugin.info
+                    details["source"] = importPath
+                    details["link"] = f"customPlugins/{importPath}/{file[:-3]}"
+                    plugins.append(details)
 
     # Verify plugin signature
     signatures = []
     try:
-        with open("plugins/signatures.json", "r") as f:
+        with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
     except:
         # Write a new signatures file
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
     for plugin in plugins:
@@ -39,34 +74,31 @@ def listPlugins():
 
 
 def pluginExists(plugin: str):
-    for file in os.listdir("plugins"):
-        if file == plugin+".py":
-            return True
-    return False
+    return os.path.exists(plugin+".py")
 
 
 def verifyPlugin(plugin: str):
     signatures = []
     try:
-        with open("plugins/signatures.json", "r") as f:
+        with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
     except:
         # Write a new signatures file
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
     # Hash the plugin file
     pluginHash = hashPlugin(plugin)
     if pluginHash not in signatures:
         signatures.append(pluginHash)
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
 
 def hashPlugin(plugin: str):
     BUF_SIZE = 65536
     sha256 = hashlib.sha256()
-    with open("plugins/"+plugin+".py", 'rb') as f:
+    with open(plugin+".py", 'rb') as f:
         while True:
             data = f.read(BUF_SIZE)
             if not data:
@@ -76,19 +108,31 @@ def hashPlugin(plugin: str):
 
 
 def getPluginData(pluginStr: str):
-    plugin = importlib.import_module("plugins."+pluginStr)
+    plugin = importlib.import_module(pluginStr.replace("/","."))
 
     # Check if the plugin is verified
     signatures = []
     try:
-        with open("plugins/signatures.json", "r") as f:
+        with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
     except:
         # Write a new signatures file
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
     info = plugin.info
+    info["source"] = "built-in"
+
+    # Check if the plugin is in customPlugins
+    if pluginStr.startswith("customPlugins"):
+        # Get git url for dir
+        print(f"cd customPlugins/{pluginStr.split('/')[-2]} && git remote get-url origin")
+        url = subprocess.check_output(f"cd customPlugins/{pluginStr.split('/')[-2]} && git remote get-url origin", shell=True).decode("utf-8").strip()
+        info["source"] = url
+        
+
+
+
     # Hash the plugin file
     pluginHash = hashPlugin(pluginStr)
     if pluginHash not in signatures:
@@ -100,12 +144,12 @@ def getPluginData(pluginStr: str):
 
 
 def getPluginFunctions(plugin: str):
-    plugin = importlib.import_module("plugins."+plugin)
+    plugin = importlib.import_module(plugin.replace("/","."))
     return plugin.functions
 
 
 def runPluginFunction(plugin: str, function: str, params: dict, authentication: str):
-    plugin_module = importlib.import_module("plugins."+plugin)
+    plugin_module = importlib.import_module(plugin.replace("/","."))
     if function not in plugin_module.functions:
         return {"error": "Function not found"}
 
@@ -118,11 +162,11 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
     # Check if the function is in the signature list
     signatures = []
     try:
-        with open("plugins/signatures.json", "r") as f:
+        with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
     except:
         # Write a new signatures file
-        with open("plugins/signatures.json", "w") as f:
+        with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
 
     # Hash the plugin file
@@ -141,12 +185,12 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
 
 
 def getPluginFunctionInputs(plugin: str, function: str):
-    plugin = importlib.import_module("plugins."+plugin)
+    plugin = importlib.import_module(plugin.replace("/","."))
     return plugin.functions[function]["params"]
 
 
 def getPluginFunctionReturns(plugin: str, function: str):
-    plugin = importlib.import_module("plugins."+plugin)
+    plugin = importlib.import_module(plugin.replace("/","."))
     return plugin.functions[function]["returns"]
 
 
