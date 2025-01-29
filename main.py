@@ -1154,16 +1154,20 @@ def login_post():
 
     # Check if the account is valid
     if account.count(":") > 0:
+        wallets = account_module.listWallets()
+        wallets = render.wallets(wallets)
         return render_template("login.html", sync=account_module.getNodeSync(),
                                wallet_status=account_module.getWalletStatus(),
-                               error="Invalid account")
+                               error="Invalid account",wallets=wallets)
 
     account = account + ":" + password
 
     # Check if the account is valid
-    if not account_module.check_account(account):
+    if not account_module.check_password(account,password):
+        wallets = account_module.listWallets()
+        wallets = render.wallets(wallets)
         return render_template("login.html", sync=account_module.getNodeSync(),
-                               error="Invalid account")
+                               error="Invalid account or password",wallets=wallets)
 
 
     # Set the cookie

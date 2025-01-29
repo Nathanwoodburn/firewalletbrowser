@@ -26,7 +26,9 @@ hsw = api.hsw(APIKEY,ip)
 # Verify the connection
 response = hsd.getInfo()
 
-
+exclude = ["primary"]
+if os.getenv("exclude") is not None:
+    exclude = os.getenv("exclude").split(",")
 
 def check_account(cookie: str):
     if cookie is None:
@@ -52,9 +54,10 @@ def check_password(cookie: str, password: str):
     info = hsw.rpc_selectWallet(account)
     if info['error'] is not None:
         return False
-    info = hsw.rpc_walletPassphrase(password,10)
+    info = hsw.rpc_walletPassphrase(password,1)
     if info['error'] is not None:
-        return False
+        if info['error']['message'] != "Wallet is not encrypted.":
+            return False
     return True
 
 def createWallet(account: str, password: str):
@@ -118,6 +121,9 @@ def listWallets():
 
     # Check if response is json or an array
     if isinstance(response, list):
+        # Remove excluded wallets
+        response = [wallet for wallet in response if wallet not in exclude]
+
         return response
     return ['Wallet not connected']
 
@@ -829,6 +835,25 @@ def signMessage(account,domain,message):
                 "message": str(e)
             }
         }
+
+def verifyMessageWithName(domain,signature,message):
+    try:
+        response = hsd.rpc_verifyMessageWithName(domain,signature,message)
+        if 'result' in response:
+            return response['result']
+        return False
+    except Exception as e:
+        return False
+
+
+def verifyMessage(address,signature,message):
+    try:
+        response = hsd.rpc_verifyMessage(address,signature,message)
+        if 'result' in response:
+            return response['result']
+        return False
+    except Exception as e:
+        return False
 
 #endregion
 

@@ -42,7 +42,7 @@ functions = {
             }
         },
         "returns": {
-            "status": 
+            "status":
             {
                 "name": "Status of the function",
                 "type": "text"

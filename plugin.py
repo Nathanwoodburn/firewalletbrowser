@@ -126,7 +126,6 @@ def getPluginData(pluginStr: str):
     # Check if the plugin is in customPlugins
     if pluginStr.startswith("customPlugins"):
         # Get git url for dir
-        print(f"cd customPlugins/{pluginStr.split('/')[-2]} && git remote get-url origin")
         url = subprocess.check_output(f"cd customPlugins/{pluginStr.split('/')[-2]} && git remote get-url origin", shell=True).decode("utf-8").strip()
         info["source"] = url
         

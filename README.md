@@ -1,6 +1,4 @@
 # FireWalletBrowser
-
-
 ## Installation
 
 ```bash
@@ -72,7 +70,7 @@ For Docker you can mount a volume to persist the user data (/app/user_data)
 - Rescan
 - Zap pending transactions
 - View xPub
-- Custom plugin support
+- Custom plugin support (find some [here](https://git.woodburn.au/nathanwoodburn?tab=repositories&q=plugin&sort=recentupdate))
 
 ## Themes
 Set a theme in the .env file  
@@ -113,3 +111,21 @@ DNS Editor page
 
 Auction page
 ![Auction page](assets/auction.png)
+
+## Environment variables
+
+```yaml
+hsd_api: HSD API key
+hsd_ip: HSD IP address
+theme: Theme to use (dark-purple, black)
+show_expired: Show expired domains (true/false)
+exclude: Comma separated list of wallets to exclude from the wallet list
+```
+
+
+## Warnings
+
+- This is a work in progress and is not guaranteed to work
+- This is not a wallet by itself but rather a frontend for HSD
+- I am not responsible for any loss of funds from using this wallet (including loss of funds from auctions)
+- I am not responsible if you expose this frontend to the internet (please don't do this unless you know what you are doing)
