@@ -70,7 +70,7 @@ For Docker you can mount a volume to persist the user data (/app/user_data)
 - Rescan
 - Zap pending transactions
 - View xPub
-- Custom plugin support
+- Custom plugin support (find some [here](https://git.woodburn.au/nathanwoodburn?tab=repositories&q=plugin&sort=recentupdate))
 
 ## Themes
 Set a theme in the .env file  
