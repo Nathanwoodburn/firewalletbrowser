@@ -846,6 +846,15 @@ def verifyMessageWithName(domain,signature,message):
         return False
 
 
+def verifyMessage(address,signature,message):
+    try:
+        response = hsd.rpc_verifyMessage(address,signature,message)
+        if 'result' in response:
+            return response['result']
+        return False
+    except Exception as e:
+        return False
+
 #endregion
 
 def generateReport(account,format="{name},{expiry},{value},{maxBid}"):
