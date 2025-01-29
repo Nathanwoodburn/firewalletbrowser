@@ -196,7 +196,7 @@ def bidDomains(bids,domains, sortState=False):
                     
 
                     html += "<tr>"
-                    html += f"<td>{domain['name']}</td>"
+                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{domain['name']}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
                     html += f"<td>{bid['height']}</td>"
@@ -216,9 +216,10 @@ def bidDomains(bids,domains, sortState=False):
 
                     bidDisplay = f'<b>{bidValue} HNS</b> + {blind} HNS blind'
                     html += "<tr>"
-                    html += f"<td>{domain['name']}</td>"
+                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{domain['name']}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
+                    html += f"<td>{domain['height']}</td>"
                     html += "</tr>"
     return html
 

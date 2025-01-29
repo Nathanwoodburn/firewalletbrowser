@@ -1298,7 +1298,7 @@ def plugins_index():
     if not account:
         return redirect("/logout")
 
-    plugins = render.plugins(plugins_module.listPlugins())
+    plugins = render.plugins(plugins_module.listPlugins(True))
 
     return render_template("plugins.html", account=account, sync=account_module.getNodeSync(),
                            wallet_status=account_module.getWalletStatus(),
