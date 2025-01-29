@@ -348,5 +348,7 @@ def plugin_output_dash(outputs, returns):
     for returnOutput in returns:
         if returnOutput not in outputs:
             continue
+        if outputs[returnOutput] == None:
+            continue
         html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])         
     return html
