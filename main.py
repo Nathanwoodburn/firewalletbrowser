@@ -1078,6 +1078,7 @@ def settings():
     if not os.path.exists(".git"):
         return render_template("settings.html", account=account,sync=account_module.getNodeSync(),
                                wallet_status=account_module.getWalletStatus(),
+                               hsd_version=account_module.hsdVersion(False),
                                error=error,success=success,version="Error")
     info = gitinfo.get_git_info()
     branch = info['refs']
@@ -1092,6 +1093,7 @@ def settings():
 
     return render_template("settings.html", account=account,sync=account_module.getNodeSync(),
                            wallet_status=account_module.getWalletStatus(),
+                           hsd_version=account_module.hsdVersion(False),
                            error=error,success=success,version=version)
 
 @app.route('/settings/<action>')

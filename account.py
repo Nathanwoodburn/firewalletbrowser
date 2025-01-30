@@ -36,11 +36,14 @@ def hsdConnected():
         return False
     return True
 
-def hsdVersion():
+def hsdVersion(format=True):
     info = hsd.getInfo()
     if 'error' in info:
         return -1
-    return float('.'.join(info['version'].split(".")[:2]))
+    if format:
+        return float('.'.join(info['version'].split(".")[:2]))
+    else:
+        return info['version']
 
 def check_account(cookie: str):
     if cookie is None:
