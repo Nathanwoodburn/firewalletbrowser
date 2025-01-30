@@ -202,15 +202,19 @@ def getAddress(account: str):
     return info['receiveAddress']
 
 def getPendingTX(account: str):
-    # Get the pending transactions
-    info = hsw.getWalletTxHistory(account)
-    if 'error' in info:
-        return 0
     pending = 0
-    for tx in info:
-        if tx['confirmations'] < 1:
-            pending += 1
-
+    page = 1
+    pageSize = 10
+    while True:
+        txs = getTransactions(account,page,pageSize)
+        page+=1
+        pendingPage = 0
+        for tx in txs:
+            if tx['confirmations'] < 1:
+                pending+=1
+                pendingPage+=1
+        if pendingPage < pageSize:
+            break
     return pending
 
 def getDomains(account,own=True):
@@ -235,8 +239,8 @@ def getDomains(account,own=True):
 
     return domains
 
-def getPageTXCache(account,page):
-    page = str(page)
+def getPageTXCache(account,page,size=100):
+    page = f"{page}-{size}"
     if not os.path.exists(f'cache'):
         os.mkdir(f'cache')
 
@@ -250,8 +254,8 @@ def getPageTXCache(account,page):
         return pageCache[page]['txid']
     return None
 
-def pushPageTXCache(account,page,txid):
-    page = str(page)
+def pushPageTXCache(account,page,txid,size=100):
+    page = f"{page}-{size}"
     if not os.path.exists(f'cache/{account}_page.json'):
         with open(f'cache/{account}_page.json', 'w') as f:
             f.write('{}')
@@ -267,18 +271,18 @@ def pushPageTXCache(account,page,txid):
 
     return pageCache[page]['txid']
 
-def getTXFromPage(account,page):
+def getTXFromPage(account,page,size=100):
     if page == 1:
-        return getTransactions(account)[-1]['hash']
+        return getTransactions(account,1,size)[-1]['hash']
     
-    cached = getPageTXCache(account,page)
+    cached = getPageTXCache(account,page,size)
     if cached:
-        return getPageTXCache(account,page)
-    previous = getTransactions(account,page)
+        return getPageTXCache(account,page,size)
+    previous = getTransactions(account,page,size)
     if len(previous) == 0:
         return None
     hash = previous[-1]['hash']
-    pushPageTXCache(account,page,hash)
+    pushPageTXCache(account,page,hash,size)
     return hash
 
 
@@ -286,6 +290,8 @@ def getTXFromPage(account,page):
 def getTransactions(account,page=1,limit=100):
     # Get the transactions
     if hsdVersion() < 7:
+        if page != 1:
+            return []
         info = hsw.getWalletTxHistory(account)
         if 'error' in info:
             return []
@@ -295,7 +301,7 @@ def getTransactions(account,page=1,limit=100):
     if page < 1:
         return []
     if page > 1:
-        lastTX = getTXFromPage(account,page-1)
+        lastTX = getTXFromPage(account,page-1,limit)
     
     if lastTX:
         response = requests.get(f'http://x:{APIKEY}@{ip}:12039/wallet/{account}/tx/history?reverse=true&limit={limit}&after={lastTX}')
@@ -310,10 +316,10 @@ def getTransactions(account,page=1,limit=100):
     data = response.json()
 
     # Refresh the cache if the next page is different
-    nextPage = getPageTXCache(account,page)
+    nextPage = getPageTXCache(account,page,limit)
     if nextPage is not None and nextPage != data[-1]['hash']:
         print(f'Refreshing page {page}')
-        pushPageTXCache(account,page,data[-1]['hash'])
+        pushPageTXCache(account,page,data[-1]['hash'],limit)
     return data
 
 def getAllTransactions(account):
@@ -321,7 +327,7 @@ def getAllTransactions(account):
     page = 0
     txs = []
     while True:
-        txs += getTransactions(account,page)
+        txs += getTransactions(account,page,1000)
         if len(txs) == 0:
             break
         page += 1
