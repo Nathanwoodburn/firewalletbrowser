@@ -29,7 +29,14 @@ functions = {
 
 def main(params, authentication):
     wallet = authentication.split(":")[0]
-    txs = account.getTransactions(wallet)
+    txCount = 0
+    page = 1
+    while True:
+        txs = account.getTransactions(wallet,page)
+        if len(txs) == 0:
+            break
+        txCount += len(txs)
+        page += 1
 
-    return {"txs": f'Total TXs: {len(txs)}'}
+    return {"txs": f'Total TXs: {txCount}'}
     

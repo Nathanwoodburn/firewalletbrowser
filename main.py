@@ -125,14 +125,23 @@ def transactions():
         return redirect("/login")
 
     account = account_module.check_account(request.cookies.get("account"))
-
     # Get the transactions
-    transactions = account_module.getTransactions(account)
+    page = request.args.get('page')
+    try:
+        page = int(page)
+    except:
+        page = 1
+
+    if page < 1:
+        page = 1
+
+    transactions = account_module.getTransactions(account,page)
+    txCount = len(transactions)
     transactions = render.transactions(transactions)
-
     return render_template("tx.html", account=account, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),tx=transactions)
-
+                           wallet_status=account_module.getWalletStatus(),tx=transactions,
+                           page=page,txCount=txCount)
+    
 
 @app.route('/send')
 def send_page():
@@ -1435,6 +1444,12 @@ def send_assets(path):
 # Try path
 @app.route('/<path:path>')
 def try_path(path):
+    # Check if node connected
+    if not account_module.hsdConnected():
+        return redirect("/login?message=Node not connected")
+
+
+
     if os.path.isfile("templates/" + path + ".html"):
         return render_template(path + ".html")
     else:

@@ -29,11 +29,10 @@ def domains(domains, mobile=False):
     return html
 
 def transactions(txs):
+    
+    if len(txs) == 0:
+        return '<tr><td colspan="5">No transactions found</td></tr>'
     html = ''
-
-    # Reverse the list
-    txs = txs[::-1]
-
     for tx in txs:
         action = "HNS Transfer"
         address = tx["outputs"][0]["address"]

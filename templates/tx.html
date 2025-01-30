@@ -65,8 +65,17 @@
                 <div class="container-fluid">
                     <h3 class="text-dark mb-4">Transactions</h3>
                     <div class="card shadow">
-                        <div class="card-header py-3">
-                            <p class="text-primary m-0 fw-bold">Transactions</p>
+                        <div class="card-header py-3" style="padding: 16px;">
+                            <div style="height: 38px;">
+                                <p class="text-primary m-0 fw-bold" style="display: inline-block;">Transactions</p><div class="btn-group" role="group" style="right: 16px;top: 16px;position: absolute;height: 38px;">
+    {% if page != 1 %}
+    <a class="btn btn-primary" role="button" href="/tx?page={{page-1}}">Prev</a>
+    {% endif %}
+    {% if txCount == 100 %}
+    <a class="btn btn-primary" role="button" href="/tx?page={{page+1}}">Next</a>
+    {% endif %}
+</div>
+                            </div>
                         </div>
                         <div class="card-body"><div id="dataTable" class="table-responsive table mt-2" role="grid" aria-describedby="dataTable_info">
     <table id="dataTable" class="table my-0">

@@ -6,7 +6,7 @@ import requests
 import re
 import domainLookup
 import json
-
+import time
 
 dotenv.load_dotenv()
 
@@ -22,6 +22,7 @@ if show_expired is None:
 hsd = api.hsd(APIKEY,ip)
 hsw = api.hsw(APIKEY,ip)
 
+cacheTime = 3600
 
 # Verify the connection
 response = hsd.getInfo()
@@ -29,6 +30,17 @@ response = hsd.getInfo()
 exclude = ["primary"]
 if os.getenv("exclude") is not None:
     exclude = os.getenv("exclude").split(",")
+
+def hsdConnected():
+    if hsdVersion() == -1:
+        return False
+    return True
+
+def hsdVersion():
+    info = hsd.getInfo()
+    if 'error' in info:
+        return -1
+    return float('.'.join(info['version'].split(".")[:2]))
 
 def check_account(cookie: str):
     if cookie is None:
@@ -61,12 +73,15 @@ def check_password(cookie: str, password: str):
     return True
 
 def createWallet(account: str, password: str):
+    if not hsdConnected():
+        return {
+            "error": {
+                "message": "Node not connected"
+            }
+        }
     # Create the account
     # Python wrapper doesn't support this yet
     response = requests.put(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}")
-    print(response)
-    print(response.json())
-
     if response.status_code != 200:
         return {
             "error": {
@@ -82,7 +97,6 @@ def createWallet(account: str, password: str):
     # Encrypt the wallet (python wrapper doesn't support this yet)
     response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/passphrase",
         json={"passphrase": password})
-    print(response)
 
     return {
         "seed": seed,
@@ -91,6 +105,13 @@ def createWallet(account: str, password: str):
     }
 
 def importWallet(account: str, password: str,seed: str):
+    if not hsdConnected():
+        return {
+            "error": {
+                "message": "Node not connected"
+            }
+        }
+
     # Import the wallet
     data = {
         "passphrase": password,
@@ -98,9 +119,6 @@ def importWallet(account: str, password: str,seed: str):
     }
 
     response = requests.put(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}",json=data)
-    print(response)
-    print(response.json())
-
     if response.status_code != 200:
         return {
             "error": {
@@ -126,6 +144,16 @@ def listWallets():
 
         return response
     return ['Wallet not connected']
+
+def selectWallet(account: str):
+    # Select wallet
+    response = hsw.rpc_selectWallet(account)
+    if response['error'] is not None:
+        return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
 
 def getBalance(account: str):
     # Get the total balance
@@ -204,13 +232,97 @@ def getDomains(account,own=True):
 
     return domains
 
-def getTransactions(account):
-    # Get the transactions
-    info = hsw.getWalletTxHistory(account)
-    if 'error' in info:
-        return []
-    return info
+def getPageTXCache(account,page):
+    page = str(page)
+    if not os.path.exists(f'cache'):
+        os.mkdir(f'cache')
 
+    if not os.path.exists(f'cache/{account}_page.json'):
+        with open(f'cache/{account}_page.json', 'w') as f:
+            f.write('{}')
+    with open(f'cache/{account}_page.json') as f:
+        pageCache = json.load(f)
+        
+    if page in pageCache and pageCache[page]['time'] > int(time.time()) - cacheTime:
+        return pageCache[page]['txid']
+    return None
+
+def pushPageTXCache(account,page,txid):
+    page = str(page)
+    if not os.path.exists(f'cache/{account}_page.json'):
+        with open(f'cache/{account}_page.json', 'w') as f:
+            f.write('{}')
+    with open(f'cache/{account}_page.json') as f:
+        pageCache = json.load(f)
+
+    pageCache[page] = {
+        'time': int(time.time()),
+        'txid': txid
+    }
+    with open(f'cache/{account}_page.json', 'w') as f:
+        json.dump(pageCache, f,indent=4)
+
+    return pageCache[page]['txid']
+
+def getTXFromPage(account,page):
+    if page == 1:
+        return getTransactions(account)[-1]['hash']
+    
+    cached = getPageTXCache(account,page)
+    if cached:
+        return getPageTXCache(account,page)
+    previous = getTransactions(account,page)
+    if len(previous) == 0:
+        return None
+    hash = previous[-1]['hash']
+    pushPageTXCache(account,page,hash)
+    return hash
+
+
+
+def getTransactions(account,page=1,limit=100):
+    # Get the transactions
+    if hsdVersion() < 7:
+        info = hsw.getWalletTxHistory(account)
+        if 'error' in info:
+            return []
+        return info[::-1]
+    
+    lastTX = None
+    if page < 1:
+        return []
+    if page > 1:
+        lastTX = getTXFromPage(account,page-1)
+    
+    if lastTX:
+        response = requests.get(f'http://x:{APIKEY}@{ip}:12039/wallet/{account}/tx/history?reverse=true&limit={limit}&after={lastTX}')
+    elif page == 1:
+        response = requests.get(f'http://x:{APIKEY}@{ip}:12039/wallet/{account}/tx/history?reverse=true&limit={limit}')
+    else:
+        return []
+
+    if response.status_code != 200:
+        print(response.text)
+        return []
+    data = response.json()
+
+    # Refresh the cache if the next page is different
+    nextPage = getPageTXCache(account,page)
+    if nextPage is not None and nextPage != data[-1]['hash']:
+        print(f'Refreshing page {page}')
+        pushPageTXCache(account,page,data[-1]['hash'])
+    return data
+
+def getAllTransactions(account):
+    # Get the transactions
+    page = 0
+    txs = []
+    while True:
+        txs += getTransactions(account,page)
+        if len(txs) == 0:
+            break
+        page += 1
+    return txs
 
 def check_address(address: str, allow_name: bool = True, return_address: bool = False):
     # Check if the address is valid
