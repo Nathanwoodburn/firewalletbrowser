@@ -1,6 +1,8 @@
 # FireWalletBrowser
 ## Installation
 
+See [here](https://firewallet.au/setup) for instructions on how to setup a FireWallet
+
 ```bash
 git clone https://github.com/Nathanwoodburn/firewalletbrowser.git
 cd firewalletbrowser
@@ -119,7 +121,7 @@ HSD_API: HSD API key
 HSD_IP: HSD IP address
 THEME: Theme to use (dark-purple, black)
 SHOW_EXPIRED: Show expired domains (true/false)
-EXCLUDE: Comma separated list of wallets to exclude from the wallet list
+EXCLUDE: Comma separated list of wallets to exclude from the wallet list (default primary)
 EXPLORER_TX: URL for exploring transactions (default https://niami.io/tx/)
 HSD_NETWORK: Network to connect to (main, regtest, simnet)
 ```
