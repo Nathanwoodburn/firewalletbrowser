@@ -48,7 +48,7 @@ cacheTime = 3600
 response = hsd.getInfo()
 
 EXCLUDE = ["primary"]
-if os.getenv("exclude") is not None:
+if os.getenv("EXCLUDE") is not None:
     EXCLUDE = os.getenv("EXCLUDE").split(",")
 
 def hsdConnected():
