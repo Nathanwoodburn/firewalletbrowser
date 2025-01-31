@@ -105,7 +105,7 @@ def dns(data, edit=False):
 
 
         elif entry['type'] == 'DS':
-            ds = f'{entry['keyTag']} {entry['algorithm']} {entry['digestType']} {entry['digest']}'
+            ds = f"{entry['keyTag']} {entry['algorithm']} {entry['digestType']} {entry['digest']}"
             html_output += f"<td>{ds}</td>\n"
 
         else:
