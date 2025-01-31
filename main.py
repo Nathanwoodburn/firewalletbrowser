@@ -38,15 +38,6 @@ def index():
     if not account:
         return redirect("/logout")
 
-    balance = account_module.getBalance(account)
-    available = balance['available']
-    total = balance['total']
-
-    # Add commas to the numbers
-    available = "{:,}".format(available)
-    total = "{:,}".format(total)
-
-    pending = account_module.getPendingTX(account)
     domains = account_module.getDomains(account)
 
     # Sort
@@ -86,12 +77,7 @@ def index():
         domains = sorted(domains, key=lambda k: k['name'],reverse=reverse)
         sort_domain = direction
         sort_domain_next = reverseDirection(direction)
-        
     
-    
-
-    
-    domain_count = len(domains)
     domainsMobile = render.domains(domains,True)
     domains = render.domains(domains)
     
@@ -101,11 +87,8 @@ def index():
         functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
         plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
 
-    return render_template("index.html", account=account, available=available,
-                           total=total, pending=pending, domains=domains,
-                           domainsMobile=domainsMobile, plugins=plugins,
-                           domain_count=domain_count, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("index.html", account=account,domains=domains,
+                           domainsMobile=domainsMobile, plugins=plugins,                           
                            sort_price=sort_price,sort_expiry=sort_expiry,
                            sort_domain=sort_domain,sort_price_next=sort_price_next,
                            sort_expiry_next=sort_expiry_next,sort_domain_next=sort_domain_next)
@@ -138,8 +121,8 @@ def transactions():
     transactions = account_module.getTransactions(account,page)
     txCount = len(transactions)
     transactions = render.transactions(transactions)
-    return render_template("tx.html", account=account, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),tx=transactions,
+    return render_template("tx.html", account=account, 
+                           tx=transactions,
                            page=page,txCount=txCount)
     
 
@@ -167,8 +150,8 @@ def send_page():
         amount = request.args.get("amount")
         
 
-    return render_template("send.html", account=account,sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("send.html", account=account,
+                           
                            max=max,message=message,address=address,amount=amount)
 
 @app.route('/send', methods=["POST"])
@@ -217,8 +200,8 @@ def send():
 
 
     return render_template("confirm.html", account=account_module.check_account(request.cookies.get("account")),
-                            sync=account_module.getNodeSync(),
-                            wallet_status=account_module.getWalletStatus(),action=action,
+                            
+                            action=action,
                             content=content,cancel=cancel,confirm=confirm)
     
 
@@ -247,8 +230,8 @@ def receive():
     
     address = account_module.getAddress(account)
 
-    return render_template("receive.html", account=account,sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("receive.html", account=account,
+                           
                            address=address)
     
 @app.route('/success')
@@ -262,8 +245,8 @@ def success():
         return redirect("/logout")
 
     tx = request.args.get("tx")
-    return render_template("success.html", account=account,sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),tx=tx)
+    return render_template("success.html", account=account,
+                           tx=tx)
 
 @app.route('/checkaddress')
 def check_address():
@@ -284,14 +267,6 @@ def auctions():
     account = account_module.check_account(request.cookies.get("account"))
     if not account:
         return redirect("/logout")
-
-    balance = account_module.getBalance(account)
-    locked = balance['locked']
-    # Round to 2 decimals
-    locked = round(locked, 2)
-
-    # Add commas to the numbers
-    locked = "{:,}".format(locked)
 
 
     bids = account_module.getBids(account)
@@ -366,12 +341,11 @@ def auctions():
     message = ''
     if 'message' in request.args:
         message = request.args.get("message")
-    return render_template("auctions.html", account=account, locked=locked, domains=bidsHtml,
+    return render_template("auctions.html", account=account, domains=bidsHtml,
                            domainsMobile=bidsHtml, plugins=plugins,
-                           domain_count=bidsHtml, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
-                           sort_price=sort_price,sort_state=sort_state,
-                           sort_domain=sort_domain,sort_price_next=sort_price_next,
+                           domain_count=bidsHtml,sort_price=sort_price,
+                           sort_state=sort_state,sort_domain=sort_domain,
+                           sort_price_next=sort_price_next,
                            sort_state_next=sort_state_next,sort_domain_next=sort_domain_next,
                            bids=len(bids),reveal=pending_reveals,message=message,
                            sort_time=sort_time,sort_time_next=sort_time_next)
@@ -430,13 +404,13 @@ def search():
     plugins += "</div>"
 
     if 'error' in domain:
-        return render_template("search.html", account=account,sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("search.html", account=account,
+                               
                                search_term=search_term, domain=domain['error'],plugins=plugins)
     
     if domain['info'] is None:
-        return render_template("search.html", account=account, sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("search.html", account=account, 
+                               
                                search_term=search_term,domain=search_term,
                                state="AVAILABLE", next="Available Now",plugins=plugins)
 
@@ -479,8 +453,8 @@ def search():
     dns = render.dns(dns)
     txs = render.txs(txs)
 
-    return render_template("search.html", account=account, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("search.html", account=account, 
+                           
                            search_term=search_term,domain=domain['info']['name'],
                            raw=domain,state=state, next=next, owner=owner,
                            dns=dns, txs=txs,plugins=plugins)
@@ -505,8 +479,8 @@ def manage(domain: str):
     
     domain_info = account_module.getDomain(domain)
     if 'error' in domain_info:
-        return render_template("manage.html", account=account, sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("manage.html", account=account, 
+                               
                                domain=domain, error=domain_info['error'])
     
     expiry = domain_info['info']['stats']['daysUntilExpire']
@@ -542,8 +516,8 @@ def manage(domain: str):
     plugins += "</div>"
 
 
-    return render_template("manage.html", account=account, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("manage.html", account=account, 
+                           
                            error=errorMessage, address=address,
                            domain=domain,expiry=expiry, dns=dns,
                            raw_dns=urllib.parse.quote(raw_dns),
@@ -612,8 +586,8 @@ def revokeInit(domain: str):
 
     
     return render_template("confirm-password.html", account=account_module.check_account(request.cookies.get("account")),
-                            sync=account_module.getNodeSync(),
-                            wallet_status=account_module.getWalletStatus(),action=action,
+                            
+                            action=action,
                             content=content,cancel=cancel,confirm=confirm,check=revokeCheck)
 
 @app.route('/manage/<domain>/revoke/confirm', methods=["POST"])
@@ -719,8 +693,8 @@ def editPage(domain: str):
         errorMessage = ""
 
     
-    return render_template("edit.html", account=account, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("edit.html", account=account, 
+                           
                            domain=domain, error=errorMessage,
                            dns=dns,raw_dns=urllib.parse.quote(raw_dns))
 
@@ -779,8 +753,8 @@ def transfer(domain):
 
 
     return render_template("confirm.html", account=account_module.check_account(request.cookies.get("account")),
-                            sync=account_module.getNodeSync(),
-                            wallet_status=account_module.getWalletStatus(),action=action,
+                            
+                            action=action,
                             content=content,cancel=cancel,confirm=confirm)
 
 @app.route('/manage/<domain>/sign')
@@ -820,8 +794,8 @@ def signMessage(domain):
 
     
 
-    return render_template("message.html", account=account,sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("message.html", account=account,
+                           
                                title="Sign Message",content=content)
     
 
@@ -865,15 +839,15 @@ def auction(domain):
         error = ""
     
     if 'error' in domainInfo:
-        return render_template("auction.html", account=account,sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("auction.html", account=account,
+                               
                                search_term=search_term, domain=domainInfo['error'],
                                error=error)
     
     if domainInfo['info'] is None:
         next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
-        return render_template("auction.html", account=account, sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("auction.html", account=account, 
+                               
                                 search_term=search_term,domain=search_term,next_action=next_action,
                                state="AVAILABLE", next="Open Auction",
                                error=error)
@@ -926,8 +900,8 @@ def auction(domain):
         message = request.args.get("message")
 
 
-    return render_template("auction.html", account=account, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("auction.html", account=account, 
+                           
                            search_term=search_term,domain=domainInfo['info']['name'],
                            raw=domainInfo,state=state, next=next,
                            next_action=next_action, bids=bids,error=message)
@@ -990,7 +964,7 @@ def bid(domain):
 
 
     return render_template("confirm.html", account=account_module.check_account(request.cookies.get("account")),
-                            sync=account_module.getNodeSync(),wallet_status=account_module.getWalletStatus(),
+                            
                             action=action,
                             domain=domain,content=content,cancel=cancel,confirm=confirm)
 
@@ -1081,8 +1055,8 @@ def settings():
         success = ""
 
     if not os.path.exists(".git"):
-        return render_template("settings.html", account=account,sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("settings.html", account=account,
+                               
                                hsd_version=account_module.hsdVersion(False),
                                error=error,success=success,version="Error")
     info = gitinfo.get_git_info()
@@ -1096,8 +1070,8 @@ def settings():
     last_commit = datetime.datetime.strptime(last_commit, "%Y-%m-%d %H:%M:%S")
     version = f'{last_commit.strftime("%y-%m-%d")} {branch}'
 
-    return render_template("settings.html", account=account,sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("settings.html", account=account,
+                           
                            hsd_version=account_module.hsdVersion(False),
                            error=error,success=success,version=version)
 
@@ -1135,8 +1109,8 @@ def settings_action(action):
         content += "<script>function copyToClipboard() {var copyText = document.getElementById('data');copyText.style.display = 'block';copyText.select();copyText.setSelectionRange(0, 99999);document.execCommand('copy');copyText.style.display = 'none';var copyButton = document.getElementById('copyButton');copyButton.innerHTML='Copied';}</script>"
         content += "<button id='copyButton' onclick='copyToClipboard()' class='btn btn-secondary'>Copy to clipboard</button>"
 
-        return render_template("message.html", account=account,sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("message.html", account=account,
+                               
                                title="xPub Key",
                                content="<code>"+xpub+"</code>" + content)
 
@@ -1154,12 +1128,12 @@ def login():
 
 
     if 'message' in request.args:
-        return render_template("login.html", sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("login.html", 
+                               
                                error=request.args.get("message"),wallets=wallets)
 
-    return render_template("login.html", sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("login.html", 
+                           
                            wallets=wallets)
 
 @app.route('/login', methods=["POST"])
@@ -1172,8 +1146,8 @@ def login_post():
     if account.count(":") > 0:
         wallets = account_module.listWallets()
         wallets = render.wallets(wallets)
-        return render_template("login.html", sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("login.html", 
+                               
                                error="Invalid account",wallets=wallets)
 
     account = account + ":" + password
@@ -1182,7 +1156,7 @@ def login_post():
     if not account_module.check_password(account,password):
         wallets = account_module.listWallets()
         wallets = render.wallets(wallets)
-        return render_template("login.html", sync=account_module.getNodeSync(),
+        return render_template("login.html", 
                                error="Invalid account or password",wallets=wallets)
 
 
@@ -1233,8 +1207,8 @@ def register():
     
     
     # Set the cookie
-    response = make_response(render_template("message.html", sync=account_module.getNodeSync(),
-                                             wallet_status=account_module.getWalletStatus(),
+    response = make_response(render_template("message.html", 
+                                             
                                               title="Account Created",
                                               content="Your account has been created. Here is your seed phrase. Please write it down and keep it safe as it will not be shown again<br><br>" + response['seed']))
     response.set_cookie("account", account+":"+password)
@@ -1316,8 +1290,8 @@ def plugins_index():
 
     plugins = render.plugins(plugins_module.listPlugins(True))
 
-    return render_template("plugins.html", account=account, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("plugins.html", account=account, 
+                           
                            plugins=plugins)
 
 @app.route('/plugin/<ptype>/<path:plugin>')
@@ -1349,8 +1323,8 @@ def plugin(ptype,plugin):
     if error == None:
         error = ""
 
-    return render_template("plugin.html", account=account, sync=account_module.getNodeSync(),
-                           wallet_status=account_module.getWalletStatus(),
+    return render_template("plugin.html", account=account, 
+                           
                            name=data['name'],description=data['description'],
                            author=data['author'],version=data['version'],
                            source=data['source'],functions=functions,error=error)
@@ -1421,13 +1395,65 @@ def plugin_function(ptype,plugin,function):
             return redirect("/plugin/" + plugin + "?error=" + response['error'])
         
         response = render.plugin_output(response,plugins_module.getPluginFunctionReturns(plugin,function))
-        return render_template("plugin-output.html", account=account, sync=account_module.getNodeSync(),
-                               wallet_status=account_module.getWalletStatus(),
+        return render_template("plugin-output.html", account=account, 
+                               
                                     name=data['name'],description=data['description'],output=response)
 
 
     else:
         return jsonify({"error": "Function not found"})
+
+#endregion
+
+#region API Routes
+@app.route('/api/v1/hsd/<function>', methods=["GET"])
+def api_hsd(function):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return jsonify({"error": "Not logged in"})
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return jsonify({"error": "Invalid account"})
+    
+    if function == "sync":
+        return jsonify({"result": account_module.getNodeSync()})
+    if function == "version":
+        return jsonify({"result": account_module.hsdVersion(False)})
+    if function == "height":
+        return jsonify({"result": account_module.getBlockHeight()})
+    
+    return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
+    
+@app.route('/api/v1/wallet/<function>', methods=["GET"])
+def api_wallet(function):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return jsonify({"error": "Not logged in"})
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return jsonify({"error": "Invalid account"})
+    
+    if function == "sync":
+        return jsonify({"result": account_module.getWalletStatus()})
+    
+    if function == "available":
+        return jsonify({"result": account_module.getBalance(account)['available']})
+    if function == "total":
+        return jsonify({"result": account_module.getBalance(account)['total']})
+    if function == "pending":
+        return jsonify({"result": account_module.getPendingTX(account)})
+    if function == "locked":
+        return jsonify({"result": account_module.getBalance(account)['locked']})
+    
+    if function == "domainCount":
+        return jsonify({"result": len(account_module.getDomains(account))})
+
+
+    return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
+    
+
 
 #endregion
 
