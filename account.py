@@ -10,12 +10,12 @@ import time
 
 dotenv.load_dotenv()
 
-HSD_API = os.getenv("hsd_api")
-HSD_IP = os.getenv("hsd_ip")
+HSD_API = os.getenv("HSD_API")
+HSD_IP = os.getenv("HSD_IP")
 if HSD_IP is None:
     HSD_IP = "localhost"
 
-HSD_NETWORK = os.getenv("hsd_network")
+HSD_NETWORK = os.getenv("HSD_NETWORK")
 HSD_WALLET_PORT = 12039
 HSD_NODE_PORT = 12037
 
@@ -35,9 +35,9 @@ elif HSD_NETWORK == "regtest":
     HSD_NODE_PORT = 14037
 
 
-show_expired = os.getenv("show_expired")
-if show_expired is None:
-    show_expired = False
+SHOW_EXPIRED = os.getenv("SHOW_EXPIRED")
+if SHOW_EXPIRED is None:
+    SHOW_EXPIRED = False
 
 hsd = api.hsd(HSD_API,HSD_IP,HSD_NODE_PORT)
 hsw = api.hsw(HSD_API,HSD_IP,HSD_WALLET_PORT)
@@ -47,9 +47,9 @@ cacheTime = 3600
 # Verify the connection
 response = hsd.getInfo()
 
-exclude = ["primary"]
+EXCLUDE = ["primary"]
 if os.getenv("exclude") is not None:
-    exclude = os.getenv("exclude").split(",")
+    EXCLUDE = os.getenv("EXCLUDE").split(",")
 
 def hsdConnected():
     if hsdVersion() == -1:
@@ -163,7 +163,7 @@ def listWallets():
     # Check if response is json or an array
     if isinstance(response, list):
         # Remove excluded wallets
-        response = [wallet for wallet in response if wallet not in exclude]
+        response = [wallet for wallet in response if wallet not in EXCLUDE]
 
         return response
     return ['Wallet not connected']
@@ -244,7 +244,7 @@ def getDomains(account,own=True):
         response = requests.get(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/name")
     info = response.json()
 
-    if show_expired:
+    if SHOW_EXPIRED:
         return info
     
     # Remove any expired domains
@@ -475,7 +475,6 @@ def getDNS(domain: str):
     if 'records' not in response['result']:
         return []
     return response['result']['records']
-
 
 def setDNS(account,domain,records):
     account_name = check_account(account)

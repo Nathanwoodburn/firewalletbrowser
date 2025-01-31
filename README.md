@@ -35,13 +35,13 @@ Also available as a docker image:
 To run using a HSD running directly on the host:
 
 ```bash
-sudo docker run --network=host -e hsd_api=yourapikeyhere git.woodburn.au/nathanwoodburn/firewallet:latest
+sudo docker run --network=host -e HSD_API=yourapikeyhere git.woodburn.au/nathanwoodburn/firewallet:latest
 ```
 
 If you have HSD running on a different IP/container
 
 ```bash
-sudo docker run -p 5000:5000 -e hsd_api=yourapikeyhere -e hsd_ip=hsdcontainer git.woodburn.au/nathanwoodburn/firewallet:latest
+sudo docker run -p 5000:5000 -e HSD_API=yourapikeyhere -e HSD_IP=hsdcontainer git.woodburn.au/nathanwoodburn/firewallet:latest
 ```
 
 For Docker you can mount a volume to persist the user data (/app/user_data)
@@ -115,11 +115,11 @@ Auction page
 ## Environment variables
 
 ```yaml
-hsd_api: HSD API key
-hsd_ip: HSD IP address
-theme: Theme to use (dark-purple, black)
-show_expired: Show expired domains (true/false)
-exclude: Comma separated list of wallets to exclude from the wallet list
+HSD_API: HSD API key
+HSD_IP: HSD IP address
+THEME: Theme to use (dark-purple, black)
+SHOW_EXPIRED: Show expired domains (true/false)
+EXCLUDE: Comma separated list of wallets to exclude from the wallet list
 ```
 
 
