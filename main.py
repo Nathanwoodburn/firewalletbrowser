@@ -26,7 +26,7 @@ fees = 0.02
 revokeCheck = random.randint(100000,999999)
 
 
-theme = os.getenv("theme")
+THEME = os.getenv("THEME")
 
 @app.route('/')
 def index():
@@ -322,19 +322,7 @@ def auctions():
         bidsHtml = render.bidDomains(bids,domains)
     
 
-    pending_reveals = 0
-    for domain in domains:
-        if domain['state'] == "REVEAL":
-            for bid in bids:
-                if bid['name'] == domain['name']:
-                    bid_found = False
-                    reveals = account_module.getReveals(account,domain['name'])
-                    for reveal in reveals:
-                        if reveal['own'] == True:
-                            if bid['value'] == reveal['value']:
-                                bid_found = True
-                    if not bid_found:
-                        pending_reveals += 1
+    
 
     plugins = ""
 
@@ -347,10 +335,11 @@ def auctions():
                            sort_state=sort_state,sort_domain=sort_domain,
                            sort_price_next=sort_price_next,
                            sort_state_next=sort_state_next,sort_domain_next=sort_domain_next,
-                           bids=len(bids),reveal=pending_reveals,message=message,
+                           bids=len(bids),message=message,
                            sort_time=sort_time,sort_time_next=sort_time_next)
 
 @app.route('/reveal')
+@app.route('/all/reveal')
 def revealAllBids():
     # Check if the user is logged in
     if request.cookies.get("account") is None:
@@ -370,6 +359,46 @@ def revealAllBids():
             
     return redirect("/success?tx=" + response['result']['hash'])
 
+
+@app.route('/all/redeem')
+def redeemAllBids():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    response = account_module.redeemAll(request.cookies.get("account"))
+    if 'error' in response:
+        print(response)
+        if response['error'] != None:
+            if response['error']['message'] == "Nothing to do.":
+                return redirect("/auctions?message=No redeems pending")
+            return redirect("/auctions?message=" + response['error']['message'])
+            
+    return redirect("/success?tx=" + response['result']['hash'])
+
+@app.route('/all/register')
+def registerAllDomains():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    response = account_module.registerAll(request.cookies.get("account"))
+    if 'error' in response:
+        print(response)
+        if response['error'] != None:
+            if response['error']['message'] == "Nothing to do.":
+                return redirect("/auctions?message=No domains to register")
+            return redirect("/auctions?message=" + response['error']['message'])
+            
+    return redirect("/success?tx=" + response['hash'])
 
 @app.route('/search')
 def search():
@@ -845,7 +874,11 @@ def auction(domain):
                                error=error)
     
     if domainInfo['info'] is None:
-        next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
+        if domainInfo['registered'] == False and domainInfo['expired'] == False:
+            # Needs to be registered
+            next_action = f'ERROR GETTING NEXT STATE'
+        else:
+            next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
         return render_template("auction.html", account=account, 
                                
                                 search_term=search_term,domain=search_term,next_action=next_action,
@@ -871,9 +904,17 @@ def auction(domain):
 
     if state == 'CLOSED':
         if not domainInfo['info']['registered']:
-            state = 'AVAILABLE'
-            next = "Available Now"
-            next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
+            if account_module.isOwnDomain(account,domain):
+                print("Waiting to be registered")
+                state = 'PENDING REGISTER'
+                next = "Pending Register"
+                next_action = f'<a href="/auction/{domain}/register">Register Domain</a>'
+            
+            else:
+                print("Not registered")
+                state = 'AVAILABLE'
+                next = "Available Now"
+                next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
         else:
             state = 'REGISTERED'
             expires = domainInfo['info']['stats']['daysUntilExpire']
@@ -1030,7 +1071,22 @@ def reveal_auction(domain):
         return redirect("/logout")
     
     domain = domain.lower()
-    response = account_module.revealAuction(request.cookies.get("account"),domain)
+    response = account_module(request.cookies.get("account"),domain)
+    if 'error' in response:
+        return redirect("/auction/" + domain + "?message=" + response['error']['message'])
+    return redirect("/success?tx=" + response['hash'])
+
+@app.route('/auction/<domain>/register')
+def registerdomain(domain):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    if not account_module.check_account(request.cookies.get("account")):
+        return redirect("/logout")
+    
+    domain = domain.lower()
+    response = account_module.register(request.cookies.get("account"),domain)
     if 'error' in response:
         return redirect("/auction/" + domain + "?message=" + response['error']['message'])
     return redirect("/success?tx=" + response['hash'])
@@ -1449,6 +1505,16 @@ def api_wallet(function):
     
     if function == "domainCount":
         return jsonify({"result": len(account_module.getDomains(account))})
+    
+    if function == "bidCount":
+        return jsonify({"result": len(account_module.getBids(account))})
+    
+    if function == "pendingReveal":
+        return jsonify({"result": len(account_module.getPendingReveals(account))})
+    if function == "pendingRegister":
+        return jsonify({"result": len(account_module.getPendingRegisters(account))})
+    if function == "pendingRedeem":
+        return jsonify({"result": len(account_module.getPendingRedeems(account))})
 
 
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
@@ -1466,9 +1532,9 @@ def qr(data):
 # Theme
 @app.route('/assets/css/styles.min.css')
 def send_css():
-    if theme == "live":
+    if THEME == "live":
         return send_from_directory('templates/assets/css', 'styles.min.css')
-    return send_from_directory('themes', f'{theme}.css')
+    return send_from_directory('themes', f'{THEME}.css')
 
 @app.route('/assets/<path:path>')
 def send_assets(path):
