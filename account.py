@@ -571,6 +571,10 @@ def getBids(account, domain="NONE"):
     for bid in response:
         if 'value' not in bid:
             bid['value'] = -1000000
+        
+        # Backup for older HSD versions
+        if 'height' not in bid:
+            bid['height'] = 0
         bids.append(bid)
     return bids
 
