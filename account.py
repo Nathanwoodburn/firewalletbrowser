@@ -433,6 +433,15 @@ def send(account,address,amount):
         "tx": response['result']
     }
 
+def isOwnDomain(account,name: str):
+    domains = getDomains(account)
+    for domain in domains:
+        print(domain)
+        if domain['name'] == name:
+            return True
+    return False
+
+
 def getDomain(domain: str):
     # Get the domain
     response = hsd.rpc_getNameInfo(domain)
@@ -520,6 +529,9 @@ def setDNS(account,domain,records):
     response = hsw.sendUPDATE(account_name,password,domain,data)
     return response
 
+def register(account,domain):
+    # Maybe add default dns records?
+    return setDNS(account,domain,'[]')
 
 def getNodeSync():
     response = hsd.getInfo()
@@ -565,6 +577,43 @@ def getBids(account, domain="NONE"):
 def getReveals(account,domain):
     return hsw.getWalletRevealsByName(domain,account)
 
+def getPendingReveals(account):
+    bids = getBids(account)
+    domains = getDomains(account,False)
+    pending = []
+    for domain in domains:
+        if domain['state'] == "REVEAL":
+            reveals = getReveals(account,domain['name'])
+            for bid in bids:
+                if bid['name'] == domain['name']:
+                    state_found = False                    
+                    for reveal in reveals:
+                        if reveal['own'] == True:
+                            if bid['value'] == reveal['value']:
+                                state_found = True
+                    
+                    if not state_found:
+                        pending.append(bid)
+    return pending
+
+#! TODO
+def getPendingRedeems(account):
+    bids = getBids(account)
+    domains = getDomains(account,False)
+    pending = []
+    return pending
+
+def getPendingRegisters(account):
+    bids = getBids(account)
+    domains = getDomains(account,False)
+    pending = []
+    for domain in domains:
+        if domain['state'] == "CLOSED" and domain['registered'] == False:
+            for bid in bids:
+                if bid['name'] == domain['name']:
+                    if bid['value'] == domain['highest']:
+                        pending.append(bid)                        
+    return pending
 
 def getRevealTX(reveal):
     prevout = reveal['prevout']
@@ -572,7 +621,11 @@ def getRevealTX(reveal):
     index = prevout['index']
     tx = hsd.getTxByHash(hash)
     if 'inputs' not in tx:
-        # Check if registered
+        print(f'Something is up with this tx: {hash}')
+        print(tx)
+        print('---')
+        # No idea what happened here
+        # Check if registered?
         return None
     return tx['inputs'][index]['prevout']['hash']
     
@@ -615,7 +668,6 @@ def revealAll(account):
         response = hsw.rpc_walletPassphrase(password,10)
         if response['error'] is not None:
             return
-        # Try to send the batch of all renew, reveal and redeem actions
         
         return requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}",json={"method": "sendbatch","params": [[["REVEAL"]]]}).json()
     except Exception as e:
@@ -624,6 +676,58 @@ def revealAll(account):
                 "message": str(e)
             }
         }
+
+def redeemAll(account):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        # Try to select and login to the wallet
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return
+        
+        return requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}",json={"method": "sendbatch","params": [[["REDEEM"]]]}).json()
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+
+def registerAll(account):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    # try:
+    domains = getPendingRegisters(account_name)
+    if len(domains) == 0:
+        return {
+            "error": {
+                "message": "Nothing to do."
+            }
+        }
+    batch = []
+    for domain in domains:
+        batch.append(["UPDATE",domain['name'],{"records":[]}])
+    return sendBatch(account,batch)
 
 def rescan_auction(account,domain):
     # Get height of the start of the auction
