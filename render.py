@@ -183,9 +183,10 @@ def bids(bids,reveals):
     return html
 
 
-def bidDomains(bids,domains, sortState=False):
+def bidDomains(bids,domains, sortbyDomains=False):
     html = ''
-    if not sortState:
+
+    if not sortbyDomains:
         for bid in bids:
             for domain in domains:
                 if bid['name'] == domain['name']:
@@ -201,7 +202,7 @@ def bidDomains(bids,domains, sortState=False):
                     html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{domain['name']}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
-                    html += f"<td>{bid['height']:,}</td>"
+                    html += f"<td>{domain['height']:,}</td>"
                     html += "</tr>"
     else:
         for domain in domains:

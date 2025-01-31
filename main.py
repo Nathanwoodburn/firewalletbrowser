@@ -297,6 +297,8 @@ def auctions():
     if direction == "⬆":
         reverse = True
 
+    sortbyDomain = False
+
     if sort == "price":
         # Sort by price
         bids = sorted(bids, key=lambda k: k['value'],reverse=reverse)
@@ -306,26 +308,25 @@ def auctions():
         sort_state = direction
         sort_state_next = reverseDirection(direction)
         domains = sorted(domains, key=lambda k: k['state'],reverse=reverse)
+        sortbyDomain = True
     elif sort == "time":
         sort_time = direction
         sort_time_next = reverseDirection(direction)
-        bids = sorted(bids, key=lambda k: k['height'],reverse=reverse)
+
+        # If older HSD version sort by domain height
+        if bids[0]['height'] == 0:
+            domains = sorted(domains, key=lambda k: k['height'],reverse=reverse)
+            sortbyDomain = True
+        else:
+            bids = sorted(bids, key=lambda k: k['height'],reverse=reverse)
     else:
         # Sort by domain
         bids = sorted(bids, key=lambda k: k['name'],reverse=reverse)
         sort_domain = direction
         sort_domain_next = reverseDirection(direction)
     
-    if sort == "state":
-        bidsHtml = render.bidDomains(bids,domains,True)
-    else:
-        bidsHtml = render.bidDomains(bids,domains)
-    
-
-    
-
+    bidsHtml = render.bidDomains(bids,domains,sortbyDomain)
     plugins = ""
-
     message = ''
     if 'message' in request.args:
         message = request.args.get("message")
