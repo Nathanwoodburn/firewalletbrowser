@@ -6,9 +6,8 @@ import hashlib
 import subprocess
 
 
-def listPlugins():
+def listPlugins(update=False):
     plugins = []
-    customPlugins = []
     for file in os.listdir("plugins"):
         if file.endswith(".py"):
             if file != "main.py":
@@ -36,9 +35,8 @@ def listPlugins():
         if not os.path.exists(f"customPlugins/{importPath}"):
             if os.system(f"git clone {importurl} customPlugins/{importPath}") != 0:
                 continue
-        else:
-            if os.system(f"cd customPlugins/{importPath} && git pull") != 0:
-                continue
+        elif update:
+            os.system(f"cd customPlugins/{importPath} && git pull")
         
         # Import plugins from customPlugins/<importPath>
         for file in os.listdir(f"customPlugins/{importPath}"):

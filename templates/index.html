@@ -43,7 +43,7 @@
                     <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
                         <form class="d-none d-sm-inline-block me-auto ms-md-3 my-2 my-md-0 mw-100 navbar-search" action="/search" method="get">
                             <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for domain" name="q" value="{{search_term}}" style="color: var(--bs-dark-text-emphasis);background: var(--bs-light);"><button class="btn btn-primary py-0" type="submit"><i class="fas fa-search"></i></button></div>
-                        </form><span style="color: var(--bs-dark);">Sync: {{sync}}%</span><span style="color: var(--bs-dark);margin-left: 10px;">Wallet: {{wallet_status}}</span>
+                        </form><span style="color: var(--bs-dark);">Sync: <span id="hsd-sync">{{sync}}</span>%</span><span style="color: var(--bs-dark);margin-left: 10px;">Wallet:&nbsp;<span id="wallet-sync">{{wallet_status}}</span></span><span style="color: var(--bs-dark);margin-left: 10px;">Height: <span id="hsd-height">{{height}}</span></span>
                         <ul class="navbar-nav flex-nowrap ms-auto">
                             <li class="nav-item dropdown d-sm-none no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><i class="fas fa-search"></i></a>
                                 <div class="dropdown-menu dropdown-menu-end p-3 animated--grow-in" aria-labelledby="searchDropdown">
@@ -73,7 +73,7 @@
                                     <div class="row align-items-center no-gutters">
                                         <div class="col me-2">
                                             <div class="text-uppercase text-primary fw-bold text-xs mb-1"><span style="color: var(--bs-dark);">HNS Available</span></div>
-                                            <div class="text-dark fw-bold h5 mb-0"><span><img src="/assets/img/HNS.png" width="20px">&nbsp;{{available}}</span></div>
+                                            <div class="text-dark fw-bold h5 mb-0"><span><img src="/assets/img/HNS.png" width="20px">&nbsp;<span id="wallet-available">0.00</span></span></div>
                                         </div>
                                         <div class="col-auto"><i class="fas fa-dollar-sign fa-2x text-gray-300"></i></div>
                                     </div>
@@ -86,7 +86,7 @@
                                     <div class="row align-items-center no-gutters">
                                         <div class="col me-2">
                                             <div class="text-uppercase text-success fw-bold text-xs mb-1"><span>HNS Total</span></div>
-                                            <div class="text-dark fw-bold h5 mb-0"><span><img src="/assets/img/HNS.png" width="20px">&nbsp;{{total}}</span></div>
+                                            <div class="text-dark fw-bold h5 mb-0"><span><img src="/assets/img/HNS.png" width="20px">&nbsp;<span id="wallet-total">0.00</span></span></div>
                                         </div>
                                         <div class="col-auto"><i class="fas fa-dollar-sign fa-2x text-gray-300"></i></div>
                                     </div>
@@ -101,7 +101,7 @@
                                             <div class="text-uppercase text-info fw-bold text-xs mb-1"><span>Domains</span></div>
                                             <div class="row g-0 align-items-center">
                                                 <div class="col-auto">
-                                                    <div class="text-dark fw-bold h5 mb-0 me-3"><span>{{domain_count}}</span></div>
+                                                    <div class="text-dark fw-bold h5 mb-0 me-3"><span id="wallet-domainCount">0</span></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -115,7 +115,7 @@
                                     <div class="row align-items-center no-gutters">
                                         <div class="col me-2">
                                             <div class="text-uppercase text-warning fw-bold text-xs mb-1"><span>Pending Transactions</span></div>
-                                            <div class="text-dark fw-bold h5 mb-0"><span>{{pending}}</span></div>
+                                            <div class="text-dark fw-bold h5 mb-0"><span id="wallet-pending">0</span></div>
                                         </div>
                                         <div class="col-auto"><svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="1em" viewBox="0 0 24 24" width="1em" fill="currentColor" class="fa-2x text-gray-300">
                                                 <g>
@@ -180,7 +180,7 @@
             </div>
             <footer class="sticky-footer" style="background: var(--bs-primary-text-emphasis);">
                 <div class="container my-auto">
-                    <div class="text-center my-auto copyright"><span>Copyright © FireWallet 2024</span></div>
+                    <div class="text-center my-auto copyright"><span>Copyright © FireWallet 2025</span></div>
                 </div>
             </footer>
         </div><a class="border rounded d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a>

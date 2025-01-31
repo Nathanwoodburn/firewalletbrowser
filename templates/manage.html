@@ -43,7 +43,7 @@
                     <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
                         <form class="d-none d-sm-inline-block me-auto ms-md-3 my-2 my-md-0 mw-100 navbar-search" action="/search" method="get">
                             <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for domain" name="q" value="{{search_term}}" style="color: var(--bs-dark-text-emphasis);background: var(--bs-light);"><button class="btn btn-primary py-0" type="submit"><i class="fas fa-search"></i></button></div>
-                        </form><span style="color: var(--bs-dark);">Sync: {{sync}}%</span><span style="color: var(--bs-dark);margin-left: 10px;">Wallet: {{wallet_status}}</span>
+                        </form><span style="color: var(--bs-dark);">Sync: <span id="hsd-sync">{{sync}}</span>%</span><span style="color: var(--bs-dark);margin-left: 10px;">Wallet:&nbsp;<span id="wallet-sync">{{wallet_status}}</span></span><span style="color: var(--bs-dark);margin-left: 10px;">Height: <span id="hsd-height">{{height}}</span></span>
                         <ul class="navbar-nav flex-nowrap ms-auto">
                             <li class="nav-item dropdown d-sm-none no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><i class="fas fa-search"></i></a>
                                 <div class="dropdown-menu dropdown-menu-end p-3 animated--grow-in" aria-labelledby="searchDropdown">
@@ -151,7 +151,7 @@ function checkAddress(inputValue) {
             </div>
             <footer class="sticky-footer" style="background: var(--bs-primary-text-emphasis);">
                 <div class="container my-auto">
-                    <div class="text-center my-auto copyright"><span>Copyright © FireWallet 2024</span></div>
+                    <div class="text-center my-auto copyright"><span>Copyright © FireWallet 2025</span></div>
                 </div>
             </footer>
         </div><a class="border rounded d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a>

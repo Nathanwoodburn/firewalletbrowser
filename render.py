@@ -3,6 +3,14 @@ import json
 import urllib.parse
 from flask import render_template
 from domainLookup import punycode_to_emoji
+import os
+
+# Get Explorer URL
+TX_EXPLORER_URL = os.getenv("EXPLORER_TX")
+if TX_EXPLORER_URL is None:
+    TX_EXPLORER_URL = "https://niami.io/tx/"
+
+
 
 def domains(domains, mobile=False):
     html = ''
@@ -21,19 +29,25 @@ def domains(domains, mobile=False):
         if emoji != name:
             name = f'{emoji} ({name})'
 
+
+        link = f'/manage/{domain["name"]}'
+        link_action = "Manage"
+        if domain['registered'] == False:
+            link_action = "Register"
+            link = f'/auction/{domain["name"]}/register'
+
         if not mobile:
-            html += f'<tr><td>{name}</td><td>{expires} days</td><td>{paid} HNS</td><td><a href="/manage/{domain["name"]}">Manage</a></td></tr>'
+            html += f'<tr><td>{name}</td><td>{expires} days</td><td>{paid:,.2f} HNS</td><td><a href="{link}">{link_action}</a></td></tr>'
         else:
-            html += f'<tr><td><a href="/manage/{domain["name"]}">{name}</a></td><td>{expires} days</td></tr>'
+            html += f'<tr><td><a href="{link}">{name}</a></td><td>{expires} days</td></tr>'
     
     return html
 
 def transactions(txs):
+    
+    if len(txs) == 0:
+        return '<tr><td colspan="5">No transactions found</td></tr>'
     html = ''
-
-    # Reverse the list
-    txs = txs[::-1]
-
     for tx in txs:
         action = "HNS Transfer"
         address = tx["outputs"][0]["address"]
@@ -59,17 +73,15 @@ def transactions(txs):
                 amount += output["value"]
 
         amount = amount / 1000000
-        amount = round(amount, 2)
-        amount = "{:,}".format(amount)
 
-        hash = "<a target='_blank' href='https://niami.io/tx/" + hash + "'>" + hash[:8] + "...</a>"
+        hash = f"<a target='_blank' href='{TX_EXPLORER_URL}{hash}'>{hash[:8]}...</a>"
         if confirmations < 5:
-            confirmations = "<td style='background-color: red;'>" + str(confirmations) + "</td>"
+            confirmations = f"<td style='background-color: red;'>{confirmations}</td>" 
         else:
-            confirmations = "<td>" + str(confirmations) + "</td>"
+            confirmations = f"<td>{confirmations:,}</td>"
 
 
-        html += f'<tr><td>{action}</td><td>{address}</td><td>{hash}</td>{confirmations}<td>{amount} HNS</td></tr>'
+        html += f'<tr><td>{action}</td><td>{address}</td><td>{hash}</td>{confirmations}<td>{amount:,.2f} HNS</td></tr>'
     return html
 
 
@@ -93,14 +105,14 @@ def dns(data, edit=False):
 
 
         elif entry['type'] == 'DS':
-            ds = str(entry['keyTag']) + " " + str(entry['algorithm']) + " " + str(entry['digestType']) + " " + entry['digest']
+            ds = f'{entry['keyTag']} {entry['algorithm']} {entry['digestType']} {entry['digest']}'
             html_output += f"<td>{ds}</td>\n"
 
         else:
             value = ""
             for key, val in entry.items():
                 if key != 'type':
-                    value += str(val) + " "
+                    value += f'{val} '
             html_output += f"<td>{value}</td>\n"
             
         if edit:
@@ -120,18 +132,16 @@ def txs(data):
 
     for entry in data:
         html_output += f"<tr><td>{entry['action']}</td>\n"
-        html_output += f"<td><a target='_blank' href='https://niami.io/tx/{entry['txid']}'>{entry['txid'][:8]}...</a></td>\n"
+        html_output += f"<td><a target='_blank' href='{TX_EXPLORER_URL}{entry['txid']}'>{entry['txid'][:8]}...</a></td>\n"
         amount = entry['amount']
         amount = amount / 1000000
-        amount = round(amount, 2)
 
         if entry['blind'] == None:
-            html_output += f"<td>{amount} HNS</td>\n"
+            html_output += f"<td>{amount:,.2f} HNS</td>\n"
         else:
             blind = entry['blind']
             blind = blind / 1000000
-            blind = round(blind, 2)
-            html_output += f"<td>{amount} + {blind} HNS</td>\n"
+            html_output += f"<td>{amount:,.2f} + {blind:,.2f} HNS</td>\n"
 
         html_output += f"<td>{timestamp_to_readable_time(entry['time'])}</td>\n"
         html_output += f"</tr>\n"
@@ -150,20 +160,17 @@ def bids(bids,reveals):
     for bid in bids:
         lockup = bid['lockup']
         lockup = lockup / 1000000
-        lockup = round(lockup, 2)
         html += "<tr>"
-        html += f"<td>{lockup} HNS</td>"
+        html += f"<td>{lockup:,.2f} HNS</td>"
         revealed = False
         for reveal in reveals:
             if reveal['bid'] == bid['prevout']['hash']:
                 revealed = True
                 value = reveal['value']
                 value = value / 1000000
-                value = round(value, 2)
-                html += f"<td>{value} HNS</td>"
+                html += f"<td>{value:,.2f} HNS</td>"
                 bidValue = lockup - value
-                bidValue = round(bidValue, 2)
-                html += f"<td>{bidValue} HNS</td>"                               
+                html += f"<td>{bidValue:,.2f} HNS</td>"                               
                 break
         if not revealed:
             html += f"<td>Hidden until reveal</td>"
@@ -184,22 +191,17 @@ def bidDomains(bids,domains, sortState=False):
                 if bid['name'] == domain['name']:
                     lockup = bid['lockup']
                     lockup = lockup / 1000000
-                    lockup = round(lockup, 2)
                     bidValue = bid['value'] / 1000000
-                    bidValue = round(bidValue, 2)
                     blind = lockup - bidValue
-                    bidValue = "{:,}".format(bidValue)
-                    blind = round(blind, 2)
-                    blind = "{:,}".format(blind)
 
-                    bidDisplay = f'<b>{bidValue} HNS</b> + {blind} HNS blind'
+                    bidDisplay = f'<b>{bidValue:,.2f} HNS</b> + {blind:,.2f} HNS blind'
                     
 
                     html += "<tr>"
-                    html += f"<td>{domain['name']}</td>"
+                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{domain['name']}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
-                    html += f"<td>{bid['height']}</td>"
+                    html += f"<td>{bid['height']:,}</td>"
                     html += "</tr>"
     else:
         for domain in domains:
@@ -207,18 +209,15 @@ def bidDomains(bids,domains, sortState=False):
                 if bid['name'] == domain['name']:
                     lockup = bid['lockup']
                     lockup = lockup / 1000000
-                    lockup = round(lockup, 2)
                     bidValue = bid['value'] / 1000000
-                    bidValue = round(bidValue, 2)
                     blind = lockup - bidValue
-                    bidValue = "{:,}".format(bidValue)
-                    blind = "{:,}".format(blind)
 
-                    bidDisplay = f'<b>{bidValue} HNS</b> + {blind} HNS blind'
+                    bidDisplay = f'<b>{bidValue:,.2f} HNS</b> + {blind:,.2f} HNS blind'
                     html += "<tr>"
-                    html += f"<td>{domain['name']}</td>"
+                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{domain['name']}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
+                    html += f"<td>{domain['height']:,}</td>"
                     html += "</tr>"
     return html
 

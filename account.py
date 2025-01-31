@@ -6,29 +6,64 @@ import requests
 import re
 import domainLookup
 import json
-
+import time
 
 dotenv.load_dotenv()
 
-APIKEY = os.getenv("hsd_api")
-ip = os.getenv("hsd_ip")
-if ip is None:
-    ip = "localhost"
+HSD_API = os.getenv("HSD_API")
+HSD_IP = os.getenv("HSD_IP")
+if HSD_IP is None:
+    HSD_IP = "localhost"
 
-show_expired = os.getenv("show_expired")
-if show_expired is None:
-    show_expired = False
+HSD_NETWORK = os.getenv("HSD_NETWORK")
+HSD_WALLET_PORT = 12039
+HSD_NODE_PORT = 12037
 
-hsd = api.hsd(APIKEY,ip)
-hsw = api.hsw(APIKEY,ip)
+if not HSD_NETWORK:
+    HSD_NETWORK = "main"
+else:
+    HSD_NETWORK = HSD_NETWORK.lower()
+    
+if HSD_NETWORK == "simnet":
+    HSD_WALLET_PORT = 15039
+    HSD_NODE_PORT = 15037
+elif HSD_NETWORK == "testnet":
+    HSD_WALLET_PORT = 13039
+    HSD_NODE_PORT = 13037
+elif HSD_NETWORK == "regtest":
+    HSD_WALLET_PORT = 14039
+    HSD_NODE_PORT = 14037
 
+
+SHOW_EXPIRED = os.getenv("SHOW_EXPIRED")
+if SHOW_EXPIRED is None:
+    SHOW_EXPIRED = False
+
+hsd = api.hsd(HSD_API,HSD_IP,HSD_NODE_PORT)
+hsw = api.hsw(HSD_API,HSD_IP,HSD_WALLET_PORT)
+
+cacheTime = 3600
 
 # Verify the connection
 response = hsd.getInfo()
 
-exclude = ["primary"]
-if os.getenv("exclude") is not None:
-    exclude = os.getenv("exclude").split(",")
+EXCLUDE = ["primary"]
+if os.getenv("EXCLUDE") is not None:
+    EXCLUDE = os.getenv("EXCLUDE").split(",")
+
+def hsdConnected():
+    if hsdVersion() == -1:
+        return False
+    return True
+
+def hsdVersion(format=True):
+    info = hsd.getInfo()
+    if 'error' in info:
+        return -1
+    if format:
+        return float('.'.join(info['version'].split(".")[:2]))
+    else:
+        return info['version']
 
 def check_account(cookie: str):
     if cookie is None:
@@ -61,12 +96,15 @@ def check_password(cookie: str, password: str):
     return True
 
 def createWallet(account: str, password: str):
+    if not hsdConnected():
+        return {
+            "error": {
+                "message": "Node not connected"
+            }
+        }
     # Create the account
     # Python wrapper doesn't support this yet
-    response = requests.put(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}")
-    print(response)
-    print(response.json())
-
+    response = requests.put(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}")
     if response.status_code != 200:
         return {
             "error": {
@@ -80,9 +118,8 @@ def createWallet(account: str, password: str):
 
     
     # Encrypt the wallet (python wrapper doesn't support this yet)
-    response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/passphrase",
+    response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/passphrase",
         json={"passphrase": password})
-    print(response)
 
     return {
         "seed": seed,
@@ -91,16 +128,20 @@ def createWallet(account: str, password: str):
     }
 
 def importWallet(account: str, password: str,seed: str):
+    if not hsdConnected():
+        return {
+            "error": {
+                "message": "Node not connected"
+            }
+        }
+
     # Import the wallet
     data = {
         "passphrase": password,
         "mnemonic": seed,
     }
 
-    response = requests.put(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}",json=data)
-    print(response)
-    print(response.json())
-
+    response = requests.put(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}",json=data)
     if response.status_code != 200:
         return {
             "error": {
@@ -122,10 +163,20 @@ def listWallets():
     # Check if response is json or an array
     if isinstance(response, list):
         # Remove excluded wallets
-        response = [wallet for wallet in response if wallet not in exclude]
+        response = [wallet for wallet in response if wallet not in EXCLUDE]
 
         return response
     return ['Wallet not connected']
+
+def selectWallet(account: str):
+    # Select wallet
+    response = hsw.rpc_selectWallet(account)
+    if response['error'] is not None:
+        return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
 
 def getBalance(account: str):
     # Get the total balance
@@ -171,25 +222,29 @@ def getAddress(account: str):
     return info['receiveAddress']
 
 def getPendingTX(account: str):
-    # Get the pending transactions
-    info = hsw.getWalletTxHistory(account)
-    if 'error' in info:
-        return 0
     pending = 0
-    for tx in info:
-        if tx['confirmations'] < 1:
-            pending += 1
-
+    page = 1
+    pageSize = 10
+    while True:
+        txs = getTransactions(account,page,pageSize)
+        page+=1
+        pendingPage = 0
+        for tx in txs:
+            if tx['confirmations'] < 1:
+                pending+=1
+                pendingPage+=1
+        if pendingPage < pageSize:
+            break
     return pending
 
 def getDomains(account,own=True):
     if own:
-        response = requests.get(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/name?own=true")
+        response = requests.get(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/name?own=true")
     else:
-        response = requests.get(f"http://x:{APIKEY}@{ip}:12039/wallet/{account}/name")
+        response = requests.get(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/name")
     info = response.json()
 
-    if show_expired:
+    if SHOW_EXPIRED:
         return info
     
     # Remove any expired domains
@@ -204,13 +259,99 @@ def getDomains(account,own=True):
 
     return domains
 
-def getTransactions(account):
-    # Get the transactions
-    info = hsw.getWalletTxHistory(account)
-    if 'error' in info:
-        return []
-    return info
+def getPageTXCache(account,page,size=100):
+    page = f"{page}-{size}"
+    if not os.path.exists(f'cache'):
+        os.mkdir(f'cache')
 
+    if not os.path.exists(f'cache/{account}_page.json'):
+        with open(f'cache/{account}_page.json', 'w') as f:
+            f.write('{}')
+    with open(f'cache/{account}_page.json') as f:
+        pageCache = json.load(f)
+        
+    if page in pageCache and pageCache[page]['time'] > int(time.time()) - cacheTime:
+        return pageCache[page]['txid']
+    return None
+
+def pushPageTXCache(account,page,txid,size=100):
+    page = f"{page}-{size}"
+    if not os.path.exists(f'cache/{account}_page.json'):
+        with open(f'cache/{account}_page.json', 'w') as f:
+            f.write('{}')
+    with open(f'cache/{account}_page.json') as f:
+        pageCache = json.load(f)
+
+    pageCache[page] = {
+        'time': int(time.time()),
+        'txid': txid
+    }
+    with open(f'cache/{account}_page.json', 'w') as f:
+        json.dump(pageCache, f,indent=4)
+
+    return pageCache[page]['txid']
+
+def getTXFromPage(account,page,size=100):
+    if page == 1:
+        return getTransactions(account,1,size)[-1]['hash']
+    
+    cached = getPageTXCache(account,page,size)
+    if cached:
+        return getPageTXCache(account,page,size)
+    previous = getTransactions(account,page,size)
+    if len(previous) == 0:
+        return None
+    hash = previous[-1]['hash']
+    pushPageTXCache(account,page,hash,size)
+    return hash
+
+
+
+def getTransactions(account,page=1,limit=100):
+    # Get the transactions
+    if hsdVersion() < 7:
+        if page != 1:
+            return []
+        info = hsw.getWalletTxHistory(account)
+        if 'error' in info:
+            return []
+        return info[::-1]
+    
+    lastTX = None
+    if page < 1:
+        return []
+    if page > 1:
+        lastTX = getTXFromPage(account,page-1,limit)
+    
+    if lastTX:
+        response = requests.get(f'http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/tx/history?reverse=true&limit={limit}&after={lastTX}')
+    elif page == 1:
+        response = requests.get(f'http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/tx/history?reverse=true&limit={limit}')
+    else:
+        return []
+
+    if response.status_code != 200:
+        print(response.text)
+        return []
+    data = response.json()
+
+    # Refresh the cache if the next page is different
+    nextPage = getPageTXCache(account,page,limit)
+    if nextPage is not None and nextPage != data[-1]['hash']:
+        print(f'Refreshing page {page}')
+        pushPageTXCache(account,page,data[-1]['hash'],limit)
+    return data
+
+def getAllTransactions(account):
+    # Get the transactions
+    page = 0
+    txs = []
+    while True:
+        txs += getTransactions(account,page,1000)
+        if len(txs) == 0:
+            break
+        page += 1
+    return txs
 
 def check_address(address: str, allow_name: bool = True, return_address: bool = False):
     # Check if the address is valid
@@ -223,7 +364,7 @@ def check_address(address: str, allow_name: bool = True, return_address: bool = 
         return check_hip2(address[1:])
     
     # Check if the address is a valid HNS address
-    response = requests.post(f"http://x:{APIKEY}@{ip}:12037",json={
+    response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_NODE_PORT}",json={
         "method": "validateaddress",
         "params": [address]
     }).json()
@@ -272,7 +413,7 @@ def send(account,address,amount):
 
     response = hsw.rpc_walletPassphrase(password,10)
     # Unlock the account
-    # response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{account_name}/unlock",
+    # response = requests.post(f"http://x:{APIKEY}@{ip}:{HSD_WALLET_PORT}/wallet/{account_name}/unlock",
         # json={"passphrase": password,"timeout": 10})
     if response['error'] is not None:
         return {
@@ -291,6 +432,15 @@ def send(account,address,amount):
     return {
         "tx": response['result']
     }
+
+def isOwnDomain(account,name: str):
+    domains = getDomains(account)
+    for domain in domains:
+        print(domain)
+        if domain['name'] == name:
+            return True
+    return False
+
 
 def getDomain(domain: str):
     # Get the domain
@@ -328,10 +478,12 @@ def getDNS(domain: str):
         return {
             "error": "No DNS records"
         }
+    if response['result'] == None:
+        return []
+
     if 'records' not in response['result']:
         return []
     return response['result']['records']
-
 
 def setDNS(account,domain,records):
     account_name = check_account(account)
@@ -377,6 +529,9 @@ def setDNS(account,domain,records):
     response = hsw.sendUPDATE(account_name,password,domain,data)
     return response
 
+def register(account,domain):
+    # Maybe add default dns records?
+    return setDNS(account,domain,'[]')
 
 def getNodeSync():
     response = hsd.getInfo()
@@ -422,12 +577,56 @@ def getBids(account, domain="NONE"):
 def getReveals(account,domain):
     return hsw.getWalletRevealsByName(domain,account)
 
+def getPendingReveals(account):
+    bids = getBids(account)
+    domains = getDomains(account,False)
+    pending = []
+    for domain in domains:
+        if domain['state'] == "REVEAL":
+            reveals = getReveals(account,domain['name'])
+            for bid in bids:
+                if bid['name'] == domain['name']:
+                    state_found = False                    
+                    for reveal in reveals:
+                        if reveal['own'] == True:
+                            if bid['value'] == reveal['value']:
+                                state_found = True
+                    
+                    if not state_found:
+                        pending.append(bid)
+    return pending
+
+#! TODO
+def getPendingRedeems(account):
+    bids = getBids(account)
+    domains = getDomains(account,False)
+    pending = []
+    return pending
+
+def getPendingRegisters(account):
+    bids = getBids(account)
+    domains = getDomains(account,False)
+    pending = []
+    for domain in domains:
+        if domain['state'] == "CLOSED" and domain['registered'] == False:
+            for bid in bids:
+                if bid['name'] == domain['name']:
+                    if bid['value'] == domain['highest']:
+                        pending.append(bid)                        
+    return pending
 
 def getRevealTX(reveal):
     prevout = reveal['prevout']
     hash = prevout['hash']
     index = prevout['index']
     tx = hsd.getTxByHash(hash)
+    if 'inputs' not in tx:
+        print(f'Something is up with this tx: {hash}')
+        print(tx)
+        print('---')
+        # No idea what happened here
+        # Check if registered?
+        return None
     return tx['inputs'][index]['prevout']['hash']
     
 
@@ -469,15 +668,66 @@ def revealAll(account):
         response = hsw.rpc_walletPassphrase(password,10)
         if response['error'] is not None:
             return
-        # Try to send the batch of all renew, reveal and redeem actions
         
-        return requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REVEAL"]]]}).json()
+        return requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}",json={"method": "sendbatch","params": [[["REVEAL"]]]}).json()
     except Exception as e:
         return {
             "error": {
                 "message": str(e)
             }
         }
+
+def redeemAll(account):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        # Try to select and login to the wallet
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return
+        
+        return requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}",json={"method": "sendbatch","params": [[["REDEEM"]]]}).json()
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+
+def registerAll(account):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    # try:
+    domains = getPendingRegisters(account_name)
+    if len(domains) == 0:
+        return {
+            "error": {
+                "message": "Nothing to do."
+            }
+        }
+    batch = []
+    for domain in domains:
+        batch.append(["UPDATE",domain['name'],{"records":[]}])
+    return sendBatch(account,batch)
 
 def rescan_auction(account,domain):
     # Get height of the start of the auction
@@ -696,7 +946,7 @@ def sendBatch(account, batch):
                 "message": response['error']['message']
             }
         }
-        response = requests.post(f"http://x:{APIKEY}@{ip}:12039",json={
+        response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}",json={
             "method": "sendbatch",
             "params": [batch]
         }).json()
@@ -756,7 +1006,7 @@ def zapTXs(account):
         }   
 
     try:
-        response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{account_name}/zap",
+        response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account_name}/zap",
             json={"age": age,
                   "account": "default"
                   })
