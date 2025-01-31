@@ -500,16 +500,15 @@ def advancedChangeLookahead(params, authentication):
     lookahead = int(lookahead)
     wallet = authentication.split(":")[0]
     password = ":".join(authentication.split(":")[1:])
-    APIKEY = os.getenv("hsd_api")
-    ip = os.getenv("hsd_ip")
-    if ip is None:
-        ip = "localhost"
+    KEY = account.HSD_API
+    IP = account.HSD_IP
+    PORT = account.HSD_WALLET_PORT
 
     # Unlock wallet
-    response = requests.post(f"http://x:{APIKEY}@{ip}:12039/wallet/{wallet}/unlock",
+    response = requests.post(f"http://x:{KEY}@{IP}:{PORT}/wallet/{wallet}/unlock",
         json={"passphrase": password, "timeout": 10})
 
-    response = requests.patch(f"http://x:{APIKEY}@{ip}:12039/wallet/{wallet}/account/default",
+    response = requests.patch(f"http://x:{KEY}@{IP}:{PORT}/wallet/{wallet}/account/default",
         json={"lookahead": lookahead})
     
 

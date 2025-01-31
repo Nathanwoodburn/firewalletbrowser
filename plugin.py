@@ -36,8 +36,7 @@ def listPlugins(update=False):
             if os.system(f"git clone {importurl} customPlugins/{importPath}") != 0:
                 continue
         elif update:
-            if os.system(f"cd customPlugins/{importPath} && git pull") != 0:
-                continue
+            os.system(f"cd customPlugins/{importPath} && git pull")
         
         # Import plugins from customPlugins/<importPath>
         for file in os.listdir(f"customPlugins/{importPath}"):

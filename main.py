@@ -860,18 +860,23 @@ def auction(domain):
         return redirect("/")
 
     domainInfo = account_module.getDomain(search_term)
+    error = request.args.get("error")
+    if error == None:
+        error = ""
     
     if 'error' in domainInfo:
         return render_template("auction.html", account=account,sync=account_module.getNodeSync(),
                                wallet_status=account_module.getWalletStatus(),
-                               search_term=search_term, domain=domainInfo['error'])
+                               search_term=search_term, domain=domainInfo['error'],
+                               error=error)
     
     if domainInfo['info'] is None:
         next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
         return render_template("auction.html", account=account, sync=account_module.getNodeSync(),
                                wallet_status=account_module.getWalletStatus(),
                                 search_term=search_term,domain=search_term,next_action=next_action,
-                               state="AVAILABLE", next="Open Auction")
+                               state="AVAILABLE", next="Open Auction",
+                               error=error)
 
     state = domainInfo['info']['state']
     next_action = ''
@@ -966,7 +971,7 @@ def bid(domain):
     blind = float(blind)
 
     if bid+blind == 0:
-        return redirect("/auction/" + domain+ "?message=Invalid bid amount")
+        return redirect("/auction/" + domain+ "?error=Invalid bid amount")
 
     
     # Show confirm page
@@ -1018,7 +1023,7 @@ def bid_confirm(domain):
                                   float(blind))
     print(response)
     if 'error' in response:
-        return redirect("/auction/" + domain + "?message=" + response['error']['message'])
+        return redirect("/auction/" + domain + "?error=" + response['error']['message'])
     
     return redirect("/success?tx=" + response['hash'])
 
@@ -1037,7 +1042,7 @@ def open_auction(domain):
 
     if 'error' in response:
         if response['error'] != None:
-            return redirect("/auction/" + domain + "?message=" + response['error']['message'])
+            return redirect("/auction/" + domain + "?error=" + response['error']['message'])
     print(response)
     return redirect("/success?tx=" + response['hash'])
 

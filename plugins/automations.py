@@ -5,10 +5,10 @@ import threading
 import os
 import time
 
-APIKEY = os.environ.get("hsd_api")
-ip = os.getenv("hsd_ip")
-if ip is None:
-    ip = "localhost"
+KEY = account.HSD_API
+IP = account.HSD_IP
+PORT = account.HSD_WALLET_PORT
+
 
 if not os.path.exists("user_data"):
     os.mkdir("user_data")
@@ -148,9 +148,9 @@ def automations_background(authentication):
             if response['error'] is not None:
                 return
             # Try to send the batch of all renew, reveal and redeem actions
-            requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["RENEW"]]]})
-            requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REVEAL"]]]})
-            requests.post(f"http://x:{APIKEY}@{ip}:12039",json={"method": "sendbatch","params": [[["REDEEM"]]]})
+            requests.post(f"http://x:{KEY}@{IP}:{PORT}",json={"method": "sendbatch","params": [[["RENEW"]]]})
+            requests.post(f"http://x:{KEY}@{IP}:{PORT}",json={"method": "sendbatch","params": [[["REVEAL"]]]})
+            requests.post(f"http://x:{KEY}@{IP}:{PORT}",json={"method": "sendbatch","params": [[["REDEEM"]]]})
         except Exception as e:
             print(e)
 
