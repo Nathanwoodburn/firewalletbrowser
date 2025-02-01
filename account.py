@@ -388,7 +388,7 @@ def check_hip2(domain: str):
     domain = domain.lower()
 
     if re.match(r'^[a-zA-Z0-9\-\.]{1,63}$', domain) is None:
-        return 'Invalid address'
+        return 'Invalid domain'
     
     address = domainLookup.hip2(domain)
     if address.startswith("Hip2: "):

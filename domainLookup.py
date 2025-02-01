@@ -114,6 +114,7 @@ def hip2(domain: str):
             
     # Catch all exceptions
     except Exception as e:
+        print(f"Hip2: Lookup failed with error: {e}")
         return "Hip2: Lookup failed."
 
 

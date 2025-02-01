@@ -208,7 +208,7 @@ def check_address():
     if address is None:
         return jsonify({"result": "Invalid address"})
     
-    return jsonify({"result": account_module.check_address(address)})
+    return jsonify({"result": account_module.check_address(address.strip())})
 #endregion
 
 #region Domains
