@@ -9,6 +9,9 @@ import dns.asyncresolver
 import httpx
 from requests_doh import DNSOverHTTPSSession, add_dns_provider
 import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) # Disable insecure request warnings (since we are manually verifying the certificate)
 
 def hip2(domain: str):
     domain_check = False
@@ -75,9 +78,9 @@ def hip2(domain: str):
                                 break
         
 
-            expiry_date = cert_obj.not_valid_after
+            expiry_date = cert_obj.not_valid_after_utc
             # Check if expiry date is past
-            if expiry_date < datetime.datetime.now():
+            if expiry_date < datetime.datetime.now(datetime.timezone.utc):
                 return "Hip2: Certificate is expired"
 
 
