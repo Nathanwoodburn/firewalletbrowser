@@ -10,7 +10,7 @@ COPY . /app
 
 # Add mount point for data volume
 # VOLUME /data
-RUN apk add git
+RUN apk add git openssl
 
 ENTRYPOINT ["python3"]
 CMD ["server.py"]
