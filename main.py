@@ -38,48 +38,6 @@ def index():
     if not account:
         return redirect("/logout")
 
-    domains = account_module.getDomains(account)
-
-    # Sort
-    sort = request.args.get("sort")
-    if sort == None:
-        sort = "domain"
-    sort = sort.lower()
-    sort_price = ""
-    sort_price_next = "⬇"
-    sort_expiry = ""
-    sort_expiry_next = "⬇"
-    sort_domain = ""
-    sort_domain_next = "⬇"
-    reverse = False
-
-    direction = request.args.get("direction")
-    if direction == None:
-        direction = "⬇"
-
-    if direction == "⬆":
-        reverse = True
-
-    if sort == "expiry":
-        # Sort by next expiry
-        domains = sorted(domains, key=lambda k: k['renewal'],reverse=reverse)
-        sort_expiry = direction
-        sort_expiry_next = reverseDirection(direction)
-
-    
-    elif sort == "price":
-        # Sort by price
-        domains = sorted(domains, key=lambda k: k['value'],reverse=reverse)
-        sort_price = direction
-        sort_price_next = reverseDirection(direction)
-    else:
-        # Sort by domain
-        domains = sorted(domains, key=lambda k: k['name'],reverse=reverse)
-        sort_domain = direction
-        sort_domain_next = reverseDirection(direction)
-    
-    domainsMobile = render.domains(domains,True)
-    domains = render.domains(domains)
     
     plugins = ""
     dashFunctions = plugins_module.getDashboardFunctions()
@@ -87,11 +45,7 @@ def index():
         functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
         plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
 
-    return render_template("index.html", account=account,domains=domains,
-                           domainsMobile=domainsMobile, plugins=plugins,                           
-                           sort_price=sort_price,sort_expiry=sort_expiry,
-                           sort_domain=sort_domain,sort_price_next=sort_price_next,
-                           sort_expiry_next=sort_expiry_next,sort_domain_next=sort_domain_next)
+    return render_template("index.html", account=account, plugins=plugins)
  
 def reverseDirection(direction: str):
     if direction == "⬆":
@@ -875,9 +829,9 @@ def auction(domain):
                                error=error)
     
     if domainInfo['info'] is None:
-        if domainInfo['registered'] == False and domainInfo['expired'] == False:
+        if 'registered' in domainInfo and domainInfo['registered'] == False and 'expired' in domainInfo and domainInfo['expired'] == False:
             # Needs to be registered
-            next_action = f'ERROR GETTING NEXT STATE'
+                next_action = f'ERROR GETTING NEXT STATE'
         else:
             next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
         return render_template("auction.html", account=account, 
@@ -1517,6 +1471,17 @@ def api_wallet(function):
         return jsonify({"result": len(account_module.getPendingRegisters(account))})
     if function == "pendingRedeem":
         return jsonify({"result": len(account_module.getPendingRedeems(account,password))})
+    
+
+    if function == "domains":
+        domains = account_module.getDomains(account)
+        if 'error' in domains:
+            return jsonify({"result": [], "error": domains['error']})
+        
+        
+
+        return jsonify({"result": domains})
+        
 
 
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
