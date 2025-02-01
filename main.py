@@ -124,7 +124,7 @@ def send():
     if address is None or amount is None:
         return redirect("/send?message=Invalid address or amount&address=" + address + "&amount=" + amount)
     
-    address_check = account_module.check_address(address,True,True)
+    address_check = account_module.check_address(address.strip(),True,True)
     if not address_check:
         return redirect("/send?message=Invalid address&address=" + address + "&amount=" + amount)
     
@@ -720,7 +720,7 @@ def transfer(domain):
     
     address_check = account_module.check_address(address,True,True)
     if not address_check:
-        return redirect("/send?message=Invalid address&address=" + address)
+        return redirect("/manage/" + domain + "?error=Invalid address")
     
     address = address_check
         
