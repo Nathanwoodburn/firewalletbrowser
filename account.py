@@ -600,11 +600,31 @@ def getPendingReveals(account):
                         pending.append(bid)
     return pending
 
-#! TODO
-def getPendingRedeems(account):
-    bids = getBids(account)
-    domains = getDomains(account,False)
+
+def getPendingRedeems(account,password):
+    hsw.rpc_selectWallet(account)
+    hsw.rpc_walletPassphrase(password,10)
+    tx = hsw.rpc_createREDEEM('','default')
+    if tx['error']:
+        return []
+    
     pending = []
+    try:
+        for output in tx['result']['outputs']:
+            if output['covenant']['type'] != 5:
+                continue
+            if output['covenant']['action'] != "REDEEM":
+                continue
+            nameHash = output['covenant']['items'][0]
+            # Try to get the name from hash
+            name = hsd.rpc_getNameByHash(nameHash)
+            if name['error']:
+                pending.append(nameHash)
+            else:
+                pending.append(name['result'])
+    except:
+        print("Failed to parse redeems")
+    
     return pending
 
 def getPendingRegisters(account):

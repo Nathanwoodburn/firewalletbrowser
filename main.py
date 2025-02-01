@@ -1489,6 +1489,7 @@ def api_wallet(function):
         return jsonify({"error": "Not logged in"})
     
     account = account_module.check_account(request.cookies.get("account"))
+    password = request.cookies.get("account").split(":")[1]
     if not account:
         return jsonify({"error": "Invalid account"})
     
@@ -1515,7 +1516,7 @@ def api_wallet(function):
     if function == "pendingRegister":
         return jsonify({"result": len(account_module.getPendingRegisters(account))})
     if function == "pendingRedeem":
-        return jsonify({"result": len(account_module.getPendingRedeems(account))})
+        return jsonify({"result": len(account_module.getPendingRedeems(account,password))})
 
 
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
