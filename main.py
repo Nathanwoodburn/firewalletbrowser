@@ -308,7 +308,6 @@ def revealAllBids():
 
     response = account_module.revealAll(request.cookies.get("account"))
     if 'error' in response:
-        print(response)
         if response['error'] != None:
             if response['error']['message'] == "Nothing to do.":
                 return redirect("/auctions?message=No reveals pending")
@@ -329,7 +328,6 @@ def redeemAllBids():
 
     response = account_module.redeemAll(request.cookies.get("account"))
     if 'error' in response:
-        print(response)
         if response['error'] != None:
             if response['error']['message'] == "Nothing to do.":
                 return redirect("/auctions?message=No redeems pending")
@@ -349,7 +347,6 @@ def registerAllDomains():
 
     response = account_module.registerAll(request.cookies.get("account"))
     if 'error' in response:
-        print(response)
         if response['error'] != None:
             if response['error']['message'] == "Nothing to do.":
                 return redirect("/auctions?message=No domains to register")
@@ -369,7 +366,6 @@ def finalizeAllBids():
 
     response = account_module.finalizeAll(request.cookies.get("account"))
     if 'error' in response:
-        print(response)
         if response['error'] != None:
             if response['error']['message'] == "Nothing to do.":
                 return redirect("/dashboard?message=No domains to finalize")
