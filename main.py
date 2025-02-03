@@ -1146,7 +1146,25 @@ def settings_action(action):
 
     return redirect("/settings?error=Invalid action")
 
+@app.route('/settings/upload', methods=['POST'])
+def upload_image():
+    if not 'account' in request.cookies:
+        return redirect("/login?message=Not logged in")
+    
+    account = request.cookies.get("account")
 
+    if not os.path.exists('user_data/images'):
+        os.mkdir('user_data/images')
+
+    if 'image' not in request.files:
+        return redirect("/settings?error=No file selected")
+    file = request.files['image']
+    if file.filename == '':
+        return redirect("/settings?error=No file selected")
+    if file:
+        filepath = os.path.join(f'user_data/images/{account.split(":")[0]}.{file.filename.split(".")[-1]}')
+        file.save(filepath)
+        return redirect("/settings?success=File uploaded successfully")
 #endregion
 
 
@@ -1159,7 +1177,6 @@ def login():
 
     if 'message' in request.args:
         return render_template("login.html", 
-                               
                                error=request.args.get("message"),wallets=wallets)
 
     return render_template("login.html", 
@@ -1497,17 +1514,32 @@ def api_wallet(function):
     if function == "domains":
         domains = account_module.getDomains(account)
         if 'error' in domains:
-            return jsonify({"result": [], "error": domains['error']})
-        
-        
-
+            return jsonify({"result": [], "error": domains['error']})  
         return jsonify({"result": domains})
-        
-
+    
+    if function == "icon":
+        # Check if there is an icon
+        if not os.path.exists(f'user_data/images'):
+            return send_file('templates/assets/img/HNS.png')
+        files = os.listdir(f'user_data/images')
+        for file in files:
+            if file.startswith(account):
+                return send_file(f'user_data/images/{file}')
+            
+        return send_file('templates/assets/img/HNS.png')
 
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
     
-
+@app.route('/api/v1/icon/<account>')
+def api_icon(account):
+    if not os.path.exists(f'user_data/images'):
+        return send_file('templates/assets/img/HNS.png')
+    files = os.listdir(f'user_data/images')
+    for file in files:
+        if file.startswith(account):
+            return send_file(f'user_data/images/{file}')
+        
+    return send_file('templates/assets/img/HNS.png')
 
 #endregion
 

@@ -32,9 +32,21 @@
                                         <h4 class="text-dark mb-4">Welcome Back!</h4>
                                     </div>
                                     <form class="user" method="post">
-                                        <div class="mb-3"><select class="form-control form-select form-select-lg form-control-user" name="account" value="default">
+                                        <div class="mb-3"><img class="border rounded-circle img-profile" id="accountIcon" src="/api/v1/icon/primary" width="50px" height="50px" style="width: 50px;height: 50px;display: inline;"><select id="accountSelect" class="form-control form-select form-select-lg form-control-user" name="account" style="display: inline;width:calc(100% - 60px);margin-left:10px;" onchange="updateIcon()"> 
     {{wallets|safe}}
-</select></div>
+</select>
+<script>
+    function updateIcon() {
+    var select = document.getElementById("accountSelect");
+    var selectedValue = select.value;
+    document.getElementById("accountIcon").src = "/api/v1/icon/" + selectedValue;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    updateIcon();
+});
+</script>
+</div>
                                         <div class="mb-3"><input class="form-control form-control-user" type="password" id="exampleInputPassword" placeholder="Password" name="password"></div><button class="btn btn-primary d-block btn-user w-100" type="submit">Login</button>
                                         <hr>
                                     </form>

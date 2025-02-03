@@ -56,7 +56,7 @@
                                 </div>
                             </li>
                             <li class="nav-item dropdown no-arrow">
-                                <div class="nav-item dropdown no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><span class="d-none d-lg-inline me-2 small" style="color: var(--bs-dark);">{{account}}</span><img class="border rounded-circle img-profile" src="/assets/img/HNS.png"></a>
+                                <div class="nav-item dropdown no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><span class="d-none d-lg-inline me-2 small" style="color: var(--bs-dark);">{{account}}</span><img class="border rounded-circle img-profile" id="wallet-icon" src="/api/v1/wallet/icon"></a>
                                     <div class="dropdown-menu shadow dropdown-menu-end animated--grow-in"><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400"></i>&nbsp;Logout</a></div>
                                 </div>
                             </li>
@@ -100,6 +100,17 @@
                                     <div><a class="btn btn-primary stick-right" role="button" href="/settings/xpub">xPub</a>
                                         <h3>xPub Key</h3><span>Get your xPub key</span>
                                     </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <form id="uploadForm" action="/settings/upload" method="post" enctype="multipart/form-data">
+                                        <div>
+                                            <h3>Account Icon</h3><span>Customise your account</span><script>
+    function autoSubmit() {
+        document.getElementById('uploadForm').submit();
+    }
+</script><input class="form-control" type="file" name="image" onchange="autoSubmit()">
+                                        </div>
+                                    </form>
                                 </li>
                             </ul>
                         </div>
