@@ -293,6 +293,8 @@ def auctions():
                            bids=len(bids),message=message,
                            sort_time=sort_time,sort_time_next=sort_time_next)
 
+
+#region All Auctions
 @app.route('/reveal')
 @app.route('/all/reveal')
 def revealAllBids():
@@ -354,6 +356,27 @@ def registerAllDomains():
             return redirect("/auctions?message=" + response['error']['message'])
             
     return redirect("/success?tx=" + response['hash'])
+
+@app.route('/all/finalize')
+def finalizeAllBids():
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    response = account_module.finalizeAll(request.cookies.get("account"))
+    if 'error' in response:
+        print(response)
+        if response['error'] != None:
+            if response['error']['message'] == "Nothing to do.":
+                return redirect("/dashboard?message=No domains to finalize")
+            return redirect("/dashboard?message=" + response['error']['message'])
+        
+    return redirect("/success?tx=" + response['hash'])
+#endregion
 
 @app.route('/search')
 def search():
@@ -1466,12 +1489,14 @@ def api_wallet(function):
         return jsonify({"result": len(account_module.getBids(account))})
     
     if function == "pendingReveal":
-        return jsonify({"result": len(account_module.getPendingReveals(account))})
+        return jsonify({"result": account_module.getPendingReveals(account)})
     if function == "pendingRegister":
-        return jsonify({"result": len(account_module.getPendingRegisters(account))})
+        return jsonify({"result": account_module.getPendingRegisters(account)})
     if function == "pendingRedeem":
-        return jsonify({"result": len(account_module.getPendingRedeems(account,password))})
+        return jsonify({"result": account_module.getPendingRedeems(account,password)})
     
+    if function == "pendingFinalize":
+        return jsonify({"result": account_module.getPendingFinalizes(account,password)})
 
     if function == "domains":
         domains = account_module.getDomains(account)

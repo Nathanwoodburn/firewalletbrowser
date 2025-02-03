@@ -639,6 +639,30 @@ def getPendingRegisters(account):
                         pending.append(bid)                        
     return pending
 
+def getPendingFinalizes(account,password):
+    tx = createBatch(f'{account}:{password}',[["FINALIZE"]])
+    if 'error' in tx:
+        return []
+    
+    pending = []
+    try:
+        for output in tx['outputs']:
+            if output['covenant']['type'] != 10:
+                continue
+            if output['covenant']['action'] != "FINALIZE":
+                continue
+            nameHash = output['covenant']['items'][0]
+            # Try to get the name from hash
+            name = hsd.rpc_getNameByHash(nameHash)
+            if name['error']:
+                pending.append(nameHash)
+            else:
+                pending.append(name['result'])
+    except:
+        print("Failed to parse finalizes")
+    return pending
+
+
 def getRevealTX(reveal):
     prevout = reveal['prevout']
     hash = prevout['hash']
@@ -752,6 +776,19 @@ def registerAll(account):
     for domain in domains:
         batch.append(["UPDATE",domain['name'],{"records":[]}])
     return sendBatch(account,batch)
+
+def finalizeAll(account):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    return sendBatch(account,[["FINALIZE"]])
 
 def rescan_auction(account,domain):
     # Get height of the start of the auction
@@ -972,6 +1009,53 @@ def sendBatch(account, batch):
         }
         response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}",json={
             "method": "sendbatch",
+            "params": [batch]
+        }).json()
+        if response['error'] is not None:
+            return response
+        if 'result' not in response:
+            return {
+            "error": {
+                "message": "No result"
+            }
+        }
+
+        return response['result']
+    except Exception as e:
+        return {
+            "error": {
+                "message": str(e)
+            }
+        }
+
+def createBatch(account, batch):
+    account_name = check_account(account)
+    password = ":".join(account.split(":")[1:])
+
+    if account_name == False:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
+
+    try:
+        response = hsw.rpc_selectWallet(account_name)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = hsw.rpc_walletPassphrase(password,10)
+        if response['error'] is not None:
+            return {
+            "error": {
+                "message": response['error']['message']
+            }
+        }
+        response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}",json={
+            "method": "createbatch",
             "params": [batch]
         }).json()
         if response['error'] is not None:
