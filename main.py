@@ -1,3 +1,4 @@
+import io
 import json
 import random
 from flask import Flask, make_response, redirect, request, jsonify, render_template, send_from_directory,send_file
@@ -1457,19 +1458,21 @@ def plugin_function(ptype,plugin,function):
                 # Handle URL encoding of DNS
                 request_data[input] = urllib.parse.unquote(request_data[input])
 
-
-
-
         response = plugins_module.runPluginFunction(plugin,function,request_data,request.cookies.get("account"))
         if not response:
             return redirect("/plugin/" + plugin + "?error=An error occurred")
         if 'error' in response:
             return redirect("/plugin/" + plugin + "?error=" + response['error'])
-        
-        response = render.plugin_output(response,plugins_module.getPluginFunctionReturns(plugin,function))
-        return render_template("plugin-output.html", account=account, 
-                               
-                                    name=data['name'],description=data['description'],output=response)
+        outputs = plugins_module.getPluginFunctionReturns(plugin,function)
+        # Check outputs
+        for output in outputs:
+            if outputs[output]['type'] == "file":
+                data = io.BytesIO(response[output].encode('utf-8'))
+                return send_file(data, as_attachment=True, download_name=outputs[output]['name'])
+
+        response = render.plugin_output(response,outputs)
+        return render_template("plugin-output.html", account=account,name=data['name'],
+                               description=data['description'],output=response)
 
 
     else:
