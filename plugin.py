@@ -6,12 +6,19 @@ import hashlib
 import subprocess
 
 
+def import_module(module_name):
+    if module_name in sys.modules:
+        return importlib.reload(sys.modules[module_name])
+    else:
+        return importlib.import_module(module_name)
+
+
 def listPlugins(update=False):
     plugins = []
     for file in os.listdir("plugins"):
         if file.endswith(".py"):
             if file != "main.py":
-                plugin = importlib.import_module("plugins."+file[:-3])
+                plugin = import_module("plugins."+file[:-3])
                 if "info" not in dir(plugin):
                     continue
                 details = plugin.info
@@ -42,7 +49,7 @@ def listPlugins(update=False):
         for file in os.listdir(f"customPlugins/{importPath}"):
             if file.endswith(".py"):
                 if file != "main.py":
-                    plugin = importlib.import_module(f"customPlugins.{importPath}."+file[:-3])
+                    plugin = import_module(f"customPlugins.{importPath}."+file[:-3])
                     if "info" not in dir(plugin):
                         continue
                     details = plugin.info
@@ -106,7 +113,7 @@ def hashPlugin(plugin: str):
 
 
 def getPluginData(pluginStr: str):
-    plugin = importlib.import_module(pluginStr.replace("/","."))
+    plugin = import_module(pluginStr.replace("/","."))
 
     # Check if the plugin is verified
     signatures = []
@@ -141,12 +148,12 @@ def getPluginData(pluginStr: str):
 
 
 def getPluginFunctions(plugin: str):
-    plugin = importlib.import_module(plugin.replace("/","."))
+    plugin = import_module(plugin.replace("/","."))
     return plugin.functions
 
 
 def runPluginFunction(plugin: str, function: str, params: dict, authentication: str):
-    plugin_module = importlib.import_module(plugin.replace("/","."))
+    plugin_module = import_module(plugin.replace("/","."))
     if function not in plugin_module.functions:
         return {"error": "Function not found"}
 
@@ -182,12 +189,12 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
 
 
 def getPluginFunctionInputs(plugin: str, function: str):
-    plugin = importlib.import_module(plugin.replace("/","."))
+    plugin = import_module(plugin.replace("/","."))
     return plugin.functions[function]["params"]
 
 
 def getPluginFunctionReturns(plugin: str, function: str):
-    plugin = importlib.import_module(plugin.replace("/","."))
+    plugin = import_module(plugin.replace("/","."))
     return plugin.functions[function]["returns"]
 
 
