@@ -45,6 +45,17 @@ def index():
         functionOutput = plugins_module.runPluginFunction(function["plugin"],function["function"],{},request.cookies.get("account"))
         plugins += render.plugin_output_dash(functionOutput,plugins_module.getPluginFunctionReturns(function["plugin"],function["function"]))
 
+    # Check for updates
+    if not os.path.exists(".git"):
+        return render_template("index.html", account=account, plugins=plugins)
+    
+    info = gitinfo.get_git_info()
+    branch = info['refs']
+    commit = info['commit']
+    if commit != latestVersion(branch):
+        print("New version available",flush=True)
+        plugins += render_template('components/dashboard-plugin.html', name='Update', output='New version available') 
+
     return render_template("index.html", account=account, plugins=plugins)
  
 def reverseDirection(direction: str):
@@ -1100,8 +1111,9 @@ def settings():
     last_commit = datetime.datetime.strptime(last_commit, "%Y-%m-%d %H:%M:%S")
     version = f'{last_commit.strftime("%y-%m-%d")} {branch}'
 
-    return render_template("settings.html", account=account,
-                           
+    if info['commit'] != latestVersion(branch):
+        version += ' (New version available)'
+    return render_template("settings.html", account=account,                           
                            hsd_version=account_module.hsdVersion(False),
                            error=error,success=success,version=version)
 
@@ -1165,6 +1177,19 @@ def upload_image():
         filepath = os.path.join(f'user_data/images/{account.split(":")[0]}.{file.filename.split(".")[-1]}')
         file.save(filepath)
         return redirect("/settings?success=File uploaded successfully")
+    
+
+def latestVersion(branch):
+    result = requests.get(f"https://git.woodburn.au/api/v1/repos/nathanwoodburn/firewalletbrowser/branches")
+    if result.status_code != 200:
+        return "Error"
+    
+    data = result.json()
+    for b in data:
+        if b['name'] == branch:
+            return b['commit']['id']
+    return "Invalid branch"
+
 #endregion
 
 
@@ -1538,7 +1563,6 @@ def api_icon(account):
     for file in files:
         if file.startswith(account):
             return send_file(f'user_data/images/{file}')
-        
     return send_file('templates/assets/img/HNS.png')
 
 #endregion
