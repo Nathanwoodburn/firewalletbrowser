@@ -65,7 +65,7 @@
                 <h1 class="text-center" style="color: rgb(255,0,0);">{{error}}</h1>
                 <div class="container-fluid" style="margin-bottom: 20px;">
                     <h3 class="text-dark mb-1">{{name}}</h3>
-                    <h4 class="text-dark mb-1">{{description}}</h4>
+                    <h4 class="text-dark mb-1">{{description|safe}}</h4>
                     <h6 class="text-dark mb-1">Author: {{author}}<br>Version: {{version}}<br>Source: {{source}}</h6>{{functions|safe}}
                 </div>
             </div>

@@ -6,7 +6,7 @@ import os
 # Plugin Data
 info = {
     "name": "Custom Plugin Manager",
-    "description": "Import custom plugins from git repositories",
+    "description": "Import custom plugins from git repositories<br>Find some plugins <a href=https://git.woodburn.au/nathanwoodburn?tab=repositories&q=plugin&sort=recentupdate target=_blank>here</a>",
     "version": "1.0",
     "author": "Nathan.Woodburn/"
 }
