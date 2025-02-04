@@ -1,6 +1,7 @@
 import io
 import json
 import random
+import sys
 from flask import Flask, make_response, redirect, request, jsonify, render_template, send_from_directory,send_file
 import os
 import dotenv
@@ -1474,7 +1475,6 @@ def plugin_function(ptype,plugin,function):
         return render_template("plugin-output.html", account=account,name=data['name'],
                                description=data['description'],output=response)
 
-
     else:
         return jsonify({"error": "Function not found"})
 
@@ -1609,4 +1609,8 @@ def page_not_found(e):
 #endregion
 
 if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0')
+    # Check to see if --debug is in the command line arguments
+    if "--debug" in sys.argv:
+        app.run(debug=True,host='0.0.0.0')
+    else:
+        app.run(host='0.0.0.0')
