@@ -1108,8 +1108,7 @@ def settings():
     # import to time from format "2024-02-13 11:24:03"
     last_commit = datetime.datetime.strptime(last_commit, "%Y-%m-%d %H:%M:%S")
     version = f'{last_commit.strftime("%y-%m-%d")} {branch}'
-
-    if info['commit'] != latestVersion(branch):
+    if info['commit'] != latestVersion(info['refs']):
         version += ' (New version available)'
     return render_template("settings.html", account=account,                           
                            hsd_version=account_module.hsdVersion(False),
@@ -1216,8 +1215,7 @@ def login_post():
     if account.count(":") > 0:
         wallets = account_module.listWallets()
         wallets = render.wallets(wallets)
-        return render_template("login.html", 
-                               
+        return render_template("login.html",
                                error="Invalid account",wallets=wallets)
 
     account = account + ":" + password
