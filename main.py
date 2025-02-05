@@ -1613,4 +1613,4 @@ if __name__ == '__main__':
     if "--debug" in sys.argv:
         app.run(debug=True,host='0.0.0.0')
     else:
-        app.run(host='0.0.0.0')
+        app.run(host='0.0.0.0',threaded=True)
