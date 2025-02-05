@@ -1,9 +1,11 @@
-from flask import Flask
-from main import app
-import main
-from gunicorn.app.base import BaseApplication
 import os
+import sys
+import platform
+from main import app
+from waitress import serve
+from gunicorn.app.base import BaseApplication
 
+threads = 4
 
 class GunicornApp(BaseApplication):
     def __init__(self, app, options=None):
@@ -19,20 +21,33 @@ class GunicornApp(BaseApplication):
     def load(self):
         return self.application
 
-if __name__ == '__main__':
-    workers = 1
-    threads = 2
-    if workers is None:
-        workers = 1
-    if threads is None:
-        threads = 2
-    workers = int(workers)
-    threads = int(threads)
+
+def gunicornServer():
     options = {
         'bind': '0.0.0.0:5000',
-        'workers': workers,
+        'workers': 2,
         'threads': threads,
     }
     gunicorn_app = GunicornApp(app, options)
-    print('Starting server with ' + str(workers) + ' workers and ' + str(threads) + ' threads', flush=True)
+    print(f'Starting server with Gunicorn on {platform.system()} with {threads} threads...', flush=True)
     gunicorn_app.run()
+    
+
+if __name__ == '__main__':    
+    # Check if --gunicorn is in the command line arguments
+    if "--gunicorn" in sys.argv:
+        gunicornServer()
+        sys.exit()
+
+    print(f'Starting server with Waitress on {platform.system()} with {threads} threads...', flush=True)
+    print(f'Press Ctrl+C to stop the server', flush=True)
+    print(f'Serving on http://0.0.0.0:5000/', flush=True)
+    serve(app, host="0.0.0.0", port=5000, threads=threads)
+
+
+
+
+
+
+
+
