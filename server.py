@@ -42,11 +42,3 @@ if __name__ == '__main__':
     print(f'Press Ctrl+C to stop the server', flush=True)
     print(f'Serving on http://0.0.0.0:5000/', flush=True)
     serve(app, host="0.0.0.0", port=5000, threads=threads)
-
-
-
-
-
-
-
-

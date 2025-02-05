@@ -551,7 +551,6 @@ def finalize(domain: str):
         return redirect("/logout")
     
     domain = domain.lower()
-    print(domain)
     response = account_module.finalize(request.cookies.get("account"),domain)
     if response['error'] != None:
         print(response)
@@ -570,7 +569,6 @@ def cancelTransfer(domain: str):
         return redirect("/logout")
     
     domain = domain.lower()
-    print(domain)
     response = account_module.cancelTransfer(request.cookies.get("account"),domain)
     if 'error' in response:
         if response['error'] != None:
@@ -885,7 +883,6 @@ def auction(domain):
             # Get TX
             revealInfo = account_module.getRevealTX(reveal)
             reveal['bid'] = revealInfo
-            print(revealInfo)
         bids = render.bids(bids,reveals)
 
 
@@ -947,7 +944,6 @@ def rescan_auction(domain):
     domain = domain.lower()
     
     response = account_module.rescan_auction(account,domain)
-    print(response)    
     return redirect("/auction/" + domain)
 
 @app.route('/auction/<domain>/bid')
@@ -1023,7 +1019,7 @@ def bid_confirm(domain):
     response = account_module.bid(request.cookies.get("account"),domain,
                                   float(bid),
                                   float(blind))
-    print(response)
+
     if 'error' in response:
         return redirect("/auction/" + domain + "?error=" + response['error']['message'])
     
@@ -1045,7 +1041,7 @@ def open_auction(domain):
     if 'error' in response:
         if response['error'] != None:
             return redirect("/auction/" + domain + "?error=" + response['error']['message'])
-    print(response)
+
     return redirect("/success?tx=" + response['hash'])
 
 @app.route('/auction/<domain>/reveal')
