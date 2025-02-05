@@ -56,7 +56,7 @@ def index():
     commit = info['commit']
     if commit != latestVersion(branch):
         print("New version available",flush=True)
-        plugins += render_template('components/dashboard-plugin.html', name='Update', output='New version available') 
+        plugins += render_template('components/dashboard-alert.html', name='Update', output='A new version of FireWallet is available') 
 
     return render_template("index.html", account=account, plugins=plugins)
  
