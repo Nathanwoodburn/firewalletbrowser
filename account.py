@@ -436,7 +436,6 @@ def send(account,address,amount):
 def isOwnDomain(account,name: str):
     domains = getDomains(account)
     for domain in domains:
-        print(domain)
         if domain['name'] == name:
             return True
     return False
@@ -1139,7 +1138,6 @@ def getxPub(account):
     
 
     try:
-        print(account_name)
         response = hsw.getAccountInfo(account_name,"default")
         if 'error' in response:
             return {

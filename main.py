@@ -551,7 +551,6 @@ def finalize(domain: str):
         return redirect("/logout")
     
     domain = domain.lower()
-    print(domain)
     response = account_module.finalize(request.cookies.get("account"),domain)
     if response['error'] != None:
         print(response)
@@ -570,7 +569,6 @@ def cancelTransfer(domain: str):
         return redirect("/logout")
     
     domain = domain.lower()
-    print(domain)
     response = account_module.cancelTransfer(request.cookies.get("account"),domain)
     if 'error' in response:
         if response['error'] != None:
@@ -885,7 +883,6 @@ def auction(domain):
             # Get TX
             revealInfo = account_module.getRevealTX(reveal)
             reveal['bid'] = revealInfo
-            print(revealInfo)
         bids = render.bids(bids,reveals)
 
 
@@ -947,7 +944,6 @@ def rescan_auction(domain):
     domain = domain.lower()
     
     response = account_module.rescan_auction(account,domain)
-    print(response)    
     return redirect("/auction/" + domain)
 
 @app.route('/auction/<domain>/bid')
@@ -1023,7 +1019,7 @@ def bid_confirm(domain):
     response = account_module.bid(request.cookies.get("account"),domain,
                                   float(bid),
                                   float(blind))
-    print(response)
+
     if 'error' in response:
         return redirect("/auction/" + domain + "?error=" + response['error']['message'])
     
@@ -1045,7 +1041,7 @@ def open_auction(domain):
     if 'error' in response:
         if response['error'] != None:
             return redirect("/auction/" + domain + "?error=" + response['error']['message'])
-    print(response)
+
     return redirect("/success?tx=" + response['hash'])
 
 @app.route('/auction/<domain>/reveal')
@@ -1112,8 +1108,7 @@ def settings():
     # import to time from format "2024-02-13 11:24:03"
     last_commit = datetime.datetime.strptime(last_commit, "%Y-%m-%d %H:%M:%S")
     version = f'{last_commit.strftime("%y-%m-%d")} {branch}'
-
-    if info['commit'] != latestVersion(branch):
+    if info['commit'] != latestVersion(info['refs']):
         version += ' (New version available)'
     return render_template("settings.html", account=account,                           
                            hsd_version=account_module.hsdVersion(False),
@@ -1220,8 +1215,7 @@ def login_post():
     if account.count(":") > 0:
         wallets = account_module.listWallets()
         wallets = render.wallets(wallets)
-        return render_template("login.html", 
-                               
+        return render_template("login.html",
                                error="Invalid account",wallets=wallets)
 
     account = account + ":" + password
