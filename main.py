@@ -1588,8 +1588,6 @@ def try_path(path):
     if not account_module.hsdConnected():
         return redirect("/login?message=Node not connected")
 
-
-
     if os.path.isfile("templates/" + path + ".html"):
         return render_template(path + ".html")
     else:
@@ -1604,7 +1602,9 @@ def page_not_found(e):
 
 if __name__ == '__main__':
     # Check to see if --debug is in the command line arguments
-    if "--debug" in sys.argv:
-        app.run(debug=True,host='0.0.0.0')
-    else:
-        app.run(host='0.0.0.0')
+    debug = "--debug" in sys.argv
+    port = 5000
+    if "--port" in sys.argv:
+        port = int(sys.argv[sys.argv.index("--port")+1])
+    app.run(debug=True,host='0.0.0.0',port=port)
+    
