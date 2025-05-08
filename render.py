@@ -8,7 +8,7 @@ import os
 # Get Explorer URL
 TX_EXPLORER_URL = os.getenv("EXPLORER_TX")
 if TX_EXPLORER_URL is None:
-    TX_EXPLORER_URL = "https://niami.io/tx/"
+    TX_EXPLORER_URL = "https://shakeshift.com/transaction/"
 
 
 
