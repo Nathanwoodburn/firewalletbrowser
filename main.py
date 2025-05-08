@@ -1570,6 +1570,16 @@ def api_icon(account):
             return send_file(f'user_data/images/{file}')
     return send_file('templates/assets/img/HNS.png')
 
+
+@app.route('/api/v1/status')
+def api_status():
+    # This doesn't require a login
+    # Check if the node is connected
+    if not account_module.hsdConnected():
+        return jsonify({"status":400,"error": "Node not connected"}, 400)
+    return jsonify({"status": 200,"result": "FireWallet is running"})
+
+
 #endregion
 
 
