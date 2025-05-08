@@ -178,7 +178,15 @@ def sendConfirmed():
     address = request.args.get("address")
     amount = float(request.args.get("amount"))
     response = account_module.send(request.cookies.get("account"),address,amount)
-    if 'error' in response:
+    if 'error' in response and response['error'] != None:
+        # If error is a dict get the message
+        if isinstance(response['error'], dict):
+            if 'message' in response['error']:
+                return redirect("/send?message=" + response['error']['message'] + "&address=" + address + "&amount=" + str(amount))
+            else:
+                return redirect("/send?message=" + str(response['error']) + "&address=" + address + "&amount=" + str(amount))
+        
+        # If error is a string
         return redirect("/send?message=" + response['error'] + "&address=" + address + "&amount=" + str(amount))
     
     return redirect("/success?tx=" + response['tx'])

@@ -122,7 +122,7 @@ HSD_IP: HSD IP address
 THEME: Theme to use (dark-purple, black)
 SHOW_EXPIRED: Show expired domains (true/false)
 EXCLUDE: Comma separated list of wallets to exclude from the wallet list (default primary)
-EXPLORER_TX: URL for exploring transactions (default https://niami.io/tx/)
+EXPLORER_TX: URL for exploring transactions (default https://shakeshift.com/transaction/)
 HSD_NETWORK: Network to connect to (main, regtest, simnet)
 ```
 

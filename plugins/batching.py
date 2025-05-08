@@ -9,7 +9,7 @@ import os
 info = {
     "name": "Batching Functions",
     "description": "This is a plugin that provides multiple functions to batch transactions",  
-    "version": "1.0",
+    "version": "1.1",
     "author": "Nathan.Woodburn/"
 }
 # https://hsd-dev.org/api-docs/?shell--cli#sendbatch
@@ -394,7 +394,6 @@ def bid(params, authentication):
     for domain in domains:
         batch.append(['BID', domain, bid, blind])
 
-    print(batch)
     response = sendBatch(batch, authentication)
     if 'error' in response:
         return {
