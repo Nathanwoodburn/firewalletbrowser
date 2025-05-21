@@ -529,10 +529,24 @@ def setDNS(account, domain, records):
                 for txt in record['txt']:
                     TXTRecords.append(txt)
         elif record['type'] == 'NS':
-            newRecords.append({
-                'type': 'NS',
-                'ns': record['value']
-            })
+            if 'value' in record:
+                newRecords.append({
+                    'type': 'NS',
+                    'ns': record['value']
+                })
+            elif 'ns' in record:
+                newRecords.append({
+                    'type': 'NS',
+                    'ns': record['ns']
+                })
+            else:
+                return {
+                    'error': {
+                        'message': 'Invalid NS record'
+                    }
+                }
+            
+
         elif record['type'] in ['GLUE4', 'GLUE6', "SYNTH4", "SYNTH6"]:
             newRecords.append({
                 'type': record['type'],
