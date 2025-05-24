@@ -3,6 +3,7 @@ import json
 import urllib.parse
 from flask import render_template
 from domainLookup import punycode_to_emoji
+from main import renderDomain
 import os
 
 # Get Explorer URL
@@ -24,10 +25,7 @@ def domains(domains, mobile=False):
         paid = paid / 1000000
         
         # Handle punycodes
-        name = domain['name']
-        emoji = punycode_to_emoji(name)
-        if emoji != name:
-            name = f'{emoji} ({name})'
+        name = renderDomain(domain['name'])
 
 
         link = f'/manage/{domain["name"]}'
@@ -199,7 +197,7 @@ def bidDomains(bids,domains, sortbyDomains=False):
                     
 
                     html += "<tr>"
-                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{domain['name']}</a></td>"
+                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
                     html += f"<td>{domain['height']:,}</td>"
@@ -215,7 +213,7 @@ def bidDomains(bids,domains, sortbyDomains=False):
 
                     bidDisplay = f'<b>{bidValue:,.2f} HNS</b> + {blind:,.2f} HNS blind'
                     html += "<tr>"
-                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{domain['name']}</a></td>"
+                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
                     html += f"<td>{domain['height']:,}</td>"
