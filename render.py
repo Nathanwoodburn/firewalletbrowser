@@ -3,7 +3,6 @@ import json
 import urllib.parse
 from flask import render_template
 from domainLookup import punycode_to_emoji
-from main import renderDomain
 import os
 
 # Get Explorer URL
@@ -350,3 +349,20 @@ def plugin_output_dash(outputs, returns):
             continue
         html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])         
     return html
+
+
+
+def renderDomain(name: str) -> str:
+    """
+    Render a domain name with emojis and other special characters.
+    """
+    # Convert emoji to punycode
+    try:
+        rendered = name.encode("ascii").decode("idna") 
+        if rendered == name:
+            return f"{name}/"
+        return f"{rendered}/ ({name})"
+
+
+    except Exception as e:
+        return f"{name}/"
