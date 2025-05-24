@@ -1544,7 +1544,12 @@ def api_wallet(function):
     if function == "domains":
         domains = account_module.getDomains(account)
         if 'error' in domains:
-            return jsonify({"result": [], "error": domains['error']})  
+            return jsonify({"result": [], "error": domains['error']})
+        
+        # Add nameRender to each domain
+        for domain in domains:
+            domain['nameRender'] = renderDomain(domain['name'])
+
         return jsonify({"result": domains})
     
     if function == "icon":
@@ -1579,6 +1584,25 @@ def api_status():
         return jsonify({"status":503,"error": "Node not connected"}), 503
     return jsonify({"status": 200,"result": "FireWallet is running"})
 
+
+#endregion
+
+#region Helper functions
+
+def renderDomain(name: str) -> str:
+    """
+    Render a domain name with emojis and other special characters.
+    """
+    # Convert emoji to punycode
+    try:
+        rendered = name.encode("ascii").decode("idna") 
+        if rendered == name:
+            return f"{name}/"
+        return f"{rendered}/ ({name}/)"
+
+
+    except Exception as e:
+        return f"{name}/"
 
 #endregion
 
