@@ -1645,8 +1645,9 @@ def page_not_found(e):
 #endregion
 
 if __name__ == '__main__':
+    #TODO add parsing to allow for custom port and host
     # Check to see if --debug is in the command line arguments
     if "--debug" in sys.argv:
-        app.run(debug=True,host='0.0.0.0')
+        app.run(debug=True)
     else:
-        app.run(host='0.0.0.0')
+        app.run()
