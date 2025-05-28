@@ -429,12 +429,12 @@ def search():
 
     if 'error' in domain:
         return render_template("search.html", account=account,
-                               
+                               rendered=renderDomain(search_term),
                                search_term=search_term, domain=domain['error'],plugins=plugins)
     
     if domain['info'] is None:
         return render_template("search.html", account=account, 
-                               
+                               rendered=renderDomain(search_term),
                                search_term=search_term,domain=search_term,
                                state="AVAILABLE", next="Available Now",plugins=plugins)
 
@@ -478,7 +478,7 @@ def search():
     txs = render.txs(txs)
 
     return render_template("search.html", account=account, 
-                           
+                           rendered=renderDomain(search_term),
                            search_term=search_term,domain=domain['info']['name'],
                            raw=domain,state=state, next=next, owner=owner,
                            dns=dns, txs=txs,plugins=plugins)
@@ -504,7 +504,7 @@ def manage(domain: str):
     domain_info = account_module.getDomain(domain)
     if 'error' in domain_info:
         return render_template("manage.html", account=account, 
-                               
+                               rendered=renderDomain(domain),
                                domain=domain, error=domain_info['error'])
     
     expiry = domain_info['info']['stats']['daysUntilExpire']
@@ -541,7 +541,7 @@ def manage(domain: str):
 
 
     return render_template("manage.html", account=account, 
-                           
+                           rendered=renderDomain(domain),
                            error=errorMessage, address=address,
                            domain=domain,expiry=expiry, dns=dns,
                            raw_dns=urllib.parse.quote(raw_dns),
@@ -716,7 +716,7 @@ def editPage(domain: str):
 
     
     return render_template("edit.html", account=account, 
-                           
+                           rendered=renderDomain(domain),
                            domain=domain, error=errorMessage,
                            dns=dns,raw_dns=urllib.parse.quote(raw_dns))
 
@@ -862,7 +862,7 @@ def auction(domain):
     
     if 'error' in domainInfo:
         return render_template("auction.html", account=account,
-                               
+                               rendered=renderDomain(search_term),
                                search_term=search_term, domain=domainInfo['error'],
                                error=error)
     
@@ -873,7 +873,7 @@ def auction(domain):
         else:
             next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
         return render_template("auction.html", account=account, 
-                               
+                               rendered=renderDomain(search_term),
                                 search_term=search_term,domain=search_term,next_action=next_action,
                                state="AVAILABLE", next="Open Auction",
                                error=error)
@@ -934,7 +934,7 @@ def auction(domain):
 
 
     return render_template("auction.html", account=account, 
-                           
+                           rendered=renderDomain(search_term),
                            search_term=search_term,domain=domainInfo['info']['name'],
                            raw=domainInfo,state=state, next=next,
                            next_action=next_action, bids=bids,error=message)
@@ -1544,7 +1544,12 @@ def api_wallet(function):
     if function == "domains":
         domains = account_module.getDomains(account)
         if 'error' in domains:
-            return jsonify({"result": [], "error": domains['error']})  
+            return jsonify({"result": [], "error": domains['error']})
+        
+        # Add nameRender to each domain
+        for domain in domains:
+            domain['nameRender'] = renderDomain(domain['name'])
+
         return jsonify({"result": domains})
     
     if function == "icon":
@@ -1569,6 +1574,35 @@ def api_icon(account):
         if file.startswith(account):
             return send_file(f'user_data/images/{file}')
     return send_file('templates/assets/img/HNS.png')
+
+
+@app.route('/api/v1/status')
+def api_status():
+    # This doesn't require a login
+    # Check if the node is connected
+    if not account_module.hsdConnected():
+        return jsonify({"status":503,"error": "Node not connected"}), 503
+    return jsonify({"status": 200,"result": "FireWallet is running"})
+
+
+#endregion
+
+#region Helper functions
+
+def renderDomain(name: str) -> str:
+    """
+    Render a domain name with emojis and other special characters.
+    """
+    # Convert emoji to punycode
+    try:
+        rendered = name.encode("ascii").decode("idna") 
+        if rendered == name:
+            return f"{name}/"
+        return f"{rendered}/ ({name})"
+
+
+    except Exception as e:
+        return f"{name}/"
 
 #endregion
 
@@ -1609,10 +1643,9 @@ def page_not_found(e):
 #endregion
 
 if __name__ == '__main__':
+    #TODO add parsing to allow for custom port and host
     # Check to see if --debug is in the command line arguments
-    debug = "--debug" in sys.argv
-    port = 5000
-    if "--port" in sys.argv:
-        port = int(sys.argv[sys.argv.index("--port")+1])
-    app.run(debug=True,host='0.0.0.0',port=port)
-    
+    if "--debug" in sys.argv:
+        app.run(debug=True)
+    else:
+        app.run()
