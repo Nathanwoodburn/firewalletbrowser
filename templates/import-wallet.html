@@ -17,7 +17,7 @@
 
 <body class="bg-gradient-primary">
     <div class="container">
-        <div class="card shadow-lg o-hidden border-0 my-5">
+        <div class="card shadow-lg my-5 o-hidden border-0">
             <div class="card-body p-0">
                 <div class="row">
                     <div class="col-lg-5 d-none d-lg-flex">
@@ -30,12 +30,12 @@
                                 <h4 class="text-dark mb-4">Import a wallet!</h4>
                             </div>
                             <form class="user" method="post">
-                                <div class="row mb-3" style="padding-right: 16px;padding-left: 16px;"><input class="form-control form-control-user" type="text" id="exampleLastName" placeholder="Wallet name" name="name" value="{{name}}"></div>
-                                <div class="row mb-3">
+                                <div class="mb-3 row" style="padding-right: 16px;padding-left: 16px;"><input class="form-control form-control-user" type="text" id="exampleLastName" placeholder="Wallet name" name="name" value="{{name}}"></div>
+                                <div class="mb-3 row">
                                     <div class="col-sm-6 mb-3 mb-sm-0"><input class="form-control form-control-user" type="password" id="examplePasswordInput" placeholder="Password" name="password" required="" value="{{password}}"></div>
                                     <div class="col-sm-6"><input class="form-control form-control-user" type="password" id="exampleRepeatPasswordInput" placeholder="Repeat Password" name="password_repeat" required="" value="{{password_repeat}}"></div>
                                 </div>
-                                <div style="margin-bottom: 16px;"><textarea class="form-control form-control-lg" placeholder="Seed Phrase" name="seed" rows="1" style="height: 7em;">{{seed}}</textarea></div><button class="btn btn-primary d-block btn-user w-100" type="submit">Import Wallet</button>
+                                <div style="margin-bottom: 16px;"><textarea class="form-control form-control-lg" placeholder="Seed Phrase" name="seed" rows="1" style="height: 7em;">{{seed}}</textarea></div><button class="btn btn-primary d-block w-100 btn-user" type="submit">Import Wallet</button>
                                 <hr>
                             </form>
                             <div class="text-center"><a class="small" href="/login">Didn't mean to create a new wallet? Login!</a></div>

@@ -21,12 +21,12 @@
 
 <body id="page-top">
     <div id="wrapper">
-        <nav class="navbar align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0 navbar-dark toggled" style="background: var(--bs-primary-border-subtle);">
-            <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="/">
+        <nav class="navbar align-items-start p-0 sidebar sidebar-dark accordion bg-gradient-primary navbar-dark toggled" style="background: var(--bs-primary-border-subtle);">
+            <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center m-0 sidebar-brand" href="/">
                     <div class="sidebar-brand-icon"><img src="/assets/img/favicon.png" width="44"></div>
-                    <div class="sidebar-brand-text mx-3"><span>FireWallet</span></div>
+                    <div class="mx-3 sidebar-brand-text"><span>FireWallet</span></div>
                 </a>
-                <hr class="sidebar-divider my-0">
+                <hr class="my-0 sidebar-divider">
                 <ul class="navbar-nav text-light" id="accordionSidebar">
                     <li class="nav-item"><a class="nav-link" href="/"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a></li>
                     <li class="nav-item"><a class="nav-link" href="/tx"><i class="fas fa-table"></i><span>Transactions</span></a></li>
@@ -40,14 +40,14 @@
         <div class="d-flex flex-column" id="content-wrapper" style="background: var(--bs-primary);">
             <div id="content">
                 <nav class="navbar navbar-expand shadow mb-4 topbar static-top navbar-light" style="background: var(--bs-primary-text-emphasis);">
-                    <div class="container-fluid"><button class="btn btn-link d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
-                        <form class="d-none d-sm-inline-block me-auto ms-md-3 my-2 my-md-0 mw-100 navbar-search" action="/search" method="get">
+                    <div class="container-fluid"><button class="btn btn-link d-md-none me-3 rounded-circle" id="sidebarToggleTop" type="button"><i class="fas fa-bars"></i></button>
+                        <form class="d-none d-sm-inline-block mw-100 ms-md-3 me-auto my-2 my-md-0 navbar-search" action="/search" method="get">
                             <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for domain" name="q" value="{{search_term}}" style="color: var(--bs-dark-text-emphasis);background: var(--bs-light);"><button class="btn btn-primary py-0" type="submit"><i class="fas fa-search"></i></button></div>
                         </form><span style="color: var(--bs-dark);">Sync: <span id="hsd-sync">{{sync}}</span>%</span><span style="color: var(--bs-dark);margin-left: 10px;">Wallet:&nbsp;<span id="wallet-sync">{{wallet_status}}</span></span><span style="color: var(--bs-dark);margin-left: 10px;">Height: <span id="hsd-height">{{height}}</span></span>
                         <ul class="navbar-nav flex-nowrap ms-auto">
                             <li class="nav-item dropdown d-sm-none no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><i class="fas fa-search"></i></a>
-                                <div class="dropdown-menu dropdown-menu-end p-3 animated--grow-in" aria-labelledby="searchDropdown">
-                                    <form class="me-auto navbar-search w-100" action="/search" method="get">
+                                <div class="dropdown-menu p-3 dropdown-menu-end animated--grow-in" aria-labelledby="searchDropdown">
+                                    <form class="w-100 me-auto navbar-search" action="/search" method="get">
                                         <div class="input-group"><input class="bg-light form-control border-0 small" type="text" placeholder="Search for ..." name="q" value="{{search_term}}">
                                             <div class="input-group-append"><button class="btn btn-primary py-0" type="button"><i class="fas fa-search"></i></button></div>
                                         </div>
@@ -56,7 +56,7 @@
                             </li>
                             <li class="nav-item dropdown no-arrow">
                                 <div class="nav-item dropdown no-arrow"><a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown" href="#"><span class="d-none d-lg-inline me-2 small" style="color: var(--bs-dark);">{{account}}</span><img class="border rounded-circle img-profile" src="/api/v1/wallet/icon" id="wallet-icon"></a>
-                                    <div class="dropdown-menu shadow dropdown-menu-end animated--grow-in"><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400"></i>&nbsp;Logout</a></div>
+                                    <div class="dropdown-menu shadow dropdown-menu-end animated--grow-in"><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-2 fa-sm fa-fw text-gray-400"></i>&nbsp;Logout</a></div>
                                 </div>
                             </li>
                         </ul>
