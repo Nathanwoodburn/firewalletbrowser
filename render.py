@@ -96,54 +96,60 @@ def transactions(txs):
     if len(txs) == 0:
         return '<tr><td colspan="5">No transactions found</td></tr>'
     html = ''
+
+    test = "1de69f8138513fd8d9f1b3a8285b06e4b94f74b919b123f5da37beb164bb1688"
     for tx in txs:
         action = "HNS Transfer"
         address = tx["outputs"][0]["address"]
         hash = tx["hash"]
         confirmations=tx["confirmations"]
+        incomming = True
         amount = 0
-        incomming = False
         isMulti = False
         nameHashes = []
-
-        if not tx["inputs"][0]["path"]:
-            incomming = True
+        
+        if tx["hash"] == test:
+            with open("test.json", "w") as f:
+                json.dump(tx, f, indent=4)
 
         for txInput in tx["inputs"]:
             if txInput["path"]:
+                incomming = False
                 amount -= txInput["value"]
-        
+
+        if tx["hash"] == test:
+            print(f"TEXT TX INPUT VALUE: {amount}")
+
         for output in tx["outputs"]:
             if output["covenant"]["action"] != "NONE":
                 if action == "HNS Transfer":
                     action = output["covenant"]["action"]
                 elif action == output["covenant"]["action"]:
                     isMulti = True
-                    continue
                 else:
                     action = "Multiple Actions"
         
             
             if output["covenant"]["items"] and len(output["covenant"]["items"]) > 0:
                 nameHashes.append(output["covenant"]["items"][0])
-                
 
-            # Skip value of domains
-            if output["covenant"]["action"] in ["FINALIZE", "RENEW"]:
-                continue
+            if not incomming:
+                if output["path"]:
+                    amount += output["value"]
+            else:
+                if output["path"] and output["covenant"]["action"] == "NONE":
+                    amount += output["value"]
 
-            if not output["path"] and not incomming:
-                amount += output["value"]
-            elif output["path"] and incomming:
-                amount += output["value"]
-            
+        if not incomming:
+            # Subtract fee to make it easier to read
+            amount += tx["fee"]
 
 
         amount = amount / 1000000
         humanAction = action
 
         if action == "HNS Transfer":
-            if incomming:
+            if amount > 0:
                 humanAction = "Received HNS"
             else:
                 humanAction = "Sent HNS"
@@ -173,9 +179,9 @@ def transactions(txs):
                 name = None
             humanAction += renderDomain(name) if name else "domain"
 
-        if not incomming and amount > 0:
-            amount = f"<span style='color: red;'>-{amount:,.2f}</span>"
-        elif incomming and amount > 0:
+        if amount < 0:
+            amount = f"<span style='color: red;'>{amount:,.2f}</span>"
+        elif amount > 0:
             amount = f"<span style='color: green;'>+{amount:,.2f}</span>"
         else:
             amount = f"<span style='color: gray;'>0.00</span>"

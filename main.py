@@ -16,6 +16,8 @@ import importlib
 import plugin as plugins_module
 import gitinfo
 import datetime
+import functools
+import time
 
 dotenv.load_dotenv()
 
@@ -68,6 +70,10 @@ def reverseDirection(direction: str):
 
 
 #region Transactions
+# Add a cache for transactions with a timeout
+tx_cache = {}
+TX_CACHE_TIMEOUT = 60*5  # Cache timeout in seconds
+
 @app.route('/tx')
 def transactions():
     # Check if the user is logged in
@@ -84,13 +90,34 @@ def transactions():
 
     if page < 1:
         page = 1
-
-    transactions = account_module.getTransactions(account,page)
-    txCount = len(transactions)
-    transactions = render.transactions(transactions)
+        
+    # Check for force refresh parameter
+    force_refresh = request.args.get('refresh') == 'true'
+    
+    # Create a cache key based on account and page
+    cache_key = f"{account}_{page}"
+    
+    # Check if data is in cache and not expired
+    current_time = time.time()
+    if not force_refresh and cache_key in tx_cache and (current_time - tx_cache[cache_key]['time'] < TX_CACHE_TIMEOUT):
+        transactions = tx_cache[cache_key]['data']
+        txCount = len(transactions)
+        transactions_html = tx_cache[cache_key]['html']
+    else:
+        # Fetch transactions from account module
+        transactions = account_module.getTransactions(account, page)
+        txCount = len(transactions)
+        transactions_html = render.transactions(transactions)
+        
+        # Store in cache
+        tx_cache[cache_key] = {
+            'data': transactions,
+            'html': transactions_html,
+            'time': current_time
+        }
     return render_template("tx.html", account=account, 
-                           tx=transactions,
-                           page=page,txCount=txCount)
+                           tx=transactions_html,
+                           page=page, txCount=txCount)
     
 
 @app.route('/send')
