@@ -96,8 +96,6 @@ def transactions(txs):
     if len(txs) == 0:
         return '<tr><td colspan="5">No transactions found</td></tr>'
     html = ''
-
-    test = "1de69f8138513fd8d9f1b3a8285b06e4b94f74b919b123f5da37beb164bb1688"
     for tx in txs:
         action = "HNS Transfer"
         address = tx["outputs"][0]["address"]
@@ -108,17 +106,10 @@ def transactions(txs):
         isMulti = False
         nameHashes = []
         
-        if tx["hash"] == test:
-            with open("test.json", "w") as f:
-                json.dump(tx, f, indent=4)
-
         for txInput in tx["inputs"]:
             if txInput["path"]:
                 incomming = False
                 amount -= txInput["value"]
-
-        if tx["hash"] == test:
-            print(f"TEXT TX INPUT VALUE: {amount}")
 
         for output in tx["outputs"]:
             if output["covenant"]["action"] != "NONE":
