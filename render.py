@@ -4,6 +4,34 @@ import urllib.parse
 from flask import render_template
 from domainLookup import punycode_to_emoji
 import os
+from handywrapper import api
+
+HSD_API = os.getenv("HSD_API")
+HSD_IP = os.getenv("HSD_IP")
+if HSD_IP is None:
+    HSD_IP = "localhost"
+
+HSD_NETWORK = os.getenv("HSD_NETWORK")
+HSD_WALLET_PORT = 12039
+HSD_NODE_PORT = 12037
+
+if not HSD_NETWORK:
+    HSD_NETWORK = "main"
+else:
+    HSD_NETWORK = HSD_NETWORK.lower()
+
+if HSD_NETWORK == "simnet":
+    HSD_WALLET_PORT = 15039
+    HSD_NODE_PORT = 15037
+elif HSD_NETWORK == "testnet":
+    HSD_WALLET_PORT = 13039
+    HSD_NODE_PORT = 13037
+elif HSD_NETWORK == "regtest":
+    HSD_WALLET_PORT = 14039
+    HSD_NODE_PORT = 14037
+
+
+hsd = api.hsd(HSD_API, HSD_IP, HSD_NODE_PORT)
 
 # Get Explorer URL
 TX_EXPLORER_URL = os.getenv("EXPLORER_TX")
@@ -40,6 +68,29 @@ def domains(domains, mobile=False):
     
     return html
 
+
+actionMap = {
+    "UPDATE": "Updated ",
+    "REGISTER": "Registered ",
+    "RENEW": "Renewed ",
+    "BID": "Bid on ",
+    "REVEAL": "Revealed Bid for ",
+    "REDEEM": "Redeemed Bid for ",
+    "TRANSFER": "Started Transfer for ",
+    "NONE": "Multiple Actions"
+}
+
+actionMapPlural = {
+    "UPDATE": "Updated Multiple Domains' Records",
+    "REGISTER": "Registered Multiple Domains",
+    "RENEW": "Renewed Multiple Domains",
+    "BID": "Bid on Domains",
+    "REVEAL": "Revealed Bids",
+    "REDEEM": "Redeemed Bids",
+    "TRANSFER": "Started Multiple Domain Transfers",
+    "NONE": "Multiple Actions"
+}
+
 def transactions(txs):
     
     if len(txs) == 0:
@@ -52,24 +103,83 @@ def transactions(txs):
         confirmations=tx["confirmations"]
         amount = 0
         incomming = False
+        isMulti = False
+        nameHashes = []
+
         if not tx["inputs"][0]["path"]:
             incomming = True
 
+        for txInput in tx["inputs"]:
+            if txInput["path"]:
+                amount -= txInput["value"]
+        
         for output in tx["outputs"]:
             if output["covenant"]["action"] != "NONE":
                 if action == "HNS Transfer":
                     action = output["covenant"]["action"]
                 elif action == output["covenant"]["action"]:
+                    isMulti = True
                     continue
                 else:
                     action = "Multiple Actions"
+        
+            
+            if output["covenant"]["items"] and len(output["covenant"]["items"]) > 0:
+                nameHashes.append(output["covenant"]["items"][0])
+                
+
+            # Skip value of domains
+            if output["covenant"]["action"] in ["FINALIZE", "RENEW"]:
+                continue
 
             if not output["path"] and not incomming:
                 amount += output["value"]
             elif output["path"] and incomming:
                 amount += output["value"]
+            
+
 
         amount = amount / 1000000
+        humanAction = action
+
+        if action == "HNS Transfer":
+            if incomming:
+                humanAction = "Received HNS"
+            else:
+                humanAction = "Sent HNS"
+        elif action == "FINALIZE":
+            if incomming and not isMulti:
+                name = hsd.rpc_getNameByHash(nameHashes[0])
+                if name["error"] is None:
+                    name = name["result"]
+                humanAction = f"Received {renderDomain(name)}"
+            elif incomming and isMulti:
+                humanAction = "Received Multiple Domains"
+            elif not isMulti:
+                name = hsd.rpc_getNameByHash(nameHashes[0])
+                if name["error"] is None:
+                    name = name["result"]
+                humanAction = f"Finalized {renderDomain(name)}"
+            else:
+                humanAction = "Finalized Multiple Domain Transfers"
+        elif isMulti:
+            humanAction  = actionMapPlural.get(action, "Unknown Action")
+        else:
+            humanAction  = actionMap.get(action, "Unknown Action")
+            name = hsd.rpc_getNameByHash(nameHashes[0])
+            if name["error"] is None:
+                name = name["result"]
+            else:
+                name = None
+            humanAction += renderDomain(name) if name else "domain"
+
+        if not incomming and amount > 0:
+            amount = f"<span style='color: red;'>-{amount:,.2f}</span>"
+        elif incomming and amount > 0:
+            amount = f"<span style='color: green;'>+{amount:,.2f}</span>"
+        else:
+            amount = f"<span style='color: gray;'>0.00</span>"
+
 
         hash = f"<a target='_blank' href='{TX_EXPLORER_URL}{hash}'>{hash[:8]}...</a>"
         if confirmations < 5:
@@ -77,8 +187,7 @@ def transactions(txs):
         else:
             confirmations = f"<td>{confirmations:,}</td>"
 
-
-        html += f'<tr><td>{action}</td><td>{address}</td><td>{hash}</td>{confirmations}<td>{amount:,.2f} HNS</td></tr>'
+        html += f'<tr><td>{humanAction}</td><td>{address}</td><td>{hash}</td>{confirmations}<td class="amount-column">{amount} HNS</td></tr>'
     return html
 
 
