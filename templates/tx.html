@@ -119,7 +119,7 @@
     const loadingRow = document.getElementById('loading-row');
 
     // Fetch transactions
-    fetch(`/api/v1/transactions?page=${page}`)
+    fetch(`/api/v1/wallet/transactions?page=${page}`)
         .then(response => response.json())
         .then(data => {
             if (data.error) {

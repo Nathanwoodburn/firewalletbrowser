@@ -1508,57 +1508,6 @@ def api_hsd(function):
         return jsonify({"result": account_module.getBlockHeight()})
     
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
-    
-@app.route('/api/v1/transactions', methods=["GET"])
-def api_transactions():
-    # Check if the user is logged in
-    if request.cookies.get("account") is None:
-        return jsonify({"error": "Not logged in"})
-    
-    account = account_module.check_account(request.cookies.get("account"))
-    if not account:
-        return jsonify({"error": "Invalid account"})
-    
-    # Get the page parameter
-    page = request.args.get('page')
-    try:
-        page = int(page)
-    except:
-        page = 1
-
-    if page < 1:
-        page = 1
-        
-    # Check for force refresh parameter
-    force_refresh = request.args.get('refresh') == 'true'
-    
-    # Create a cache key based on account and page
-    cache_key = f"{account}_{page}"
-    
-    # Check if data is in cache and not expired
-    current_time = time.time()
-    if not force_refresh and cache_key in tx_cache and (current_time - tx_cache[cache_key]['time'] < TX_CACHE_TIMEOUT):
-        transactions = tx_cache[cache_key]['data']
-        txCount = len(transactions)
-        transactions_html = tx_cache[cache_key]['html']
-    else:
-        # Fetch transactions from account module
-        transactions = account_module.getTransactions(account, page)
-        txCount = len(transactions)
-        transactions_html = render.transactions(transactions)
-        
-        # Store in cache
-        tx_cache[cache_key] = {
-            'data': transactions,
-            'html': transactions_html,
-            'time': current_time
-        }
-    
-    return jsonify({
-        "html": transactions_html,
-        "txCount": txCount,
-        "page": page
-    })
 
 @app.route('/api/v1/wallet/<function>', methods=["GET"])
 def api_wallet(function):
@@ -1610,6 +1559,49 @@ def api_wallet(function):
 
         return jsonify({"result": domains})
     
+    if function == "transactions":
+        # Get the page parameter
+        page = request.args.get('page')
+        try:
+            page = int(page)
+        except:
+            page = 1
+
+        if page < 1:
+            page = 1
+            
+        # Check for force refresh parameter
+        force_refresh = request.args.get('refresh') == 'true'
+        
+        # Create a cache key based on account and page
+        cache_key = f"{account}_{page}"
+        
+        # Check if data is in cache and not expired
+        current_time = time.time()
+        if not force_refresh and cache_key in tx_cache and (current_time - tx_cache[cache_key]['time'] < TX_CACHE_TIMEOUT):
+            transactions = tx_cache[cache_key]['data']
+            txCount = len(transactions)
+            transactions_html = tx_cache[cache_key]['html']
+        else:
+            # Fetch transactions from account module
+            transactions = account_module.getTransactions(account, page)
+            txCount = len(transactions)
+            transactions_html = render.transactions(transactions)
+            
+            # Store in cache
+            tx_cache[cache_key] = {
+                'data': transactions,
+                'html': transactions_html,
+                'time': current_time
+            }
+        
+        return jsonify({
+            "html": transactions_html,
+            "txCount": txCount,
+            "page": page
+        })
+
+
     if function == "icon":
         # Check if there is an icon
         if not os.path.exists(f'user_data/images'):
