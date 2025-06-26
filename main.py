@@ -1509,6 +1509,30 @@ def api_hsd(function):
     
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
 
+
+@app.route('/api/v1/hsd/<function>/mobile', methods=["GET"])
+def api_hsd_mobile(function):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return jsonify({"error": "Not logged in"})
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return jsonify({"error": "Invalid account"})
+    
+    if function == "sync":
+        sync = account_module.getNodeSync()
+        if sync == 100:
+            # Don't show sync percentage on mobile
+            sync = ""
+        elif sync == -1:
+            sync = "HSD Error"
+        else:
+            sync = f"{sync}%"
+        return jsonify({"result": sync})
+    
+    return jsonify({"error": "Invalid function", "result": "Invalid mobile function"}), 400
+
 @app.route('/api/v1/wallet/<function>', methods=["GET"])
 def api_wallet(function):
     # Check if the user is logged in
@@ -1614,6 +1638,30 @@ def api_wallet(function):
         return send_file('templates/assets/img/HNS.png')
 
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
+
+@app.route('/api/v1/wallet/<function>/mobile', methods=["GET"])
+def api_wallet_mobile(function):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return jsonify({"error": "Not logged in"})
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    password = request.cookies.get("account").split(":")[1]
+    if not account:
+        return jsonify({"error": "Invalid account"})
+    
+    if function == "sync":
+        sync = account_module.getWalletStatus()
+        if sync == "Ready":
+            # Don't show sync percentage on mobile
+            sync = ""
+        elif sync == "Error wallet ahead of node":
+            sync = "HSW Sync Error"
+        else:
+            sync = "HSW Syncing"        
+        return jsonify({"result": sync})
+
+    return jsonify({"error": "Invalid function", "result": "Invalid mobile function"}), 400
     
 @app.route('/api/v1/icon/<account>')
 def api_icon(account):
