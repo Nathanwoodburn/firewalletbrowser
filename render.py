@@ -298,7 +298,10 @@ def bidDomains(bids,domains, sortbyDomains=False):
                     bidValue = bid['value'] / 1000000
                     blind = lockup - bidValue
 
-                    bidDisplay = f'<b>{bidValue:,.2f} HNS</b> + {blind:,.2f} HNS blind'
+                    if blind > 0:
+                        bidDisplay = f'<b>{bidValue:,.2f}</b> (+{blind:,.2f}) HNS'
+                    else:
+                        bidDisplay = f'<b>{bidValue:,.2f}</b> HNS'
                     
 
                     html += "<tr>"
