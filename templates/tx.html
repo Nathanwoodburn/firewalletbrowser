@@ -71,9 +71,10 @@
     {% if page != 1 %}
     <a class="btn btn-primary" role="button" href="/tx?page={{page-1}}">Prev</a>
     {% endif %}
-    {% if txCount == 100 %}
+    <!-- {% if txCount == 100 %} -->
+     <!-- {% endif %} -->
     <a class="btn btn-primary" role="button" href="/tx?page={{page+1}}">Next</a>
-    {% endif %}
+    
 </div>
                             </div>
                         </div>
@@ -88,8 +89,17 @@
                 <th class="amount-column">Amount</th>
             </tr>
         </thead>
-        <tbody>
-            {{tx|safe}}
+        <tbody id="transactions-tbody">
+            <tr id="loading-row">
+                <td colspan="5" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="mt-2">Loading transactions...</div>
+                </td>
+            </tr>
+            <!-- <tbody>
+            {{tx|safe}} -->
         </tbody>
         <tfoot>
             <tr>
@@ -101,7 +111,47 @@
             </tr>
         </tfoot>
     </table>
-</div></div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const page = {{ page }};
+    const tbody = document.getElementById('transactions-tbody');
+    const loadingRow = document.getElementById('loading-row');
+
+    // Fetch transactions
+    fetch(`/api/v1/transactions?page=${page}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${data.error}</td></tr>`;
+                return;
+            }
+
+            // Replace loading with actual transactions
+            tbody.innerHTML = data.html;
+
+            // Update pagination buttons if needed
+            updatePagination(data.txCount, page);
+        })
+        .catch(error => {
+            console.error('Error fetching transactions:', error);
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load transactions</td></tr>';
+        });
+    });
+
+    function updatePagination(txCount, currentPage) {
+        // Update pagination buttons based on transaction count
+        const prevBtn = document.querySelector('a[href*="page=' + (currentPage - 1) + '"]');
+        const nextBtn = document.querySelector('a[href*="page=' + (currentPage + 1) + '"]');
+
+        if (currentPage <= 1 && prevBtn) {
+            prevBtn.style.display = 'none';
+        }
+        if (txCount < 100 && nextBtn) {
+            nextBtn.style.display = 'none';
+        }
+    }
+</script></div>
                     </div>
                 </div>
             </div>
