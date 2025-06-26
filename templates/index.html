@@ -142,13 +142,12 @@
         <thead>
             <tr>
                 <th onclick="sortTable(0)">Domain <span class="sort-indicator"></span></th>
-                <th onclick="sortTable(1)">Expires <span class="sort-indicator"></span></th>
-                <th onclick="sortTable(2)">Price Paid <span class="sort-indicator"></span></th>
-                <th><span class="sort-indicator"></span></th>
+                <th onclick="sortTable(1)" class="hide-mobile">Expires <span class="sort-indicator"></span></th>
+                <th onclick="sortTable(2)" class="hide-mobile">Price Paid <span class="sort-indicator"></span></th>
+                <!-- <th><span class="sort-indicator"></span></th> -->
             </tr>
         </thead>
         <tbody>
-            <!-- {{domains | safe}} -->
         </tbody>
     </table>
 </div>
