@@ -178,13 +178,13 @@ def transactions(txs):
             amount = f"<span style='color: gray;'>0.00</span>"
 
 
-        hash = f"<a target='_blank' href='{TX_EXPLORER_URL}{hash}'>{hash[:8]}...</a>"
+        # hash = f"<a target='_blank' href='{TX_EXPLORER_URL}{hash}'>{hash[:8]}...</a>"
         if confirmations < 5:
-            confirmations = f"<td style='background-color: red;'>{confirmations}</td>" 
+            confirmations = f"<td class='hide-mobile' style='background-color: red;'>{confirmations}</td>" 
         else:
-            confirmations = f"<td>{confirmations:,}</td>"
+            confirmations = f"<td class='hide-mobile'>{confirmations:,}</td>"
 
-        html += f'<tr><td>{humanAction}</td><td>{address}</td><td>{hash}</td>{confirmations}<td class="amount-column">{amount} HNS</td></tr>'
+        html += f'<tr><td><a style="color:var(--bs-body-color);" target="_blank" href="{TX_EXPLORER_URL}{hash}">{humanAction}</a></td><td class="hide-mobile">{address}</td>{confirmations}<td class="amount-column">{amount} HNS</td></tr>'
     return html
 
 
