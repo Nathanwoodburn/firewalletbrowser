@@ -305,7 +305,7 @@ def bidDomains(bids,domains, sortbyDomains=False):
                     html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
-                    html += f"<td>{domain['height']:,}</td>"
+                    html += f"<td class='hide-mobile'>{domain['height']:,}</td>"
                     html += "</tr>"
     else:
         for domain in domains:
@@ -321,7 +321,7 @@ def bidDomains(bids,domains, sortbyDomains=False):
                     html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td>{bidDisplay}</td>"
-                    html += f"<td>{domain['height']:,}</td>"
+                    html += f"<td class='hide-mobile'>{domain['height']:,}</td>"
                     html += "</tr>"
     return html
 
