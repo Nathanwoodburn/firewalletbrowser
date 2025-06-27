@@ -42,6 +42,9 @@ if TX_EXPLORER_URL is None:
 NAMEHASH_CACHE = 'user_data/namehash_cache.json'
 CACHE_LOCK = threading.Lock()
 
+
+HNS_ICON = '<img src="/assets/img/HNS.png" width="20px" style="filter: invert(1);" />'
+
 def domains(domains, mobile=False):
     html = ''
     for domain in domains:
@@ -157,9 +160,9 @@ def transactions(txs):
 
         if action == "HNS Transfer":
             if amount >= 0:
-                humanAction = f"Received {amount:,.2f} HNS"
+                humanAction = f"Received {amount:,.2f} {HNS_ICON}"
             else:
-                humanAction = f"Sent {(amount*-1):,.2f} HNS"
+                humanAction = f"Sent {(amount*-1):,.2f} {HNS_ICON}"
         elif action == "FINALIZE":
             if incomming and not isMulti:
                 humanAction = f"Received {renderFromNameHash(nameHashes[0])}"                    
@@ -170,7 +173,7 @@ def transactions(txs):
             else:
                 humanAction = f"Finalized  {isMulti + 1} domain transfers"
         elif action == "BID" and not isMulti:
-            humanAction = f"Bid {bid_value:,.2f} HNS on {renderFromNameHash(nameHashes[0])}"
+            humanAction = f"Bid {bid_value:,.2f} {HNS_ICON} on {renderFromNameHash(nameHashes[0])}"
         elif isMulti:
             humanAction = actionMapPlural.get(action, "Unknown Action")
             humanAction = humanAction.replace("multiple", f'{isMulti + 1}')
@@ -197,7 +200,7 @@ def transactions(txs):
         html += f'''
         <tr>
             <td style='white-space: nowrap;'>{txdate}</td>
-            <td><a style="color:var(--bs-body-color);" target="_blank" href="{TX_EXPLORER_URL}{txhash}">{humanAction}</a></td>                        
+            <td><a style="color:var(--bs-body-color); text-decoration:none;" target="_blank" href="{TX_EXPLORER_URL}{txhash}">{humanAction}</a></td>                        
         </tr>
         '''
     return html
