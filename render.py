@@ -76,21 +76,21 @@ actionMap = {
     "REGISTER": "Registered ",
     "RENEW": "Renewed ",
     "BID": "Bid on ",
-    "REVEAL": "Revealed Bid for ",
-    "REDEEM": "Redeemed Bid for ",
-    "TRANSFER": "Started Transfer for ",
-    "NONE": "Multiple Actions"
+    "REVEAL": "Revealed bid for ",
+    "REDEEM": "Redeemed bid for ",
+    "TRANSFER": "Started transfer for ",
+    "NONE": "Multiple actions"
 }
 
 actionMapPlural = {
-    "UPDATE": "Updated Multiple Domains' Records",
-    "REGISTER": "Registered Multiple Domains",
-    "RENEW": "Renewed Multiple Domains",
-    "BID": "Bid on Domains",
-    "REVEAL": "Revealed Bids",
-    "REDEEM": "Redeemed Bids",
-    "TRANSFER": "Started Multiple Domain Transfers",
-    "NONE": "Multiple Actions"
+    "UPDATE": "Updated multiple domains' records",
+    "REGISTER": "Registered multiple domains",
+    "RENEW": "Renewed multiple domains",
+    "BID": "Bid on multiple domains",
+    "REVEAL": "Revealed multiple bids",
+    "REDEEM": "Redeemed multiple bids",
+    "TRANSFER": "Started multiple domain transfers",
+    "NONE": "Multiple actions"
 }
 
 def transactions(txs):
@@ -98,11 +98,9 @@ def transactions(txs):
     if len(txs) == 0:
         return '<tr><td colspan="5">No transactions found</td></tr>'
     html = ''
-    print(f"Processing {len(txs)} transactions")
-    for tx in txs:        
+    for tx in txs:
         action = "HNS Transfer"
-        address = tx["outputs"][0]["address"]
-        hash = tx["hash"]
+        txhash = tx["hash"]        
         confirmations=tx["confirmations"]
         mined_date = "Pending"
         if confirmations >= 1:
@@ -114,6 +112,7 @@ def transactions(txs):
                 mined_date = datetime.datetime.strptime(mined_date, "%Y-%m-%dT%H:%M:%SZ").strftime("%d %b %Y")
         incomming = True
         amount = 0
+        bid_value = 0
         isMulti = False
         nameHashes = []
         
@@ -142,12 +141,18 @@ def transactions(txs):
                 if output["path"] and output["covenant"]["action"] == "NONE":
                     amount += output["value"]
 
+            # Check if this is a bid
+            if output["covenant"]["action"] == "BID":
+                bid_value += output["value"]
+                amount -= output["value"]
+
         if not incomming:
             # Subtract fee to make it easier to read
             amount += tx["fee"]
 
 
         amount = amount / 1000000
+        bid_value = bid_value / 1000000
         humanAction = action
 
         if action == "HNS Transfer":
@@ -157,37 +162,20 @@ def transactions(txs):
                 humanAction = f"Sent {(amount*-1):,.2f} HNS"
         elif action == "FINALIZE":
             if incomming and not isMulti:
-                # humanAction = "Received Domain"
-                # if CONVERT_NAME:
-                #     name = hsd.rpc_getNameByHash(nameHashes[0])
-                #     if name["error"] is None:
-                #         name = name["result"]
                 humanAction = f"Received {renderFromNameHash(nameHashes[0])}"                    
             elif incomming and isMulti:
                 humanAction = "Received Multiple Domains"
             elif not isMulti:
                 humanAction = f"Finalized {renderFromNameHash(nameHashes[0])}"
-                # if CONVERT_NAME:
-                #     name = hsd.rpc_getNameByHash(nameHashes[0])
-                #     if name["error"] is None:
-                #         name = name["result"]
-                #         humanAction = f"Finalized {renderDomain(name)}"
             else:
                 humanAction = "Finalized Multiple Domain Transfers"
+        elif action == "BID" and not isMulti:
+            humanAction = f"Bid {bid_value:,.2f} HNS on {renderFromNameHash(nameHashes[0])}"
         elif isMulti:
             humanAction  = actionMapPlural.get(action, "Unknown Action")
         else:
             humanAction  = actionMap.get(action, "Unknown Action")
             humanAction += renderFromNameHash(nameHashes[0])
-            # if CONVERT_NAME:
-            #     name = hsd.rpc_getNameByHash(nameHashes[0])
-            #     if name["error"] is None:
-            #         name = name["result"]
-            #     else:
-            #         name = None
-            #     humanAction += renderDomain(name) if name else "domain"
-            # else:
-            #     humanAction += "domain"
         if amount < 0:
             amount = f"<span style='color: red;'>{amount:,.2f}</span>"
         elif amount > 0:
@@ -206,7 +194,7 @@ def transactions(txs):
         html += f'''
         <tr>
             <td style='white-space: nowrap;'>{txdate}</td>
-            <td><a style="color:var(--bs-body-color);" target="_blank" href="{TX_EXPLORER_URL}{hash}">{humanAction}</a></td>                        
+            <td><a style="color:var(--bs-body-color);" target="_blank" href="{TX_EXPLORER_URL}{txhash}">{humanAction}</a></td>                        
         </tr>
         '''
     return html
