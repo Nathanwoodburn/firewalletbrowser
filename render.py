@@ -30,6 +30,7 @@ elif HSD_NETWORK == "regtest":
     HSD_WALLET_PORT = 14039
     HSD_NODE_PORT = 14037
 
+CONVERT_NAME = False
 
 hsd = api.hsd(HSD_API, HSD_IP, HSD_NODE_PORT)
 
@@ -96,11 +97,20 @@ def transactions(txs):
     if len(txs) == 0:
         return '<tr><td colspan="5">No transactions found</td></tr>'
     html = ''
-    for tx in txs:
+    print(f"Processing {len(txs)} transactions")
+    for tx in txs:        
         action = "HNS Transfer"
         address = tx["outputs"][0]["address"]
         hash = tx["hash"]
         confirmations=tx["confirmations"]
+        mined_date = "Pending"
+        if confirmations >= 1:
+            mined_date = tx["mdate"]
+            if mined_date is None:
+                mined_date = "Pending"
+            else:
+                # Format 2025-06-27T01:49:14Z
+                mined_date = datetime.datetime.strptime(mined_date, "%Y-%m-%dT%H:%M:%SZ").strftime("%d %b %Y")
         incomming = True
         amount = 0
         isMulti = False
@@ -140,36 +150,42 @@ def transactions(txs):
         humanAction = action
 
         if action == "HNS Transfer":
-            if amount > 0:
-                humanAction = "Received HNS"
+            if amount >= 0:
+                humanAction = f"Received {amount:,.2f} HNS"
             else:
-                humanAction = "Sent HNS"
+                humanAction = f"Sent {(amount*-1):,.2f} HNS"
         elif action == "FINALIZE":
             if incomming and not isMulti:
-                name = hsd.rpc_getNameByHash(nameHashes[0])
-                if name["error"] is None:
-                    name = name["result"]
-                humanAction = f"Received {renderDomain(name)}"
+                humanAction = "Received Domain"
+                if CONVERT_NAME:
+                    name = hsd.rpc_getNameByHash(nameHashes[0])
+                    if name["error"] is None:
+                        name = name["result"]
+                        humanAction = f"Received {renderDomain(name)}"                    
             elif incomming and isMulti:
                 humanAction = "Received Multiple Domains"
             elif not isMulti:
-                name = hsd.rpc_getNameByHash(nameHashes[0])
-                if name["error"] is None:
-                    name = name["result"]
-                humanAction = f"Finalized {renderDomain(name)}"
+                humanAction = "Finalized Domain Transfer"
+                if CONVERT_NAME:
+                    name = hsd.rpc_getNameByHash(nameHashes[0])
+                    if name["error"] is None:
+                        name = name["result"]
+                        humanAction = f"Finalized {renderDomain(name)}"
             else:
                 humanAction = "Finalized Multiple Domain Transfers"
         elif isMulti:
             humanAction  = actionMapPlural.get(action, "Unknown Action")
         else:
             humanAction  = actionMap.get(action, "Unknown Action")
-            name = hsd.rpc_getNameByHash(nameHashes[0])
-            if name["error"] is None:
-                name = name["result"]
+            if CONVERT_NAME:
+                name = hsd.rpc_getNameByHash(nameHashes[0])
+                if name["error"] is None:
+                    name = name["result"]
+                else:
+                    name = None
+                humanAction += renderDomain(name) if name else "domain"
             else:
-                name = None
-            humanAction += renderDomain(name) if name else "domain"
-
+                humanAction += "domain"
         if amount < 0:
             amount = f"<span style='color: red;'>{amount:,.2f}</span>"
         elif amount > 0:
@@ -179,12 +195,18 @@ def transactions(txs):
 
 
         # hash = f"<a target='_blank' href='{TX_EXPLORER_URL}{hash}'>{hash[:8]}...</a>"
+        txdate = ""
         if confirmations < 5:
-            confirmations = f"<td class='hide-mobile' style='background-color: red;'>{confirmations}</td>" 
+            txdate = f"<span style='color: red;'>{mined_date}</span>"
         else:
-            confirmations = f"<td class='hide-mobile'>{confirmations:,}</td>"
-
-        html += f'<tr><td><a style="color:var(--bs-body-color);" target="_blank" href="{TX_EXPLORER_URL}{hash}">{humanAction}</a></td><td class="hide-mobile">{address}</td>{confirmations}<td class="amount-column">{amount} HNS</td></tr>'
+            txdate = f"<span>{mined_date}</span>"
+            # confirmations = f"<td class='hide-mobile'>{confirmations:,}</td>"
+        html += f'''
+        <tr>
+            <td style='white-space: nowrap;'>{txdate}</td>
+            <td><a style="color:var(--bs-body-color);" target="_blank" href="{TX_EXPLORER_URL}{hash}">{humanAction}</a></td>                        
+        </tr>
+        '''
     return html
 
 
