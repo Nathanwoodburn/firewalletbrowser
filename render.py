@@ -113,7 +113,7 @@ def transactions(txs):
         incomming = True
         amount = 0
         bid_value = 0
-        isMulti = False
+        isMulti = 0
         nameHashes = []
         
         for txInput in tx["inputs"]:
@@ -126,7 +126,7 @@ def transactions(txs):
                 if action == "HNS Transfer":
                     action = output["covenant"]["action"]
                 elif action == output["covenant"]["action"]:
-                    isMulti = True
+                    isMulti += 1
                 else:
                     action = "Multiple Actions"
         
@@ -164,18 +164,21 @@ def transactions(txs):
             if incomming and not isMulti:
                 humanAction = f"Received {renderFromNameHash(nameHashes[0])}"                    
             elif incomming and isMulti:
-                humanAction = "Received Multiple Domains"
+                humanAction = f"Received {isMulti + 1} domains"
             elif not isMulti:
                 humanAction = f"Finalized {renderFromNameHash(nameHashes[0])}"
             else:
-                humanAction = "Finalized Multiple Domain Transfers"
+                humanAction = f"Finalized  {isMulti + 1} domain transfers"
         elif action == "BID" and not isMulti:
             humanAction = f"Bid {bid_value:,.2f} HNS on {renderFromNameHash(nameHashes[0])}"
         elif isMulti:
-            humanAction  = actionMapPlural.get(action, "Unknown Action")
+            humanAction = actionMapPlural.get(action, "Unknown Action")
+            humanAction = humanAction.replace("multiple", f'{isMulti + 1}')
         else:
             humanAction  = actionMap.get(action, "Unknown Action")
             humanAction += renderFromNameHash(nameHashes[0])
+
+
         if amount < 0:
             amount = f"<span style='color: red;'>{amount:,.2f}</span>"
         elif amount > 0:
