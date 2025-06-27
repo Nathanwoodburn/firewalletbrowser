@@ -1605,7 +1605,7 @@ def api_wallet(function):
         if not force_refresh and cache_key in tx_cache and (current_time - tx_cache[cache_key]['time'] < TX_CACHE_TIMEOUT):
             transactions = tx_cache[cache_key]['data']
             txCount = len(transactions)
-            transactions_html = tx_cache[cache_key]['html']
+            transactions_html = render.transactions(transactions)
         else:
             # Fetch transactions from account module
             transactions = account_module.getTransactions(account, page)

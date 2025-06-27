@@ -5,6 +5,7 @@ from flask import render_template
 from domainLookup import punycode_to_emoji
 import os
 from handywrapper import api
+import threading
 
 HSD_API = os.getenv("HSD_API")
 HSD_IP = os.getenv("HSD_IP")
@@ -30,8 +31,6 @@ elif HSD_NETWORK == "regtest":
     HSD_WALLET_PORT = 14039
     HSD_NODE_PORT = 14037
 
-CONVERT_NAME = False
-
 hsd = api.hsd(HSD_API, HSD_IP, HSD_NODE_PORT)
 
 # Get Explorer URL
@@ -40,6 +39,8 @@ if TX_EXPLORER_URL is None:
     TX_EXPLORER_URL = "https://shakeshift.com/transaction/"
 
 
+NAMEHASH_CACHE = 'user_data/namehash_cache.json'
+CACHE_LOCK = threading.Lock()
 
 def domains(domains, mobile=False):
     html = ''
@@ -156,36 +157,37 @@ def transactions(txs):
                 humanAction = f"Sent {(amount*-1):,.2f} HNS"
         elif action == "FINALIZE":
             if incomming and not isMulti:
-                humanAction = "Received Domain"
-                if CONVERT_NAME:
-                    name = hsd.rpc_getNameByHash(nameHashes[0])
-                    if name["error"] is None:
-                        name = name["result"]
-                        humanAction = f"Received {renderDomain(name)}"                    
+                # humanAction = "Received Domain"
+                # if CONVERT_NAME:
+                #     name = hsd.rpc_getNameByHash(nameHashes[0])
+                #     if name["error"] is None:
+                #         name = name["result"]
+                humanAction = f"Received {renderFromNameHash(nameHashes[0])}"                    
             elif incomming and isMulti:
                 humanAction = "Received Multiple Domains"
             elif not isMulti:
-                humanAction = "Finalized Domain Transfer"
-                if CONVERT_NAME:
-                    name = hsd.rpc_getNameByHash(nameHashes[0])
-                    if name["error"] is None:
-                        name = name["result"]
-                        humanAction = f"Finalized {renderDomain(name)}"
+                humanAction = f"Finalized {renderFromNameHash(nameHashes[0])}"
+                # if CONVERT_NAME:
+                #     name = hsd.rpc_getNameByHash(nameHashes[0])
+                #     if name["error"] is None:
+                #         name = name["result"]
+                #         humanAction = f"Finalized {renderDomain(name)}"
             else:
                 humanAction = "Finalized Multiple Domain Transfers"
         elif isMulti:
             humanAction  = actionMapPlural.get(action, "Unknown Action")
         else:
             humanAction  = actionMap.get(action, "Unknown Action")
-            if CONVERT_NAME:
-                name = hsd.rpc_getNameByHash(nameHashes[0])
-                if name["error"] is None:
-                    name = name["result"]
-                else:
-                    name = None
-                humanAction += renderDomain(name) if name else "domain"
-            else:
-                humanAction += "domain"
+            humanAction += renderFromNameHash(nameHashes[0])
+            # if CONVERT_NAME:
+            #     name = hsd.rpc_getNameByHash(nameHashes[0])
+            #     if name["error"] is None:
+            #         name = name["result"]
+            #     else:
+            #         name = None
+            #     humanAction += renderDomain(name) if name else "domain"
+            # else:
+            #     humanAction += "domain"
         if amount < 0:
             amount = f"<span style='color: red;'>{amount:,.2f}</span>"
         elif amount > 0:
@@ -497,3 +499,63 @@ def renderDomain(name: str) -> str:
 
     except Exception as e:
         return f"{name}/"
+
+def renderDomainAsync(namehash: str) -> None:
+    """
+    Get the domain name from HSD using its name hash and store it in the cache.
+    This function is meant to be run in the background.
+    """
+    try:
+        with CACHE_LOCK:
+            if not os.path.exists(NAMEHASH_CACHE):
+                with open(NAMEHASH_CACHE, 'w') as f:
+                    json.dump({}, f)
+            with open(NAMEHASH_CACHE, 'r') as f:
+                cache = json.load(f)
+
+            if namehash in cache:
+                return
+
+        # Fetch the name outside the lock (network call)
+        name = hsd.rpc_getNameByHash(namehash)
+        if name["error"] is None:
+            name = name["result"]
+            rendered = renderDomain(name)
+
+            with CACHE_LOCK:
+                with open(NAMEHASH_CACHE, 'r') as f:
+                    cache = json.load(f)
+                cache[namehash] = rendered
+                with open(NAMEHASH_CACHE, 'w') as f:
+                    json.dump(cache, f)
+
+            return rendered
+        else:
+            print(f"Error fetching name for hash {namehash}: {name['error']}", flush=True)
+
+    except Exception as e:
+        print(f"Exception fetching name for hash {namehash}: {e}", flush=True)
+
+
+def renderFromNameHash(nameHash: str) -> str:
+    """
+    Render a domain name from its name hash.
+    Try to retrieve the name from the cache. If not, create a background task to fetch it.
+    """
+    try:
+        with CACHE_LOCK:
+            if not os.path.exists(NAMEHASH_CACHE):
+                with open(NAMEHASH_CACHE, 'w') as f:
+                    json.dump({}, f)
+            with open(NAMEHASH_CACHE, 'r') as f:
+                cache = json.load(f)
+
+            if nameHash in cache:
+                return cache[nameHash]
+        thread = threading.Thread(target=renderDomainAsync, args=(nameHash,))
+        thread.start()
+        return "domain"
+
+    except Exception as e:
+        print(f"Exception in renderFromNameHash: {e}", flush=True)
+        return "domain"
