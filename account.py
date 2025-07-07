@@ -472,6 +472,24 @@ def getDomain(domain: str):
         }
     return response['result']
 
+def getAddressFromCoin(coinhash: str, coinindex = 0):
+    # Get the address from the hash
+    response = requests.get(f"http://x:{HSD_API}@{HSD_IP}:{HSD_NODE_PORT}/coin/{coinhash}/{coinindex}")
+    if response.status_code != 200:
+        return {
+            "error": {
+                "message": "Error getting address from coin"
+            }
+        }
+    data = response.json()
+    if 'address' not in data:
+        return {
+            "error": {
+                "message": "Error getting address from coin"
+            }
+        }
+    return data['address']
+
 
 def renewDomain(account, domain):
     account_name = check_account(account)

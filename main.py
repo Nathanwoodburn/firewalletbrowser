@@ -464,15 +464,17 @@ def search():
 
 
 
-    domain_info = domainLookup.niami_info(search_term)
+    domain_info = account_module.getDomain(search_term)
     owner = 'Unknown'
     dns = []
     txs = []
 
     if domain_info:
-        owner = domain_info['owner']
-        dns = domain_info['dns']
-        txs = domain_info['txs']
+        # Check if info and info.owner
+        if 'info' in domain_info and 'owner' in domain_info['info']:
+            owner = account_module.getAddressFromCoin(domain_info['info']['owner']['hash'],domain_info['info']['owner']['index'])
+    
+    dns = account_module.getDNS(search_term)
 
     own_domains = account_module.getDomains(account)
     own_domains = [x['name'] for x in own_domains]
@@ -481,13 +483,12 @@ def search():
         owner = "You"
 
     dns = render.dns(dns)
-    txs = render.txs(txs)
 
     return render_template("search.html", account=account, 
                            rendered=renderDomain(search_term),
                            search_term=search_term,domain=domain['info']['name'],
                            raw=domain,state=state, next=next, owner=owner,
-                           dns=dns, txs=txs,plugins=plugins)
+                           dns=dns,plugins=plugins)
     
 @app.route('/manage/<domain>')
 def manage(domain: str):
