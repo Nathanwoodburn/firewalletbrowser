@@ -210,34 +210,35 @@ def dns(data, edit=False):
     html_output = ""
     index = 0
     for entry in data:
+        print(entry, flush=True)
         html_output += f"<tr><td>{entry['type']}</td>\n"
         
         if entry['type'] != 'DS' and not entry['type'].startswith("GLUE") and not entry['type'].startswith("SYNTH"):
             for key, value in entry.items():
                 if key != 'type':
                     if isinstance(value, list):
-                        html_output += "<td>\n"
-                        for val in value:
-                            html_output += f"{val}<br>\n"
-
-                        html_output += "</td>\n"
+                        if len(value) > 1:
+                            html_output += '<td style="white-space: pre-wrap; font-family: monospace;">\n'
+                            for val in value:
+                                html_output += f"{val}<br>\n"
+                            html_output += "</td>\n"
+                        else:
+                            html_output += f'<td style="white-space: pre-wrap; font-family: monospace;">{value[0]}</td>\n'
                     else:
-                        html_output += f"<td>{value}</td>\n"
-
+                        html_output += f'<td style="white-space: pre-wrap; font-family: monospace;">{value}</td>\n'
 
         elif entry['type'] == 'DS':
             ds = f"{entry['keyTag']} {entry['algorithm']} {entry['digestType']} {entry['digest']}"
-            html_output += f"<td>{ds}</td>\n"
+            html_output += f'<td style="white-space: pre-wrap; font-family: monospace;">{ds}</td>\n'
 
         else:
             value = ""
             for key, val in entry.items():
                 if key != 'type':
                     value += f'{val} '
-            html_output += f"<td>{value}</td>\n"
+            html_output += f'<td style="white-space: pre-wrap; font-family: monospace;">{value.strip()}</td>\n'
             
         if edit:
-            # Remove the current entry from the list
             keptRecords = str(data[:index] + data[index+1:]).replace("'", '"')
             keptRecords = urllib.parse.quote(keptRecords)
             html_output += f"<td><a href='edit?dns={keptRecords}'>Remove</a></td>\n"
@@ -245,6 +246,7 @@ def dns(data, edit=False):
         html_output += "  </tr>\n"    
         index += 1
     return html_output
+
 
 def txs(data):
     data = data[::-1]
