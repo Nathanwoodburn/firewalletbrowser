@@ -628,6 +628,47 @@ def getBids(account, domain="NONE"):
         bids.append(bid)
     return bids
 
+def getPossibleOutbids(account):
+    # Get all bids
+    bids = getBids(account)
+    if 'error' in bids:
+        return []
+    
+    # Get current height
+    current_height = getBlockHeight()
+
+    # Sort out bids older than 720 blocks
+    bids = [bid for bid in bids if (current_height - bid['height']) <= 720]
+    possible_outbids = []
+
+    for bid in bids:
+        domain = bid['name']
+
+        # Check to make sure that bidding is still happening
+        domain_info = getDomain(domain)
+        if 'info' not in domain_info or 'state' not in domain_info['info']:
+            print(f"Domain {domain} not found or no info available",flush=True)
+            continue
+        if domain_info['info']['state'] != "BIDDING":
+            continue
+
+
+        current_highest_bid = bid['value']
+        domain_bids = getBids(account, domain)
+        print(domain)
+        print(json.dumps(domain_bids, indent=4))
+        for domain_bid in domain_bids:
+            if domain_bid["own"]:
+                current_highest_bid = max(current_highest_bid, domain_bid['value'])
+                continue
+            if domain_bid['value'] != -1000000:
+                print("Revealed bid")
+                continue
+            if current_highest_bid < domain_bid["lockup"]:
+                possible_outbids.append(domain)
+                break
+
+    return possible_outbids
 
 def getReveals(account, domain):
     return hsw.getWalletRevealsByName(domain, account)

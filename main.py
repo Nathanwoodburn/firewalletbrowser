@@ -1673,6 +1673,12 @@ def api_wallet(function):
             
         return send_file('templates/assets/img/HNS.png')
 
+
+    if function == "possibleOutbids":
+        return jsonify({"result": account_module.getPossibleOutbids(account)})
+
+
+
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
 
 @app.route('/api/v1/wallet/<function>/mobile', methods=["GET"])
