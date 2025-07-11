@@ -273,84 +273,74 @@ def auctions():
     if not account:
         return redirect("/logout")
 
-
-    bids = account_module.getBids(account)
-    domains = account_module.getDomains(account,False)
-    
-    # Sort
-    sort = request.args.get("sort")
-    if sort == None:
-        sort = "time"
-    sort = sort.lower()
-    sort_price = ""
-    sort_price_next = "⬇"
-    sort_state = ""
-    sort_state_next = "⬇"
-    sort_domain = ""
-    sort_domain_next = "⬇"
-    sort_time = ""
-    sort_time_next = "⬇"
-    reverse = False
-
+    # Get sort parameters with defaults
+    sort = request.args.get("sort", "time").lower()
     direction = request.args.get("direction")
-    if direction == None:
-        if sort == "time":
-            direction = "⬆"
-        else:
-            direction = "⬇"
-
-    if direction == "⬆":
-        reverse = True
-
+    if direction is None:
+        direction = "⬆" if sort == "time" else "⬇"
+    
+    reverse = (direction == "⬆")
+    
+    # Initialize sort indicators with a more efficient approach
+    sort_indicators = {
+        "price": ["", "⬇"],
+        "state": ["", "⬇"],
+        "domain": ["", "⬇"],
+        "time": ["", "⬇"]
+    }
+    # Set the current sort column's indicators
+    sort_indicators[sort][0] = direction
+    sort_indicators[sort][1] = reverseDirection(direction)
+    
+    # Efficiently retrieve data
+    bids = account_module.getBids(account)
+    domains = account_module.getDomains(account, False)
+    
+    # Determine if sorting by domains and apply appropriate sort
     sortbyDomain = False
-
+    
     if sort == "price":
-        # Sort by price
-        bids = sorted(bids, key=lambda k: k['value'],reverse=reverse)
-        sort_price = direction
-        sort_price_next = reverseDirection(direction)
+        bids = sorted(bids, key=lambda k: k['value'], reverse=reverse)
     elif sort == "state":
-        sort_state = direction
-        sort_state_next = reverseDirection(direction)
-        domains = sorted(domains, key=lambda k: k['state'],reverse=reverse)
+        domains = sorted(domains, key=lambda k: k['state'], reverse=reverse)
         sortbyDomain = True
     elif sort == "time":
-        sort_time = direction
-        sort_time_next = reverseDirection(direction)
-
-        # If older HSD version sort by domain height
-        if bids[0]['height'] == 0:
-            domains = sorted(domains, key=lambda k: k['height'],reverse=reverse)
+        # Handle older HSD versions that don't have height in bids
+        if bids and bids[0]['height'] == 0:
+            domains = sorted(domains, key=lambda k: k['height'], reverse=reverse)
             sortbyDomain = True
         else:
-            bids = sorted(bids, key=lambda k: k['height'],reverse=reverse)
-    else:
-        # Sort by domain
-        bids = sorted(bids, key=lambda k: k['name'],reverse=reverse)
-        sort_domain = direction
-        sort_domain_next = reverseDirection(direction)
+            bids = sorted(bids, key=lambda k: k['height'], reverse=reverse)
+    else:  # Default to domain name sorting
+        bids = sorted(bids, key=lambda k: k['name'], reverse=reverse)
     
-    # Check if outbids set to true
-    outbids = request.args.get("outbids")
-    if outbids is not None and outbids.lower() == "true":
-        # Get outbid domains
+    # Get outbids only if explicitly requested
+    outbids = []
+    if request.args.get("outbids", "").lower() == "true":
         outbids = account_module.getPossibleOutbids(account)
-
-
-    bidsHtml = render.bidDomains(bids,domains,sortbyDomain,outbids)
-    plugins = ""
-    message = ''
-    if 'message' in request.args:
-        message = request.args.get("message")
-    return render_template("auctions.html", account=account, domains=bidsHtml,
-                           domainsMobile=bidsHtml, plugins=plugins,
-                           domain_count=bidsHtml,sort_price=sort_price,
-                           sort_state=sort_state,sort_domain=sort_domain,
-                           sort_price_next=sort_price_next,
-                           sort_state_next=sort_state_next,sort_domain_next=sort_domain_next,
-                           bids=len(bids),message=message,
-                           sort_time=sort_time,sort_time_next=sort_time_next)
-
+    
+    # Generate HTML just once
+    bidsHtml = render.bidDomains(bids, domains, sortbyDomain, outbids)
+    
+    # Get message if present
+    message = request.args.get("message", "")
+    
+    return render_template("auctions.html", account=account, 
+                          domains=bidsHtml,
+                          domainsMobile=bidsHtml, 
+                          plugins="",
+                          domain_count=bidsHtml,
+                          sort_price=sort_indicators["price"][0],
+                          sort_state=sort_indicators["state"][0],
+                          sort_domain=sort_indicators["domain"][0],
+                          sort_time=sort_indicators["time"][0],
+                          sort_price_next=sort_indicators["price"][1],
+                          sort_state_next=sort_indicators["state"][1],
+                          sort_domain_next=sort_indicators["domain"][1],
+                          sort_time_next=sort_indicators["time"][1],
+                          bids=len(bids),
+                          message=message)
+#endregion
 
 #region All Auctions
 @app.route('/reveal')

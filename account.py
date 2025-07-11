@@ -611,11 +611,24 @@ def getWalletStatus():
         return "Error wallet ahead of node"
 
 
+# Add a simple cache for bid data
+_bid_cache = {}
+_bid_cache_time = {}
+_cache_duration = 60  # Cache duration in seconds
+
 def getBids(account, domain="NONE"):
+    cache_key = f"{account}:{domain}"
+    current_time = time.time()
+    
+    # Return cached data if available and fresh
+    if cache_key in _bid_cache and current_time - _bid_cache_time.get(cache_key, 0) < _cache_duration:
+        return _bid_cache[cache_key]
+    
     if domain == "NONE":
         response = hsw.getWalletBids(account)
     else:
         response = hsw.getWalletBidsByName(domain, account)
+    
     # Add backup for bids with no value
     bids = []
     for bid in response:
@@ -626,6 +639,11 @@ def getBids(account, domain="NONE"):
         if 'height' not in bid:
             bid['height'] = 0
         bids.append(bid)
+    
+    # Cache the results
+    _bid_cache[cache_key] = bids
+    _bid_cache_time[cache_key] = current_time
+    
     return bids
 
 def getPossibleOutbids(account):
@@ -640,28 +658,41 @@ def getPossibleOutbids(account):
     # Sort out bids older than 720 blocks
     bids = [bid for bid in bids if (current_height - bid['height']) <= 720]
     possible_outbids = []
+    processed_domains = set()  # Track domains we've already processed
+    
+    # Pre-fetch domain info for all domains in a single batch
+    domains_to_check = {bid['name'] for bid in bids}
+    domain_info_map = {}
+    
+    for domain in domains_to_check:
+        domain_info = getDomain(domain)
+        if ('info' in domain_info and 'state' in domain_info['info'] and 
+            domain_info['info']['state'] == "BIDDING"):
+            domain_info_map[domain] = domain_info
 
     for bid in bids:
         domain = bid['name']
-
-        # Check to make sure that bidding is still happening
-        domain_info = getDomain(domain)
-        if 'info' not in domain_info or 'state' not in domain_info['info']:
-            print(f"Domain {domain} not found or no info available",flush=True)
+        
+        # Skip if we've already processed this domain or it's not in bidding state
+        if domain in processed_domains or domain not in domain_info_map:
             continue
-        if domain_info['info']['state'] != "BIDDING":
-            continue
-
-
-        current_highest_bid = bid['value']
+        
+        processed_domains.add(domain)
+        
+        # Get all bids for this domain in one call
         domain_bids = getBids(account, domain)
+        
+        # Find the highest bid we've made
+        current_highest_bid = bid['value']
+        for own_bid in domain_bids:
+            if own_bid["own"]:
+                current_highest_bid = max(current_highest_bid, own_bid['value'])
+        
+        # Check if any unrevealed bids could outbid us
         for domain_bid in domain_bids:
-            if domain_bid["own"]:
-                current_highest_bid = max(current_highest_bid, domain_bid['value'])
-                continue
-            if domain_bid['value'] != -1000000:
-                print("Revealed bid")
-                continue
+            if domain_bid["own"] or domain_bid['value'] != -1000000:
+                continue  # Skip our own bids or revealed bids
+                
             if current_highest_bid < domain_bid["lockup"]:
                 possible_outbids.append(domain)
                 break
@@ -671,24 +702,28 @@ def getPossibleOutbids(account):
 def getReveals(account, domain):
     return hsw.getWalletRevealsByName(domain, account)
 
-
 def getPendingReveals(account):
     bids = getBids(account)
-    domains = getDomains(account, False)
+    # Only get domains in REVEAL state to reduce API calls
+    domains = [d for d in getDomains(account, False) if d['state'] == "REVEAL"]
     pending = []
-    for domain in domains:
-        if domain['state'] == "REVEAL":
-            reveals = getReveals(account, domain['name'])
-            for bid in bids:
-                if bid['name'] == domain['name']:
-                    state_found = False
-                    for reveal in reveals:
-                        if reveal['own'] == True:
-                            if bid['value'] == reveal['value']:
-                                state_found = True
-
-                    if not state_found:
-                        pending.append(bid)
+    
+    # Process domains in REVEAL state
+    domain_names = {domain['name']: domain for domain in domains}
+    
+    for bid in bids:
+        if bid['name'] in domain_names:
+            reveals = getReveals(account, bid['name'])
+            
+            # Check if this bid has been revealed
+            bid_revealed = any(
+                reveal['own'] == True and bid['value'] == reveal['value'] 
+                for reveal in reveals
+            )
+            
+            if not bid_revealed:
+                pending.append(bid)
+    
     return pending
 
 

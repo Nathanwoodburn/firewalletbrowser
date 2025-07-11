@@ -336,47 +336,77 @@ def bids(bids,reveals):
     return html
 
 
-def bidDomains(bids,domains, sortbyDomains=False, outbids=[]):
+def bidDomains(bids, domains, sortbyDomains=False, outbids=[]):
     html = ''
+    
+    # Create lookup dictionaries for O(1) lookups instead of O(n) searches
+    domain_lookup = {d['name']: d for d in domains}
+    bid_lookup = {}
+    for bid in bids:
+        if bid['name'] not in bid_lookup or bid['value'] > bid_lookup[bid['name']]['value']:
+            bid_lookup[bid['name']] = bid
+    
     if not sortbyDomains:
+        # Process by bids first
         for bid in bids:
-            for domain in domains:
-                if bid['name'] == domain['name']:
-                    lockup = bid['lockup']
-                    lockup = lockup / 1000000
-                    bidValue = bid['value'] / 1000000
-                    blind = lockup - bidValue
+            domain_name = bid['name']
+            if domain_name not in domain_lookup:
+                continue
+                
+            domain = domain_lookup[domain_name]
+            
+            lockup = bid['lockup']
+            lockup = lockup / 1000000
+            bidValue = bid['value'] / 1000000
+            blind = lockup - bidValue
 
-                    if blind > 0:
-                        bidDisplay = f'<b>{bidValue:,.2f}</b> (+{blind:,.2f}) HNS'
-                    else:
-                        bidDisplay = f'<b>{bidValue:,.2f}</b> HNS'
-                        
-                    html += "<tr>"
-                    if domain['name'] in outbids:
-                        html += f"<td style='background-color: red;'><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
-                    else:
-                        html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
-                    html += f"<td>{domain['state']}</td>"
-                    html += f"<td style='white-space: nowrap;'>{bidDisplay}</td>"
-                    html += f"<td class='hide-mobile'>{bid['height']:,}</td>"
-                    html += "</tr>"
+            if blind > 0:
+                bidDisplay = f'<b>{bidValue:,.2f}</b> (+{blind:,.2f}) HNS'
+            else:
+                bidDisplay = f'<b>{bidValue:,.2f}</b> HNS'
+                
+            html += "<tr>"
+            
+            # Efficiently check if domain is in outbids list
+            is_outbid = domain_name in outbids
+            td_style = " style='background-color: red;'" if is_outbid else ""
+            
+            html += f"<td{td_style}><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain_name}'>{renderDomain(domain_name)}</a></td>"
+            html += f"<td>{domain['state']}</td>"
+            html += f"<td style='white-space: nowrap;'>{bidDisplay}</td>"
+            html += f"<td class='hide-mobile'>{bid['height']:,}</td>"
+            html += "</tr>"
     else:
+        # Process by domains first (for state sorting)
         for domain in domains:
-            for bid in bids:
-                if bid['name'] == domain['name']:
-                    lockup = bid['lockup']
-                    lockup = lockup / 1000000
-                    bidValue = bid['value'] / 1000000
-                    blind = lockup - bidValue
+            domain_name = domain['name']
+            if domain_name not in bid_lookup:
+                continue
+                
+            bid = bid_lookup[domain_name]
+            
+            lockup = bid['lockup']
+            lockup = lockup / 1000000
+            bidValue = bid['value'] / 1000000
+            blind = lockup - bidValue
 
-                    bidDisplay = f'<b>{bidValue:,.2f} HNS</b> + {blind:,.2f} HNS blind'
-                    html += "<tr>"
-                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
-                    html += f"<td>{domain['state']}</td>"
-                    html += f"<td>{bidDisplay}</td>"
-                    html += f"<td class='hide-mobile'>{bid['height']:,}</td>"
-                    html += "</tr>"
+            if blind > 0:
+                bidDisplay = f'<b>{bidValue:,.2f}</b> (+{blind:,.2f}) HNS'
+            else:
+                bidDisplay = f'<b>{bidValue:,.2f}</b> HNS'
+            
+            html += "<tr>"
+            
+            # Efficiently check if domain is in outbids list
+            is_outbid = domain_name in outbids
+            td_style = " style='background-color: red;'" if is_outbid else ""
+            
+            html += f"<td{td_style}><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain_name}'>{renderDomain(domain_name)}</a></td>"
+            html += f"<td>{domain['state']}</td>"
+            html += f"<td style='white-space: nowrap;'>{bidDisplay}</td>"
+            html += f"<td class='hide-mobile'>{bid['height']:,}</td>"
+            html += "</tr>"
+    
     return html
 
 
