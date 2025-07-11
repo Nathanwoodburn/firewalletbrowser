@@ -336,9 +336,8 @@ def bids(bids,reveals):
     return html
 
 
-def bidDomains(bids,domains, sortbyDomains=False):
+def bidDomains(bids,domains, sortbyDomains=False, outbids=[]):
     html = ''
-
     if not sortbyDomains:
         for bid in bids:
             for domain in domains:
@@ -352,10 +351,12 @@ def bidDomains(bids,domains, sortbyDomains=False):
                         bidDisplay = f'<b>{bidValue:,.2f}</b> (+{blind:,.2f}) HNS'
                     else:
                         bidDisplay = f'<b>{bidValue:,.2f}</b> HNS'
-                    
-
+                        
                     html += "<tr>"
-                    html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
+                    if domain['name'] in outbids:
+                        html += f"<td style='background-color: red;'><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
+                    else:
+                        html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='/auction/{domain['name']}'>{renderDomain(domain['name'])}</a></td>"
                     html += f"<td>{domain['state']}</td>"
                     html += f"<td style='white-space: nowrap;'>{bidDisplay}</td>"
                     html += f"<td class='hide-mobile'>{bid['height']:,}</td>"

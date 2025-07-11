@@ -655,8 +655,6 @@ def getPossibleOutbids(account):
 
         current_highest_bid = bid['value']
         domain_bids = getBids(account, domain)
-        print(domain)
-        print(json.dumps(domain_bids, indent=4))
         for domain_bid in domain_bids:
             if domain_bid["own"]:
                 current_highest_bid = max(current_highest_bid, domain_bid['value'])

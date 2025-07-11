@@ -330,7 +330,14 @@ def auctions():
         sort_domain = direction
         sort_domain_next = reverseDirection(direction)
     
-    bidsHtml = render.bidDomains(bids,domains,sortbyDomain)
+    # Check if outbids set to true
+    outbids = request.args.get("outbids")
+    if outbids is not None and outbids.lower() == "true":
+        # Get outbid domains
+        outbids = account_module.getPossibleOutbids(account)
+
+
+    bidsHtml = render.bidDomains(bids,domains,sortbyDomain,outbids)
     plugins = ""
     message = ''
     if 'message' in request.args:
