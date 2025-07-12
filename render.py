@@ -547,6 +547,8 @@ def renderDomainAsync(namehash: str) -> None:
         if name["error"] is None:
             name = name["result"]
             rendered = renderDomain(name)
+            rendered = f"<a href='/manage/{name}' target='_blank' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));'>{rendered}</a>"
+
 
             with CACHE_LOCK:
                 with open(NAMEHASH_CACHE, 'r') as f:
