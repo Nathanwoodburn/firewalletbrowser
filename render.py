@@ -330,7 +330,7 @@ def bids(bids,reveals):
         else:
             html += f"<td>Unknown</td>"
 
-        html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='{TX_EXPLORER_URL}{bid['prevout']['hash']}'>Bid TX 🔗</a></td>"
+        html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' target='_blank' href='{TX_EXPLORER_URL}{bid['prevout']['hash']}'>Bid TX 🔗</a></td>"
         html += "</tr>"
         
     return html
