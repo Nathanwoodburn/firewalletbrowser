@@ -210,7 +210,6 @@ def dns(data, edit=False):
     html_output = ""
     index = 0
     for entry in data:
-        print(entry, flush=True)
         html_output += f"<tr><td>{entry['type']}</td>\n"
         
         if entry['type'] != 'DS' and not entry['type'].startswith("GLUE") and not entry['type'].startswith("SYNTH"):
