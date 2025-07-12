@@ -56,6 +56,14 @@ def blocks_to_time(blocks: int) -> str:
     
 
 
+# Add a cache for transactions with a timeout
+tx_cache = {}
+TX_CACHE_TIMEOUT = 60*5  # Cache timeout in seconds
+
+# Add a cache for outbids with a timeout
+outbids_cache = {}
+OUTBIDS_CACHE_TIMEOUT = 60*2  # Cache timeout in seconds
+
 @app.route('/')
 def index():
     # Check if the user is logged in
@@ -94,10 +102,6 @@ def reverseDirection(direction: str):
 
 
 #region Transactions
-# Add a cache for transactions with a timeout
-tx_cache = {}
-TX_CACHE_TIMEOUT = 60*5  # Cache timeout in seconds
-
 @app.route('/tx')
 def transactions():
     # Check if the user is logged in
@@ -318,8 +322,12 @@ def auctions():
         sort_time = direction
         sort_time_next = reverseDirection(direction)
 
+        # Check if bids list is empty to avoid IndexError
+        if not bids:
+            domains = sorted(domains, key=lambda k: k['height'],reverse=reverse)
+            sortbyDomain = True
         # If older HSD version sort by domain height
-        if bids[0]['height'] == 0:
+        elif bids[0]['height'] == 0:
             domains = sorted(domains, key=lambda k: k['height'],reverse=reverse)
             sortbyDomain = True
         else:
@@ -333,8 +341,20 @@ def auctions():
     # Check if outbids set to true
     outbids = request.args.get("outbids")
     if outbids is not None and outbids.lower() == "true":
-        # Get outbid domains
-        outbids = account_module.getPossibleOutbids(account)
+        # Check cache before making expensive call
+        cache_key = f"outbids_{account}"
+        current_time = time.time()
+        
+        if cache_key in outbids_cache and (current_time - outbids_cache[cache_key]['time'] < OUTBIDS_CACHE_TIMEOUT):
+            outbids = outbids_cache[cache_key]['data']
+        else:
+            # Get outbid domains
+            outbids = account_module.getPossibleOutbids(account)
+            # Store in cache
+            outbids_cache[cache_key] = {
+                'data': outbids,
+                'time': current_time
+            }
     else:
         outbids = []
 
@@ -366,11 +386,12 @@ def revealAllBids():
         return redirect("/logout")
 
     response = account_module.revealAll(request.cookies.get("account"))
-    if 'error' in response:
-        if response['error'] != None:
-            if response['error']['message'] == "Nothing to do.":
-                return redirect("/auctions?message=No reveals pending")
-            return redirect("/auctions?message=" + response['error']['message'])
+    # Simplified error handling
+    if 'error' in response and response['error']:
+        error_msg = response['error'].get('message', str(response['error']))
+        if error_msg == "Nothing to do.":
+            return redirect("/auctions?message=No reveals pending")
+        return redirect("/auctions?message=" + error_msg)
             
     return redirect("/success?tx=" + response['result']['hash'])
 

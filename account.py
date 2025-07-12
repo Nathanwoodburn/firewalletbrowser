@@ -7,6 +7,7 @@ import re
 import domainLookup
 import json
 import time
+import concurrent.futures
 
 dotenv.load_dotenv()
 
@@ -614,7 +615,17 @@ def getWalletStatus():
 # Add a simple cache for bid data
 _bid_cache = {}
 _bid_cache_time = {}
-_cache_duration = 60  # Cache duration in seconds
+_cache_duration = 300  # Increased cache duration to 5 minutes for bids
+
+# Add domain info cache
+_domain_info_cache = {}
+_domain_info_time = {}
+_domain_info_duration = 600  # Cache domain info for 10 minutes
+
+# Add wallet authentication cache
+_wallet_auth_cache = {}
+_wallet_auth_time = {}
+_wallet_auth_duration = 300  # Increased to 5 minutes for wallet auth
 
 def getBids(account, domain="NONE"):
     cache_key = f"{account}:{domain}"
@@ -624,79 +635,135 @@ def getBids(account, domain="NONE"):
     if cache_key in _bid_cache and current_time - _bid_cache_time.get(cache_key, 0) < _cache_duration:
         return _bid_cache[cache_key]
     
-    if domain == "NONE":
-        response = hsw.getWalletBids(account)
-    else:
-        response = hsw.getWalletBidsByName(domain, account)
-    
-    # Add backup for bids with no value
-    bids = []
-    for bid in response:
-        if 'value' not in bid:
-            bid['value'] = -1000000
+    try:
+        if domain == "NONE":
+            response = hsw.getWalletBids(account)
+        else:
+            response = hsw.getWalletBidsByName(domain, account)
+        
+        # Add backup for bids with no value
+        bids = []
+        for bid in response:
+            if 'value' not in bid:
+                bid['value'] = -1000000
+            
+            # Backup for older HSD versions
+            if 'height' not in bid:
+                bid['height'] = 0
+            bids.append(bid)
+        
+        # Cache the results
+        _bid_cache[cache_key] = bids
+        _bid_cache_time[cache_key] = current_time
+        
+        return bids
+    except Exception as e:
+        print(f"Error fetching bids: {str(e)}")
+        return []
 
-        # Backup for older HSD versions
-        if 'height' not in bid:
-            bid['height'] = 0
-        bids.append(bid)
+def _fetch_domain_info(domain):
+    """Helper function to fetch domain info with caching"""
+    current_time = time.time()
     
-    # Cache the results
-    _bid_cache[cache_key] = bids
-    _bid_cache_time[cache_key] = current_time
+    # Check cache first
+    if (domain in _domain_info_cache and 
+        current_time - _domain_info_time.get(domain, 0) < _domain_info_duration):
+        return _domain_info_cache[domain]
     
-    return bids
+    # Fetch domain info
+    domain_info = getDomain(domain)
+    
+    # Store in cache
+    _domain_info_cache[domain] = domain_info
+    _domain_info_time[domain] = current_time
+    
+    return domain_info
+
+def _fetch_domain_batch(domains, max_workers=10):
+    """Fetch multiple domains in parallel"""
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Create a mapping of futures to domains
+        future_to_domain = {executor.submit(_fetch_domain_info, domain): domain for domain in domains}
+        
+        # Process as they complete
+        for future in concurrent.futures.as_completed(future_to_domain):
+            domain = future_to_domain[future]
+            try:
+                results[domain] = future.result()
+            except Exception as e:
+                print(f"Error fetching domain {domain}: {str(e)}")
+                results[domain] = {"error": str(e)}
+    
+    return results
 
 def getPossibleOutbids(account):
     # Get all bids
     bids = getBids(account)
-    if 'error' in bids:
+    if not bids or 'error' in bids:
         return []
     
     # Get current height
     current_height = getBlockHeight()
 
-    # Sort out bids older than 720 blocks
-    bids = [bid for bid in bids if (current_height - bid['height']) <= 720]
-    possible_outbids = []
-    processed_domains = set()  # Track domains we've already processed
+    # Sort out bids older than 720 blocks and extract domain names
+    filtered_bids = []
+    domains_to_check = set()
     
-    # Pre-fetch domain info for all domains in a single batch
-    domains_to_check = {bid['name'] for bid in bids}
-    domain_info_map = {}
-    
-    for domain in domains_to_check:
-        domain_info = getDomain(domain)
-        if ('info' in domain_info and 'state' in domain_info['info'] and 
-            domain_info['info']['state'] == "BIDDING"):
-            domain_info_map[domain] = domain_info
-
     for bid in bids:
+        if (current_height - bid['height']) <= 720:
+            filtered_bids.append(bid)
+            domains_to_check.add(bid['name'])
+    
+    if not domains_to_check:
+        return []
+    
+    # Fetch all domain info in parallel
+    domain_info_map = _fetch_domain_batch(domains_to_check)
+    
+    # Pre-filter domains in bidding state
+    bidding_domains = {
+        domain: info for domain, info in domain_info_map.items()
+        if ('info' in info and 'state' in info['info'] and 
+            info['info']['state'] == "BIDDING")
+    }
+    
+    # Process the results
+    possible_outbids = []
+    processed_domains = set()
+    
+    # Group bids by domain name for efficient processing
+    bids_by_domain = {}
+    for bid in filtered_bids:
         domain = bid['name']
-        
-        # Skip if we've already processed this domain or it's not in bidding state
-        if domain in processed_domains or domain not in domain_info_map:
+        if domain not in bids_by_domain:
+            bids_by_domain[domain] = []
+        bids_by_domain[domain].append(bid)
+    
+    # Analyze each domain in bidding state
+    for domain, info in bidding_domains.items():
+        if domain in processed_domains or domain not in bids_by_domain:
             continue
-        
+            
         processed_domains.add(domain)
         
         # Get all bids for this domain in one call
         domain_bids = getBids(account, domain)
         
         # Find the highest bid we've made
-        current_highest_bid = bid['value']
-        for own_bid in domain_bids:
-            if own_bid["own"]:
-                current_highest_bid = max(current_highest_bid, own_bid['value'])
+        our_highest_bid = max(
+            (bid['value'] for bid in domain_bids if bid.get("own", False)), 
+            default=0
+        )
         
-        # Check if any unrevealed bids could outbid us
-        for domain_bid in domain_bids:
-            if domain_bid["own"] or domain_bid['value'] != -1000000:
-                continue  # Skip our own bids or revealed bids
-                
-            if current_highest_bid < domain_bid["lockup"]:
-                possible_outbids.append(domain)
-                break
-
+        # Quick check if any unrevealed bids could outbid us
+        if any(
+            bid["lockup"] > our_highest_bid
+            for bid in domain_bids 
+            if not bid.get("own", False) and bid.get('value', 0) == -1000000
+        ):
+            possible_outbids.append(domain)
+    
     return possible_outbids
 
 def getReveals(account, domain):
@@ -706,19 +773,36 @@ def getPendingReveals(account):
     bids = getBids(account)
     # Only get domains in REVEAL state to reduce API calls
     domains = [d for d in getDomains(account, False) if d['state'] == "REVEAL"]
+    
+    if not domains:  # Early return if no domains in REVEAL state
+        return []
+    
     pending = []
     
-    # Process domains in REVEAL state
+    # Create a dictionary for O(1) lookups
     domain_names = {domain['name']: domain for domain in domains}
     
+    # Group bids by name to batch process reveals
+    bids_by_name = {}
     for bid in bids:
         if bid['name'] in domain_names:
-            reveals = getReveals(account, bid['name'])
-            
+            if bid['name'] not in bids_by_name:
+                bids_by_name[bid['name']] = []
+            bids_by_name[bid['name']].append(bid)
+    
+    # Fetch reveals for each domain once
+    reveals_by_name = {}
+    for domain_name in bids_by_name:
+        reveals_by_name[domain_name] = getReveals(account, domain_name)
+    
+    # Check each bid against the reveals
+    for domain_name, domain_bids in bids_by_name.items():
+        domain_reveals = reveals_by_name[domain_name]
+        for bid in domain_bids:
             # Check if this bid has been revealed
             bid_revealed = any(
                 reveal['own'] == True and bid['value'] == reveal['value'] 
-                for reveal in reveals
+                for reveal in domain_reveals
             )
             
             if not bid_revealed:
@@ -736,20 +820,27 @@ def getPendingRedeems(account, password):
 
     pending = []
     try:
+        # Collect all nameHashes first
+        name_hashes = []
         for output in tx['result']['outputs']:
             if output['covenant']['type'] != 5:
                 continue
             if output['covenant']['action'] != "REDEEM":
                 continue
-            nameHash = output['covenant']['items'][0]
-            # Try to get the name from hash
-            name = hsd.rpc_getNameByHash(nameHash)
+            name_hashes.append(output['covenant']['items'][0])
+        
+        # Batch processing name hashes
+        name_lookup = {}
+        for name_hash in name_hashes:
+            name = hsd.rpc_getNameByHash(name_hash)
             if name['error']:
-                pending.append(nameHash)
+                pending.append(name_hash)
             else:
                 pending.append(name['result'])
-    except:
-        print("Failed to parse redeems")
+                name_lookup[name_hash] = name['result']
+                
+    except Exception as e:
+        print(f"Failed to parse redeems: {str(e)}")
 
     return pending
 
@@ -757,13 +848,22 @@ def getPendingRedeems(account, password):
 def getPendingRegisters(account):
     bids = getBids(account)
     domains = getDomains(account, False)
+    
+    # Create dictionaries for O(1) lookups
+    bids_by_name = {}
+    for bid in bids:
+        if bid['name'] not in bids_by_name:
+            bids_by_name[bid['name']] = []
+        bids_by_name[bid['name']].append(bid)
+    
     pending = []
     for domain in domains:
         if domain['state'] == "CLOSED" and domain['registered'] == False:
-            for bid in bids:
-                if bid['name'] == domain['name']:
+            if domain['name'] in bids_by_name:
+                for bid in bids_by_name[domain['name']]:
                     if bid['value'] == domain['highest']:
                         pending.append(bid)
+    
     return pending
 
 
@@ -774,20 +874,26 @@ def getPendingFinalizes(account, password):
 
     pending = []
     try:
+        # Collect all nameHashes first
+        name_hashes = []
         for output in tx['outputs']:
             if output['covenant']['type'] != 10:
                 continue
             if output['covenant']['action'] != "FINALIZE":
                 continue
-            nameHash = output['covenant']['items'][0]
-            # Try to get the name from hash
-            name = hsd.rpc_getNameByHash(nameHash)
+            name_hashes.append(output['covenant']['items'][0])
+        
+        # Batch lookup for name hashes
+        for name_hash in name_hashes:
+            name = hsd.rpc_getNameByHash(name_hash)
             if name['error']:
-                pending.append(nameHash)
+                pending.append(name_hash)
             else:
                 pending.append(name['result'])
-    except:
-        print("Failed to parse finalizes")
+                
+    except Exception as e:
+        print(f"Failed to parse finalizes: {str(e)}")
+        
     return pending
 
 
@@ -1130,19 +1236,51 @@ def revoke(account, domain):
         }
 
 
-def sendBatch(account, batch):
-    account_name = check_account(account)
-    password = ":".join(account.split(":")[1:])
+def _prepare_wallet_for_batch(account_name, password):
+    """Helper function to prepare wallet for batch operations with caching"""
+    cache_key = f"{account_name}:{password}"
+    current_time = time.time()
+    
+    # Return cached authentication if available and fresh
+    if (cache_key in _wallet_auth_cache and 
+        current_time - _wallet_auth_time.get(cache_key, 0) < _wallet_auth_duration):
+        return _wallet_auth_cache[cache_key]
+    
+    # Select and unlock wallet
+    result = {'success': False, 'error': None}
+    
+    # Try to select the wallet
+    select_response = hsw.rpc_selectWallet(account_name)
+    if select_response['error'] is not None:
+        result['error'] = {"message": select_response['error']['message']}
+        return result
+    
+    # Try to unlock the wallet
+    unlock_response = hsw.rpc_walletPassphrase(password, 30)  # Increased timeout to reduce future unlocks
+    if (unlock_response['error'] is not None and 
+        unlock_response['error']['message'] != "Wallet is not encrypted."):
+        result['error'] = {"message": unlock_response['error']['message']}
+        return result
+    
+    # Authentication successful
+    result['success'] = True
+    
+    # Cache the authentication result
+    _wallet_auth_cache[cache_key] = result
+    _wallet_auth_time[cache_key] = current_time
+    
+    return result
 
-    if account_name == False:
-        return {
-            "error": {
-                "message": "Invalid account"
-            }
-        }
-
+def _execute_batch_operation(account_name, batch, operation_type="sendbatch"):
+    """Execute a batch operation with the specified wallet"""
+    # Make the batch request
     try:
-        response = hsw.rpc_selectWallet(account_name)
+        response = requests.post(
+            f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}", 
+            json={"method": operation_type, "params": [batch]},
+            timeout=30  # Add timeout to prevent hanging
+        ).json()
+        
         if response['error'] is not None:
             return {
                 "error": {
@@ -1164,31 +1302,42 @@ def sendBatch(account, batch):
         if response['error'] is not None:
             return response
         if 'result' not in response:
-            return {
-                "error": {
-                    "message": "No result"
-                }
-            }
-
+            return {"error": {"message": "No result"}}
+        
         return response['result']
     except Exception as e:
-        return {
-            "error": {
-                "message": str(e)
-            }
-        }
+        return {"error": {"message": str(e)}}
 
+def sendBatch(account, batch):
+    account_name = check_account(account)
+    if account_name == False:
+        return {"error": {"message": "Invalid account"}}
+    
+    password = ":".join(account.split(":")[1:])
+    
+    # Prepare the wallet (this uses caching)
+    auth_result = _prepare_wallet_for_batch(account_name, password)
+    if not auth_result['success']:
+        return auth_result['error']
+    
+    # Execute the batch operation
+    return _execute_batch_operation(account_name, batch, "sendbatch")
 
 def createBatch(account, batch):
     account_name = check_account(account)
-    password = ":".join(account.split(":")[1:])
-
     if account_name == False:
-        return {
-            "error": {
-                "message": "Invalid account"
-            }
-        }
+        return {"error": {"message": "Invalid account"}}
+    
+    password = ":".join(account.split(":")[1:])
+    
+    # Prepare the wallet (this uses caching)
+    auth_result = _prepare_wallet_for_batch(account_name, password)
+    if not auth_result['success']:
+        return auth_result['error']
+    
+    # Execute the batch operation
+    return _execute_batch_operation(account_name, batch, "createbatch")
+
 
     try:
         response = hsw.rpc_selectWallet(account_name)
