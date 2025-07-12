@@ -32,6 +32,24 @@ revokeCheck = random.randint(100000,999999)
 
 THEME = os.getenv("THEME")
 
+
+def blocks_to_time(blocks: int) -> str:
+    """
+    Convert blocks to time in a human-readable format.
+    """
+    if blocks < 0:
+        return "Invalid time"
+    
+    hours = blocks // 10
+    minutes = (blocks % 10) * 6
+    if hours >= 24:
+        days = hours // 24
+        hours = hours % 24
+        return f"{days}d {hours}h"
+
+    return f"{hours}h {minutes}m"
+
+
 @app.route('/')
 def index():
     # Check if the user is logged in
@@ -445,10 +463,11 @@ def search():
                                state="AVAILABLE", next="Available Now",plugins=plugins)
 
     state = domain['info']['state']
+    stats = domain['info']['stats']
     if state == 'CLOSED':
         if domain['info']['registered']:
             state = 'REGISTERED'
-            expires = domain['info']['stats']['daysUntilExpire']
+            expires = stats['daysUntilExpire']
             next = f"Expires in ~{expires} days"
         else:
             state = 'AVAILABLE'
@@ -456,11 +475,11 @@ def search():
     elif state == "REVOKED":
             next = "Available Now"
     elif state == 'OPENING':
-        next = "Bidding opens in ~" + str(domain['info']['stats']['blocksUntilBidding']) + " blocks"
+        next = f"Bidding opens in {str(stats['blocksUntilBidding'])} blocks (~{blocks_to_time(stats['blocksUntilBidding'])})"
     elif state == 'BIDDING':
-        next = "Reveal in ~" + str(domain['info']['stats']['blocksUntilReveal']) + " blocks"
+        next = f"Reveal in {str(stats['blocksUntilReveal'])} blocks (~{blocks_to_time(stats['blocksUntilReveal'])})"
     elif state == 'REVEAL':
-        next = "Reveal ends in ~" + str(domain['info']['stats']['blocksUntilClose']) + " blocks"
+        next = f"Reveal ends in {str(stats['blocksUntilClose'])} blocks (~{blocks_to_time(stats['blocksUntilClose'])})"
 
 
 
@@ -514,7 +533,10 @@ def manage(domain: str):
                                rendered=renderDomain(domain),
                                domain=domain, error=domain_info['error'])
     
-    expiry = domain_info['info']['stats']['daysUntilExpire']
+    if domain_info['info'] is not None and 'stats' in domain_info['info'] and 'daysUntilExpire' in domain_info['info']['stats']:
+        expiry = domain_info['info']['stats']['daysUntilExpire']
+    else:
+        expiry = "Unknown"
     dns = account_module.getDNS(domain)
     raw_dns = str(dns).replace("'",'"')
     dns = render.dns(dns)
@@ -900,7 +922,7 @@ def auction(domain):
             reveal['bid'] = revealInfo
         bids = render.bids(bids,reveals)
 
-
+    stats = domainInfo['info']['stats'] if 'stats' in domainInfo['info'] else {}
     if state == 'CLOSED':
         if not domainInfo['info']['registered']:
             if account_module.isOwnDomain(account,domain):
@@ -928,11 +950,11 @@ def auction(domain):
         next = "Available Now"
         next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
     elif state == 'OPENING':
-        next = "Bidding opens in ~" + str(domainInfo['info']['stats']['blocksUntilBidding']) + " blocks"
+        next = f"Bidding opens in {str(stats['blocksUntilBidding'])} blocks (~{blocks_to_time(stats['blocksUntilBidding'])})"
     elif state == 'BIDDING':
-        next = "Reveal in ~" + str(domainInfo['info']['stats']['blocksUntilReveal']) + " blocks"
+        next = f"Reveal in {str(stats['blocksUntilReveal'])} blocks (~{blocks_to_time(stats['blocksUntilReveal'])})"
     elif state == 'REVEAL':
-        next = "Reveal ends in ~" + str(domainInfo['info']['stats']['blocksUntilClose']) + " blocks"
+        next = f"Reveal ends in {str(stats['blocksUntilClose'])} blocks (~{blocks_to_time(stats['blocksUntilClose'])})"
         next_action = f'<a href="/auction/{domain}/reveal">Reveal All</a>'
 
     message = ''
