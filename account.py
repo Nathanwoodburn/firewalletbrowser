@@ -1276,7 +1276,7 @@ def _execute_batch_operation(account_name, batch, operation_type="sendbatch"):
     # Make the batch request
     try:
         response = requests.post(
-            f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}", 
+            get_wallet_api_url(), 
             json={"method": operation_type, "params": [batch]},
             timeout=30  # Add timeout to prevent hanging
         ).json()

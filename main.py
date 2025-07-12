@@ -530,10 +530,7 @@ def search():
     
     dns = account_module.getDNS(search_term)
 
-    own_domains = account_module.getDomains(account)
-    own_domains = [x['name'] for x in own_domains]
-    own_domains = [x.lower() for x in own_domains]
-    if search_term in own_domains:
+    if account_module.isOwnDomain(account, search_term):
         owner = "You"
 
     dns = render.dns(dns)
@@ -728,10 +725,7 @@ def editPage(domain: str):
     
     domain = domain.lower()
     
-    own_domains = account_module.getDomains(account)
-    own_domains = [x['name'] for x in own_domains]
-    own_domains = [x.lower() for x in own_domains]
-    if domain not in own_domains:
+    if not account_module.isOwnDomain(account, domain):
         return redirect("/search?q=" + domain)
        
 
@@ -973,10 +967,7 @@ def auction(domain):
             expires = domainInfo['info']['stats']['daysUntilExpire']
             next = f"Expires in ~{expires} days"
 
-            own_domains = account_module.getDomains(account)
-            own_domains = [x['name'] for x in own_domains]
-            own_domains = [x.lower() for x in own_domains]
-            if search_term in own_domains:
+            if account_module.isOwnDomain(account,domain):
                 next_action = f'<a href="/manage/{domain}">Manage</a>'
     elif state == "REVOKED":
         next = "Available Now"
