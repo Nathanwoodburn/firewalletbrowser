@@ -1070,7 +1070,7 @@ def reveal_auction(domain):
         return redirect("/logout")
     
     domain = domain.lower()
-    response = account_module(request.cookies.get("account"),domain)
+    response = account_module.revealAuction(request.cookies.get("account"),domain)
     if 'error' in response:
         return redirect("/auction/" + domain + "?message=" + response['error']['message'])
     return redirect("/success?tx=" + response['hash'])
