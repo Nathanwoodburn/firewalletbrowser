@@ -278,30 +278,61 @@ def timestamp_to_readable_time(timestamp):
     return readable_time
 
 def bids(bids,reveals):
-    html = ''
+    # Create a list to hold bid data for sorting
+    bid_data = []
+    
+    # Prepare data for sorting
     for bid in bids:
-        lockup = bid['lockup']
-        lockup = lockup / 1000000
-        html += "<tr>"
-        html += f"<td>{lockup:,.2f} HNS</td>"
+        lockup = bid['lockup'] / 1000000
         revealed = False
+        value = 0
+        
+        # Check if this bid has been revealed
         for reveal in reveals:
             if reveal['bid'] == bid['prevout']['hash']:
                 revealed = True
-                value = reveal['value']
-                value = value / 1000000
-                html += f"<td>{value:,.2f} HNS</td>"
-                bidValue = lockup - value
-                html += f"<td>{bidValue:,.2f} HNS</td>"                               
+                value = reveal['value'] / 1000000
                 break
-        if not revealed:
+        
+        # Store all relevant information for sorting and display
+        bid_data.append({
+            'bid': bid,
+            'lockup': lockup,
+            'revealed': revealed,
+            'value': value,
+            'sort_value': value if revealed else lockup  # Use value for sorting if revealed, otherwise lockup
+        })
+    
+    # Sort by the sort_value in descending order (highest first)
+    bid_data.sort(key=lambda x: x['sort_value'], reverse=True)
+    
+    # Generate HTML from sorted data
+    html = ''
+    for data in bid_data:
+        bid = data['bid']
+        lockup = data['lockup']
+        revealed = data['revealed']
+        value = data['value']
+        
+        html += "<tr>"
+        html += f"<td>{lockup:,.2f} HNS</td>"
+        
+        if revealed:
+            bidValue = lockup - value
+            html += f"<td>{value:,.2f} HNS</td>"
+            html += f"<td>{bidValue:,.2f} HNS</td>"
+        else:
             html += f"<td>Hidden until reveal</td>"
             html += f"<td>Hidden until reveal</td>"
+            
         if bid['own']:
             html += "<td>You</td>"
         else:
-            html += "<td>Unknown</td>"
+            html += f"<td>Unknown</td>"
+
+        html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' href='{TX_EXPLORER_URL}{bid['prevout']['hash']}'>Bid TX 🔗</a></td>"
         html += "</tr>"
+        
     return html
 
 

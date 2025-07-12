@@ -476,9 +476,11 @@ def getAddressFromCoin(coinhash: str, coinindex = 0):
     # Get the address from the hash
     response = requests.get(get_node_api_url(f"coin/{coinhash}/{coinindex}"))
     if response.status_code != 200:
+        print(f"Error getting address from coin: {response.text}")
         return "No Owner"
     data = response.json()
     if 'address' not in data:
+        print(json.dumps(data, indent=4))
         return "No Owner"
     return data['address']
 
