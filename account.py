@@ -449,13 +449,15 @@ def isOwnDomain(account, name: str):
     domain_info = getDomain(name)
     owner = getAddressFromCoin(domain_info['info']['owner']['hash'],domain_info['info']['owner']['index'])
     # Select the account
-    print(hsw.rpc_selectWallet(account))
-    print(hsw.rpc_getAccount(owner))
+    hsw.rpc_selectWallet(account)
+    account = hsw.rpc_getAccount(owner)
 
-    domains = getDomains(account)
-    for domain in domains:
-        if domain['name'] == name:
-            return True
+    if 'error' in account and account['error'] is not None:
+        return False
+    if 'result' not in account:
+        return False
+    if account['result'] == 'default':
+        return True
     return False
 
 
