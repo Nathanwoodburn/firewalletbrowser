@@ -184,7 +184,6 @@ def selectWallet(account: str):
             }
         }
 
-
 def getBalance(account: str):
     # Get the total balance
     info = hsw.getBalance('default', account)
@@ -446,6 +445,13 @@ def send(account, address, amount):
 
 
 def isOwnDomain(account, name: str):
+    # Get domain
+    domain_info = getDomain(name)
+    owner = getAddressFromCoin(domain_info['info']['owner']['hash'],domain_info['info']['owner']['index'])
+    # Select the account
+    print(hsw.rpc_selectWallet(account))
+    print(hsw.rpc_getAccount(owner))
+
     domains = getDomains(account)
     for domain in domains:
         if domain['name'] == name:

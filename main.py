@@ -36,18 +36,24 @@ THEME = os.getenv("THEME")
 def blocks_to_time(blocks: int) -> str:
     """
     Convert blocks to time in a human-readable format.
+    Blocks are mined approximately every 10 minutes.
     """
     if blocks < 0:
         return "Invalid time"
     
-    hours = blocks // 10
-    minutes = (blocks % 10) * 6
-    if hours >= 24:
-        days = hours // 24
-        hours = hours % 24
-        return f"{days}d {hours}h"
-
-    return f"{hours}h {minutes}m"
+    if blocks < 6:
+        return f"{blocks * 10} mins"
+    elif blocks < 144:
+        hours = blocks // 6
+        minutes = (blocks % 6) * 10
+        return f"{hours} hrs {minutes} mins"
+    else:
+        days = blocks // 144
+        hours = (blocks % 144) // 6
+        return f"{days} days {hours} hrs"
+        
+    
+    
 
 
 @app.route('/')
@@ -520,11 +526,8 @@ def manage(domain: str):
         return redirect("/logout")
     
     domain = domain.lower()
-    
-    own_domains = account_module.getDomains(account)
-    own_domains = [x['name'] for x in own_domains]
-    own_domains = [x.lower() for x in own_domains]
-    if domain not in own_domains:
+
+    if not account_module.isOwnDomain(account, domain):
         return redirect("/search?q=" + domain)
     
     domain_info = account_module.getDomain(domain)
@@ -952,7 +955,17 @@ def auction(domain):
     elif state == 'OPENING':
         next = f"Bidding opens in {str(stats['blocksUntilBidding'])} blocks (~{blocks_to_time(stats['blocksUntilBidding'])})"
     elif state == 'BIDDING':
-        next = f"Reveal in {str(stats['blocksUntilReveal'])} blocks (~{blocks_to_time(stats['blocksUntilReveal'])})"
+        next = f"Reveal in {stats['blocksUntilReveal']} blocks (~{blocks_to_time(stats['blocksUntilReveal'])})"
+        if stats['blocksUntilReveal'] == 1:
+            next += "<br>Bidding no longer possible"
+        elif stats['blocksUntilReveal'] == 2:
+            next += "<br>LAST CHANCE TO BID"
+        elif stats['blocksUntilReveal'] == 3:
+            next += f"<br>Next block is last chance to bid"
+        elif stats['blocksUntilReveal'] < 6:
+            next += f"<br>Last chance to bid in {stats['blocksUntilReveal']-2} blocks"
+
+
     elif state == 'REVEAL':
         next = f"Reveal ends in {str(stats['blocksUntilClose'])} blocks (~{blocks_to_time(stats['blocksUntilClose'])})"
         next_action = f'<a href="/auction/{domain}/reveal">Reveal All</a>'
