@@ -68,7 +68,7 @@
                         <div class="card-body">
                             <div class="stick-right">{{next_action|safe}}</div>
                             <h4 class="card-title">{{rendered}}</h4>
-                            <h6 class="text-muted mb-2 card-subtitle">{{next}}</h6>
+                            <h6 class="text-muted mb-2 card-subtitle">{{next | safe}}</h6>
                         </div>
                     </div>
                 </div>
@@ -93,6 +93,7 @@
                 <th>Bid</th>
                 <th>Blind</th>
                 <th>Owner</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>

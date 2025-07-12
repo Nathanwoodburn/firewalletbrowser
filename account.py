@@ -109,8 +109,7 @@ def createWallet(account: str, password: str):
         }
     # Create the account
     # Python wrapper doesn't support this yet
-    response = requests.put(
-        f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}")
+    response = requests.put(get_wallet_api_url(f"wallet/{account}"))
     if response.status_code != 200:
         return {
             "error": {
@@ -123,7 +122,7 @@ def createWallet(account: str, password: str):
     seed = seed['mnemonic']['phrase']
 
     # Encrypt the wallet (python wrapper doesn't support this yet)
-    response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/passphrase",
+    response = requests.post(get_wallet_api_url(f"/wallet/{account}/passphrase"),
                              json={"passphrase": password})
 
     return {
@@ -147,8 +146,7 @@ def importWallet(account: str, password: str, seed: str):
         "mnemonic": seed,
     }
 
-    response = requests.put(
-        f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}", json=data)
+    response = requests.put(get_wallet_api_url(f"/wallet/{account}"), json=data)
     if response.status_code != 200:
         return {
             "error": {
@@ -185,7 +183,6 @@ def selectWallet(account: str):
                 "message": response['error']['message']
             }
         }
-
 
 def getBalance(account: str):
     # Get the total balance
@@ -251,11 +248,9 @@ def getPendingTX(account: str):
 
 def getDomains(account, own=True):
     if own:
-        response = requests.get(
-            f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/name?own=true")
+        response = requests.get(get_wallet_api_url(f"/wallet/{account}/name?own=true"))
     else:
-        response = requests.get(
-            f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/name")
+        response = requests.get(get_wallet_api_url(f"/wallet/{account}/name"))
     info = response.json()
 
     if SHOW_EXPIRED:
@@ -339,11 +334,9 @@ def getTransactions(account, page=1, limit=100):
         lastTX = getTXFromPage(account, page-1, limit)
 
     if lastTX:
-        response = requests.get(
-            f'http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/tx/history?reverse=true&limit={limit}&after={lastTX}')
+        response = requests.get(get_wallet_api_url(f"/wallet/{account}/tx/history?reverse=true&limit={limit}&after={lastTX}"))
     elif page == 1:
-        response = requests.get(
-            f'http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account}/tx/history?reverse=true&limit={limit}')
+        response = requests.get(get_wallet_api_url(f"/wallet/{account}/tx/history?reverse=true&limit={limit}"))
     else:
         return []
 
@@ -383,7 +376,7 @@ def check_address(address: str, allow_name: bool = True, return_address: bool = 
         return check_hip2(address[1:])
 
     # Check if the address is a valid HNS address
-    response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_NODE_PORT}", json={
+    response = requests.post(get_node_api_url(), json={
         "method": "validateaddress",
         "params": [address]
     }).json()
@@ -431,8 +424,6 @@ def send(account, address, amount):
 
     response = hsw.rpc_walletPassphrase(password, 10)
     # Unlock the account
-    # response = requests.post(f"http://x:{APIKEY}@{ip}:{HSD_WALLET_PORT}/wallet/{account_name}/unlock",
-    # json={"passphrase": password,"timeout": 10})
     if response['error'] is not None:
         if response['error']['message'] != "Wallet is not encrypted.":
             return {
@@ -454,10 +445,19 @@ def send(account, address, amount):
 
 
 def isOwnDomain(account, name: str):
-    domains = getDomains(account)
-    for domain in domains:
-        if domain['name'] == name:
-            return True
+    # Get domain
+    domain_info = getDomain(name)
+    owner = getAddressFromCoin(domain_info['info']['owner']['hash'],domain_info['info']['owner']['index'])
+    # Select the account
+    hsw.rpc_selectWallet(account)
+    account = hsw.rpc_getAccount(owner)
+
+    if 'error' in account and account['error'] is not None:
+        return False
+    if 'result' not in account:
+        return False
+    if account['result'] == 'default':
+        return True
     return False
 
 
@@ -474,20 +474,14 @@ def getDomain(domain: str):
 
 def getAddressFromCoin(coinhash: str, coinindex = 0):
     # Get the address from the hash
-    response = requests.get(f"http://x:{HSD_API}@{HSD_IP}:{HSD_NODE_PORT}/coin/{coinhash}/{coinindex}")
+    response = requests.get(get_node_api_url(f"coin/{coinhash}/{coinindex}"))
     if response.status_code != 200:
-        return {
-            "error": {
-                "message": "Error getting address from coin"
-            }
-        }
+        print(f"Error getting address from coin: {response.text}")
+        return "No Owner"
     data = response.json()
     if 'address' not in data:
-        return {
-            "error": {
-                "message": "Error getting address from coin"
-            }
-        }
+        print(json.dumps(data, indent=4))
+        return "No Owner"
     return data['address']
 
 
@@ -783,7 +777,7 @@ def revealAll(account):
                     }
                 }
 
-        return requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}", json={"method": "sendbatch", "params": [[["REVEAL"]]]}).json()
+        return requests.post(get_wallet_api_url(), json={"method": "sendbatch", "params": [[["REVEAL"]]]}).json()
     except Exception as e:
         return {
             "error": {
@@ -817,7 +811,7 @@ def redeemAll(account):
                     }
                 }
 
-        return requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}", json={"method": "sendbatch", "params": [[["REDEEM"]]]}).json()
+        return requests.post(get_wallet_api_url(), json={"method": "sendbatch", "params": [[["REDEEM"]]]}).json()
     except Exception as e:
         return {
             "error": {
@@ -1089,7 +1083,7 @@ def sendBatch(account, batch):
                         "message": response['error']['message']
                     }
                 }
-        response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}", json={
+        response = requests.post(get_wallet_api_url(), json={
             "method": "sendbatch",
             "params": [batch]
         }).json()
@@ -1138,7 +1132,7 @@ def createBatch(account, batch):
                         "message": response['error']['message']
                     }
                 }
-        response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}", json={
+        response = requests.post(get_wallet_api_url(), json={
             "method": "createbatch",
             "params": [batch]
         }).json()
@@ -1198,7 +1192,7 @@ def zapTXs(account):
         }
 
     try:
-        response = requests.post(f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}/wallet/{account_name}/zap",
+        response = requests.post(get_wallet_api_url(f"/wallet/{account_name}/zap"),
                                  json={"age": age,
                                        "account": "default"
                                        })
@@ -1327,3 +1321,25 @@ def generateReport(account, format="{name},{expiry},{value},{maxBid}"):
 
 def convertHNS(value: int):
     return value/1000000
+    return value/1000000
+
+
+def get_node_api_url(path=''):
+    """Construct a URL for the HSD node API."""
+    base_url = f"http://x:{HSD_API}@{HSD_IP}:{HSD_NODE_PORT}"
+    if path:
+        # Ensure path starts with a slash if it's not empty
+        if not path.startswith('/'):
+            path = f'/{path}'
+        return f"{base_url}{path}"
+    return base_url
+
+def get_wallet_api_url(path=''):
+    """Construct a URL for the HSD wallet API."""
+    base_url = f"http://x:{HSD_API}@{HSD_IP}:{HSD_WALLET_PORT}"
+    if path:
+        # Ensure path starts with a slash if it's not empty
+        if not path.startswith('/'):
+            path = f'/{path}'
+        return f"{base_url}{path}"
+    return base_url
