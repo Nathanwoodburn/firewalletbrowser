@@ -40,6 +40,24 @@ if TX_EXPLORER_URL is None:
 
 
 NAMEHASH_CACHE = 'user_data/namehash_cache.json'
+# Validate cache version
+if os.path.exists(NAMEHASH_CACHE):
+    with open(NAMEHASH_CACHE, 'r') as f:
+        cache = json.load(f)
+    if not isinstance(cache, dict):
+        print("Invalid namehash cache format. Resetting cache.")
+        with open(NAMEHASH_CACHE, 'w') as f:
+            json.dump({}, f)
+    # Check if cache entries are valid
+    for key in cache:
+        if not cache[key].startswith("<a href='/manage/"):
+            print(f"Invalid cache entry for {key}. Resetting cache.")
+            with open(NAMEHASH_CACHE, 'w') as f:
+                json.dump({}, f)
+            break
+
+
+
 CACHE_LOCK = threading.Lock()
 
 
