@@ -923,10 +923,6 @@ def auction(domain):
             # Get TX
             revealInfo = account_module.getRevealTX(reveal)
             reveal['bid'] = revealInfo
-        print("RAW Bids found: ", len(bids))
-        print(json.dumps(bids, indent=4))
-        print("RAW Reveals found: ", len(reveals))
-        print(json.dumps(reveals, indent=4))
         bids = render.bids(bids,reveals)
 
     stats = domainInfo['info']['stats'] if 'stats' in domainInfo['info'] else {}
@@ -1546,6 +1542,10 @@ def api_hsd(function):
         return jsonify({"result": account_module.hsdVersion(False)})
     if function == "height":
         return jsonify({"result": account_module.getBlockHeight()})
+    if function == "mempool":
+        return jsonify({"result": account_module.getMempoolTxs()})
+    if function == "mempoolBids":
+        return jsonify({"result": account_module.getMempoolBids()})
     
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
 

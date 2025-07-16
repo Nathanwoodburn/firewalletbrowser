@@ -320,8 +320,6 @@ def bids(bids,reveals):
             'value': value,
             'sort_value': value if revealed else lockup  # Use value for sorting if revealed, otherwise lockup
         })
-    print("PARSED Bids found: ", len(bid_data))
-    print(json.dumps(bid_data, indent=4))
     # Sort by the sort_value in descending order (highest first)
     bid_data.sort(key=lambda x: x['sort_value'], reverse=True)
     

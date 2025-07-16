@@ -1155,6 +1155,87 @@ def createBatch(account, batch):
             }
         }
 
+# region Mempool
+def getMempoolTxs():
+    # hsd-cli rpc getrawmempool
+    response = hsd.rpc_getRawMemPool()
+    if 'error' in response and response['error'] is not None:
+        return []
+
+    return response['result'] if 'result' in response else []
+
+
+def getMempoolBids():
+    mempoolTxs = getMempoolTxs()
+    bids = {}
+    for txid in mempoolTxs:
+        tx = hsd.getTxByHash(txid)
+        if 'error' in tx and tx['error'] is not None:
+            print(f"Error getting tx {txid}: {tx['error']}")
+            continue
+        # bid_data.append({
+        #     'bid': bid,
+        #     'lockup': lockup,
+        #     'revealed': revealed,
+        #     'value': value,
+        #     'sort_value': value if revealed else lockup  # Use value for sorting if revealed, otherwise lockup
+        # })
+        if 'outputs' not in tx:
+            print(f"Error getting outputs for tx {txid}")
+            continue
+        for output in tx['outputs']:
+            if output['covenant']['action'] not in ["BID", "REVEAL"]:
+                continue
+            if output['covenant']['action'] == "REVEAL":
+                # Try to find bid tx from inputs
+                namehash = output['covenant']['items'][0]
+                for txInput in tx['inputs']:
+                    if txInput['coin']['covenant']['action'] != "BID":
+                        continue
+                    if txInput['coin']['covenant']['items'][0] != namehash:
+                        continue
+                    name = txInput['coin']['covenant']['items'][2]
+                    # Convert name from hex to ascii
+                    name = bytes.fromhex(name).decode('ascii')
+
+                    bid = {
+                        'txid': txid,
+                        'lockup': txInput['coin']['value'],
+                        'revealed': True,
+                        'height': -1,
+                        'value': output['value'],
+                        'sort_value': txInput['coin']['value']
+                    }
+                    if name not in bids:
+                        bids[name] = []
+                    bids[name].append(bid)               
+                continue
+
+            name = output['covenant']['items'][2]
+            # Convert name from hex to ascii
+            name = bytes.fromhex(name).decode('ascii')
+            if name not in bids:
+                bids[name] = []
+            bid = {
+                'txid': txid,
+                'value': -1000000,  # Default value if not found
+                'lockup': output['value'],
+                'revealed': False,
+                'height': -1,
+                'sort_value': output['value']
+            }
+            bids[name].append(bid)
+
+
+    return bids
+
+
+
+
+# endregion
+
+
+
 
 # region settingsAPIs
 def rescan():
