@@ -110,25 +110,33 @@
 </div>
 
 <script>
-    async function loadBids() {
+    async function loadBids(initial = false) {
         const tbody = document.getElementById('bids-tbody');
 
         try {
+            // Fetch all required data
             const response = await fetch(`/api/v1/wallet/domainBids?domain={{search_term}}`);
             const data = await response.json();
-
-            if (response.ok && data.result) {
-                tbody.innerHTML = data.result;
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No bids found. <a href="/auction/{{search_term}}/scan">Rescan Auction</a></td></tr>';
+            if (initial) {
+                if (response.ok && data.result) {
+                    tbody.innerHTML = data.result;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No bids found. <a href="/auction/{{search_term}}/scan">Rescan Auction</a></td></tr>';
+                }
             }
-        } catch (error) {
-            console.error('Error loading bids:', error);
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading bids</td></tr>';
-        }
-
-        try {
+            const mempoolResponse = await fetch('/api/v1/hsd/mempoolBids');
             const nextStateResponse = await fetch(`/api/v1/hsd/nextAuctionState?domain={{search_term}}`);
+
+            if (!initial) {
+                if (response.ok && data.result) {
+                    tbody.innerHTML = data.result;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No bids found. <a href="/auction/{{search_term}}/scan">Rescan Auction</a></td></tr>';
+                }
+            }
+
+
+
             const nextStateData = await nextStateResponse.json();
 
             if (nextStateResponse.ok && nextStateData.state) {
@@ -139,28 +147,20 @@
                 document.getElementById('next-action').innerHTML = '';
             }
 
-        } catch (error) {
-            console.error('Error fetching next state:', error);
-        }
-
-
-
-        try {
-            const mempoolResponse = await fetch('/api/v1/hsd/mempoolBids');
             const mempoolData = await mempoolResponse.json();
             if (mempoolResponse.ok && mempoolData.result) {
                 const domainBids = mempoolData.result['{{search_term}}'];
                 if (domainBids && domainBids.length > 0) {
                     let mempoolRows = '';
                     domainBids.forEach(bid => {
-                        const bidValue = bid.revealed ? (bid.value / 1000000).toFixed(2) : 'Hidden until reveal';
+                        const bidValue = bid.revealed ? `${(bid.value / 1000000).toFixed(2)} HNS` : 'Hidden until reveal';
                         const lockupValue = (bid.lockup / 1000000).toFixed(2);
-                        const blindValue = bid.revealed ? (lockupValue - bidValue).toFixed(2) : 'Hidden until reveal';
+                        const blindValue = bid.revealed ? `${((bid.lockup - bid.value) / 1000000).toFixed(2)} HNS` : 'Hidden until reveal';
                         const type = bid.revealed ? 'Reveal' : 'Bid';
                         mempoolRows += `<tr class="table-warning">
                             <td>${lockupValue} HNS</td>
-                            <td>${bidValue} HNS</td>
-                            <td>${blindValue} HNS</td>
+                            <td>${bidValue}</td>
+                            <td>${blindValue}</td>
                             <td>${bid.owner}</td>
                             <td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' target='_blank' href='https://shakeshift.com/transaction/${bid.txid}'>Mempool ${type} 🔗</a></td>
                         </tr>`;
@@ -169,17 +169,15 @@
                 }
             }
         } catch (error) {
-            console.error('Error loading mempool bids:', error);
-            // Don't override the main table content on mempool error
+            console.error('Error loading bids:', error);
         }
     }
 
     // Load bids when page loads
-    document.addEventListener('DOMContentLoaded', loadBids);
+    document.addEventListener('DOMContentLoaded', () => loadBids(true));
 
     // Auto-refresh bids every 20 seconds
-    setInterval(loadBids, 20000);
-
+    setInterval(() => loadBids(false), 20000);
 </script>
                         </div>
                     </div>
