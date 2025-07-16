@@ -867,10 +867,12 @@ def rescan_auction(account, domain):
         return {
             "error": "Invalid domain"
         }
-    if 'bidPeriodStart' not in response['result']['info']['stats']:
+    if 'height' not in response['result']['info']:
         return {
-            "error": "Not in auction"
+            "error": "Can't find start"
         }
+
+
     height = response['result']['info']['height']-1
     response = hsw.rpc_importName(domain, height)
     return response
