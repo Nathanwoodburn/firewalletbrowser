@@ -460,6 +460,23 @@ def isOwnDomain(account, name: str):
         return True
     return False
 
+def isOwnPrevout(account, prevout: dict):
+    if 'hash' not in prevout or 'index' not in prevout:
+        return False
+    # Get the address from the prevout
+    address = getAddressFromCoin(prevout['hash'], prevout['index'])
+    # Select the account
+    hsw.rpc_selectWallet(account)
+    account = hsw.rpc_getAccount(address)
+
+    if 'error' in account and account['error'] is not None:
+        return False
+    if 'result' not in account:
+        return False
+    if account['result'] == 'default':
+        return True
+    return False
+    
 
 def getDomain(domain: str):
     # Get the domain
@@ -1173,13 +1190,6 @@ def getMempoolBids():
         if 'error' in tx and tx['error'] is not None:
             print(f"Error getting tx {txid}: {tx['error']}")
             continue
-        # bid_data.append({
-        #     'bid': bid,
-        #     'lockup': lockup,
-        #     'revealed': revealed,
-        #     'value': value,
-        #     'sort_value': value if revealed else lockup  # Use value for sorting if revealed, otherwise lockup
-        # })
         if 'outputs' not in tx:
             print(f"Error getting outputs for tx {txid}")
             continue
@@ -1204,7 +1214,8 @@ def getMempoolBids():
                         'revealed': True,
                         'height': -1,
                         'value': output['value'],
-                        'sort_value': txInput['coin']['value']
+                        'sort_value': txInput['coin']['value'],
+                        'owner': "Unknown"
                     }
                     if name not in bids:
                         bids[name] = []
@@ -1222,11 +1233,10 @@ def getMempoolBids():
                 'lockup': output['value'],
                 'revealed': False,
                 'height': -1,
-                'sort_value': output['value']
+                'sort_value': output['value'],
+                'owner': "Unknown"
             }
             bids[name].append(bid)
-
-
     return bids
 
 

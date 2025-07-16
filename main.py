@@ -46,10 +46,15 @@ def blocks_to_time(blocks: int) -> str:
     elif blocks < 144:
         hours = blocks // 6
         minutes = (blocks % 6) * 10
+        if minutes == 0:
+            return f"{hours} hrs"
+
         return f"{hours} hrs {minutes} mins"
     else:
         days = blocks // 144
         hours = (blocks % 144) // 6
+        if hours == 0:
+            return f"{days} days"
         return f"{days} days {hours} hrs"
         
     
@@ -913,17 +918,18 @@ def auction(domain):
     state = domainInfo['info']['state']
     next_action = ''
 
-    bids = account_module.getBids(account,search_term)
-    if bids == []:
-        bids = "No bids found"
-        next_action = f'<a href="/auction/{domain}/scan">Rescan Auction</a>'
-    else:
-        reveals = account_module.getReveals(account,search_term)
-        for reveal in reveals:
-            # Get TX
-            revealInfo = account_module.getRevealTX(reveal)
-            reveal['bid'] = revealInfo
-        bids = render.bids(bids,reveals)
+    # bids = account_module.getBids(account,search_term)
+    bids = []
+    # if bids == []:
+    #     bids = "No bids found"
+    #     next_action = f'<a href="/auction/{domain}/scan">Rescan Auction</a>'
+    # else:
+    #     reveals = account_module.getReveals(account,search_term)
+    #     for reveal in reveals:
+    #         # Get TX
+    #         revealInfo = account_module.getRevealTX(reveal)
+    #         reveal['bid'] = revealInfo
+    #     bids = render.bids(bids,reveals)
 
     stats = domainInfo['info']['stats'] if 'stats' in domainInfo['info'] else {}
     if state == 'CLOSED':
@@ -944,10 +950,7 @@ def auction(domain):
             expires = domainInfo['info']['stats']['daysUntilExpire']
             next = f"Expires in ~{expires} days"
 
-            own_domains = account_module.getDomains(account)
-            own_domains = [x['name'] for x in own_domains]
-            own_domains = [x.lower() for x in own_domains]
-            if search_term in own_domains:
+            if account_module.isOwnDomain(account,domain):
                 next_action = f'<a href="/manage/{domain}">Manage</a>'
     elif state == "REVOKED":
         next = "Available Now"
@@ -1546,7 +1549,62 @@ def api_hsd(function):
         return jsonify({"result": account_module.getMempoolTxs()})
     if function == "mempoolBids":
         return jsonify({"result": account_module.getMempoolBids()})
-    
+    if function == "nextAuctionState":
+        # Get the domain from the query parameters
+        domain = request.args.get('domain')
+        if not domain:
+            return jsonify({"error": "No domain specified"}), 400
+        domainInfo = account_module.getDomain(domain)
+        if 'error' in domainInfo and domainInfo['error'] != None:
+            return jsonify({"error": domainInfo['error']}), 400
+        stats = domainInfo['info']['stats'] if 'stats' in domainInfo['info'] else {}
+        state = domainInfo['info']['state']
+        next_action = ""
+        if state == 'CLOSED':
+            if not domainInfo['info']['registered']:
+                if account_module.isOwnDomain(account,domain):
+                    print("Waiting to be registered")
+                    state = 'PENDING REGISTER'
+                    next = "Pending Register"
+                    next_action = f'<a href="/auction/{domain}/register">Register Domain</a>'
+                
+                else:
+                    print("Not registered")
+                    state = 'AVAILABLE'
+                    next = "Available Now"
+                    next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
+            else:
+                state = 'REGISTERED'
+                expires = domainInfo['info']['stats']['daysUntilExpire']
+                next = f"Expires in ~{expires} days"
+        elif state == "REVOKED":
+            next = "Available Now"
+            next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
+        elif state == 'OPENING':
+            next = f"Bidding opens in {str(stats['blocksUntilBidding'])} blocks (~{blocks_to_time(stats['blocksUntilBidding'])})"
+        elif state == 'BIDDING':
+            next = f"Reveal in {stats['blocksUntilReveal']} blocks (~{blocks_to_time(stats['blocksUntilReveal'])})"
+            if stats['blocksUntilReveal'] == 1:
+                next += "<br>Bidding no longer possible"
+            elif stats['blocksUntilReveal'] == 2:
+                next += "<br>LAST CHANCE TO BID"
+            elif stats['blocksUntilReveal'] == 3:
+                next += f"<br>Next block is last chance to bid"
+            elif stats['blocksUntilReveal'] < 6:
+                next += f"<br>Last chance to bid in {stats['blocksUntilReveal']-2} blocks"
+
+
+        elif state == 'REVEAL':
+            next = f"Reveal ends in {str(stats['blocksUntilClose'])} blocks (~{blocks_to_time(stats['blocksUntilClose'])})"
+            next_action = f'<a href="/auction/{domain}/reveal">Reveal All</a>'
+
+        return jsonify({
+            "state": state,
+            "next": next,
+            "next_action": next_action
+        })
+
+
     return jsonify({"error": "Invalid function", "result": "Invalid function"}), 400
 
 
@@ -1665,6 +1723,21 @@ def api_wallet(function):
             "page": page
         })
 
+    if function == "domainBids":
+        domain = request.args.get('domain')
+        if not domain:
+            return jsonify({"error": "No domain specified"}), 400
+        bids = account_module.getBids(account,domain)
+        if bids == []:
+            return jsonify({"result": [], "error": "No bids found"}), 404
+        else:
+            reveals = account_module.getReveals(account,domain)
+            for reveal in reveals:
+                # Get TX
+                revealInfo = account_module.getRevealTX(reveal)
+                reveal['bid'] = revealInfo
+            bids = render.bids(bids,reveals)
+        return jsonify({"result": bids})
 
     if function == "icon":
         # Check if there is an icon
