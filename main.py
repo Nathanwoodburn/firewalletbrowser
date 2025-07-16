@@ -923,6 +923,10 @@ def auction(domain):
             # Get TX
             revealInfo = account_module.getRevealTX(reveal)
             reveal['bid'] = revealInfo
+        print("RAW Bids found: ", len(bids))
+        print(json.dumps(bids, indent=4))
+        print("RAW Reveals found: ", len(reveals))
+        print(json.dumps(reveals, indent=4))
         bids = render.bids(bids,reveals)
 
     stats = domainInfo['info']['stats'] if 'stats' in domainInfo['info'] else {}
