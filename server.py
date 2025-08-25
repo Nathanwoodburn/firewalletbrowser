@@ -17,8 +17,8 @@ def gunicornServer():
 
         def load_config(self):
             for key, value in self.options.items():
-                if key in self.cfg.settings and value is not None:
-                    self.cfg.set(key.lower(), value)
+                if key in self.cfg.settings and value is not None: # type: ignore
+                    self.cfg.set(key.lower(), value) # type: ignore
 
         def load(self):
             return self.application

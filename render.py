@@ -7,10 +7,8 @@ import os
 from handywrapper import api
 import threading
 
-HSD_API = os.getenv("HSD_API")
-HSD_IP = os.getenv("HSD_IP")
-if HSD_IP is None:
-    HSD_IP = "localhost"
+HSD_API = os.getenv("HSD_API","")
+HSD_IP = os.getenv("HSD_IP","localhost")
 
 HSD_NETWORK = os.getenv("HSD_NETWORK")
 HSD_WALLET_PORT = 12039
@@ -560,7 +558,6 @@ def renderDomainAsync(namehash: str) -> None:
 
             if namehash in cache:
                 return
-
         # Fetch the name outside the lock (network call)
         name = hsd.rpc_getNameByHash(namehash)
         if name["error"] is None:
@@ -576,7 +573,7 @@ def renderDomainAsync(namehash: str) -> None:
                 with open(NAMEHASH_CACHE, 'w') as f:
                     json.dump(cache, f)
 
-            return rendered
+            return
         else:
             print(f"Error fetching name for hash {namehash}: {name['error']}", flush=True)
 
