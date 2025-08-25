@@ -408,6 +408,10 @@ def check_hip2(domain: str):
         if not check_address(address, False, True):
             return 'Hip2: Lookup succeeded but address is invalid'
         return address
+
+    # Check if DISABLE_WALLETDNS is set
+    if os.getenv("DISABLE_WALLETDNS","").lower() in ["1","true","yes"]:
+        return "No HIP2 record found for this domain"
     # Try using WALLET TXT record
     address = domainLookup.wallet_txt(domain)
     if not address.startswith("hs1"):
