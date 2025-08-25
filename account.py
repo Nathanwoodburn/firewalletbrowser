@@ -10,10 +10,8 @@ import time
 
 dotenv.load_dotenv()
 
-HSD_API = os.getenv("HSD_API")
-HSD_IP = os.getenv("HSD_IP")
-if HSD_IP is None:
-    HSD_IP = "localhost"
+HSD_API = os.getenv("HSD_API","")
+HSD_IP = os.getenv("HSD_IP","localhost")
 
 HSD_NETWORK = os.getenv("HSD_NETWORK")
 HSD_WALLET_PORT = 12039
@@ -47,9 +45,7 @@ cacheTime = 3600
 # Verify the connection
 response = hsd.getInfo()
 
-EXCLUDE = ["primary"]
-if os.getenv("EXCLUDE") is not None:
-    EXCLUDE = os.getenv("EXCLUDE").split(",")
+EXCLUDE = os.getenv("EXCLUDE","primary").split(",")
 
 
 def hsdConnected():
@@ -426,6 +422,12 @@ def check_hip2(domain: str):
 def send(account, address, amount):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
+    if not account_name:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
     response = hsw.rpc_selectWallet(account_name)
     if response['error'] is not None:
         return {
@@ -730,9 +732,13 @@ def getPendingFinalizes(account, password):
     pending = []
     try:
         for output in tx['outputs']:
-            if output['covenant']['type'] != 10:
+            if type(output) != dict:
                 continue
-            if output['covenant']['action'] != "FINALIZE":
+            if not 'covenant' in output:
+                continue
+            if output['covenant'].get("type") != 10:
+                continue
+            if output['covenant'].get('action') != "FINALIZE":
                 continue
             nameHash = output['covenant']['items'][0]
             # Try to get the name from hash

@@ -13,6 +13,7 @@ import httpx
 from requests_doh import DNSOverHTTPSSession, add_dns_provider
 import requests
 import urllib3
+from cryptography.x509.oid import ExtensionOID
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) # Disable insecure request warnings (since we are manually verifying the certificate)
 
@@ -59,7 +60,7 @@ def hip2(domain: str):
 
             domains = []
             for ext in cert_obj.extensions:
-                if ext.oid == x509.ExtensionOID.SUBJECT_ALTERNATIVE_NAME:
+                if ext.oid == ExtensionOID.SUBJECT_ALTERNATIVE_NAME:
                     san_list = ext.value.get_values_for_type(x509.DNSName)
                     domains.extend(san_list)
             
@@ -133,7 +134,7 @@ def wallet_txt(domain: str, doh_url="https://hnsdoh.com/dns-query"):
 
         wallet_record = "No WALLET record found"
         for ans in r.answer:
-            raw = ans[0].to_wire()
+            raw = ans[0].to_wire() # type: ignore
             try:
                 data = raw[1:].decode("utf-8", errors="ignore")
             except UnicodeDecodeError:
@@ -155,7 +156,7 @@ def resolve_with_doh(query_name, doh_url="https://hnsdoh.com/dns-query"):
         q = dns.message.make_query(query_name, dns.rdatatype.A)
         r = dns.query.https(q, doh_url, session=client)
 
-        ip = r.answer[0][0].address
+        ip = r.answer[0][0].address # type: ignore
         return ip
     
 def resolve_TLSA_with_doh(query_name, doh_url="https://hnsdoh.com/dns-query"):
