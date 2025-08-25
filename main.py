@@ -66,7 +66,6 @@ def index():
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
-    
     account = account_module.check_account(request.cookies.get("account"))
     if not account:
         return redirect("/logout")

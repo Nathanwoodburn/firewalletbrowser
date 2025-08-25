@@ -6,6 +6,9 @@ import subprocess
 import binascii
 import datetime
 import dns.asyncresolver
+import dns.message
+import dns.query
+import dns.rdatatype
 import httpx
 from requests_doh import DNSOverHTTPSSession, add_dns_provider
 import requests
@@ -120,6 +123,32 @@ def hip2(domain: str):
         print(f"Hip2: Lookup failed with error: {e}",flush=True)
         return "Hip2: Lookup failed."
 
+def wallet_txt(domain: str, doh_url="https://hnsdoh.com/dns-query"):
+    with httpx.Client() as client:
+        q = dns.message.make_query(domain, dns.rdatatype.from_text("TYPE262"))
+        r = dns.query.https(q, doh_url, session=client)
+
+        if not r.answer:
+            return "No wallet address found for this domain"
+
+        wallet_record = "No WALLET record found"
+        for ans in r.answer:
+            raw = ans[0].to_wire()
+            try:
+                data = raw[1:].decode("utf-8", errors="ignore")
+            except UnicodeDecodeError:
+                return f"Unknown WALLET record format: {raw.hex()}"
+            
+            if data.startswith("HNS:"):
+                wallet_record = data[4:]
+                break
+            elif data.startswith("HNS "):
+                wallet_record = data[4:]
+                break
+            elif data.startswith('"HNS" '):
+                wallet_record = data[6:].strip('"')
+                break
+        return wallet_record
 
 def resolve_with_doh(query_name, doh_url="https://hnsdoh.com/dns-query"):
     with httpx.Client() as client:

@@ -68,7 +68,7 @@ def hsdVersion(format=True):
         return info['version']
 
 
-def check_account(cookie: str):
+def check_account(cookie: str | None):
     if cookie is None:
         return False
 
@@ -403,12 +403,19 @@ def check_hip2(domain: str):
         return 'Invalid domain'
 
     address = domainLookup.hip2(domain)
-    if address.startswith("Hip2: "):
+    if not address.startswith("Hip2: "):
+        if not check_address(address, False, True):
+            return 'Hip2: Lookup succeeded but address is invalid'
         return address
-
+    # Try using WALLET TXT record
+    address = domainLookup.wallet_txt(domain)
+    if not address.startswith("hs1"):
+        return "No HIP2 or WALLET record found for this domain"
     if not check_address(address, False, True):
-        return 'Hip2: Lookup succeeded but address is invalid'
+        return 'WALLET DNS record found but address is invalid'
     return address
+
+    
 
 
 def send(account, address, amount):
