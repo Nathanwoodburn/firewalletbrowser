@@ -152,7 +152,10 @@ def getPluginFunctions(plugin: str):
     return plugin.functions
 
 
-def runPluginFunction(plugin: str, function: str, params: dict, authentication: str):
+def runPluginFunction(plugin: str, function: str, params: dict, authentication: (str|None)):
+    if not authentication:
+        return {"error": "Authentication required"}
+
     plugin_module = import_module(plugin.replace("/","."))
     if function not in plugin_module.functions:
         return {"error": "Function not found"}

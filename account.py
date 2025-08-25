@@ -84,7 +84,12 @@ def check_account(cookie: str | None):
     return account
 
 
-def check_password(cookie: str, password: str):
+def check_password(cookie: str|None, password: str|None):
+    if cookie is None:
+        return False
+    if password is None:
+        password = ""
+    
     account = check_account(cookie)
     if account == False:
         return False
