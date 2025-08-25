@@ -148,11 +148,14 @@ def getPluginData(pluginStr: str):
 
 
 def getPluginFunctions(plugin: str):
-    plugin = import_module(plugin.replace("/","."))
-    return plugin.functions
+    imported_plugin = import_module(plugin.replace("/","."))
+    return imported_plugin.functions
 
 
-def runPluginFunction(plugin: str, function: str, params: dict, authentication: str):
+def runPluginFunction(plugin: str, function: str, params: dict, authentication: (str|None)):
+    if not authentication:
+        return {"error": "Authentication required"}
+
     plugin_module = import_module(plugin.replace("/","."))
     if function not in plugin_module.functions:
         return {"error": "Function not found"}
@@ -189,13 +192,13 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
 
 
 def getPluginFunctionInputs(plugin: str, function: str):
-    plugin = import_module(plugin.replace("/","."))
-    return plugin.functions[function]["params"]
+    imported_plugin = import_module(plugin.replace("/","."))
+    return imported_plugin.functions[function]["params"]
 
 
 def getPluginFunctionReturns(plugin: str, function: str):
-    plugin = import_module(plugin.replace("/","."))
-    return plugin.functions[function]["returns"]
+    imported_plugin = import_module(plugin.replace("/","."))
+    return imported_plugin.functions[function]["returns"]
 
 
 def getDomainFunctions():

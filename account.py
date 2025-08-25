@@ -10,10 +10,8 @@ import time
 
 dotenv.load_dotenv()
 
-HSD_API = os.getenv("HSD_API")
-HSD_IP = os.getenv("HSD_IP")
-if HSD_IP is None:
-    HSD_IP = "localhost"
+HSD_API = os.getenv("HSD_API","")
+HSD_IP = os.getenv("HSD_IP","localhost")
 
 HSD_NETWORK = os.getenv("HSD_NETWORK")
 HSD_WALLET_PORT = 12039
@@ -47,9 +45,7 @@ cacheTime = 3600
 # Verify the connection
 response = hsd.getInfo()
 
-EXCLUDE = ["primary"]
-if os.getenv("EXCLUDE") is not None:
-    EXCLUDE = os.getenv("EXCLUDE").split(",")
+EXCLUDE = os.getenv("EXCLUDE","primary").split(",")
 
 
 def hsdConnected():
@@ -68,7 +64,7 @@ def hsdVersion(format=True):
         return info['version']
 
 
-def check_account(cookie: str):
+def check_account(cookie: str | None):
     if cookie is None:
         return False
 
@@ -84,7 +80,12 @@ def check_account(cookie: str):
     return account
 
 
-def check_password(cookie: str, password: str):
+def check_password(cookie: str|None, password: str|None):
+    if cookie is None:
+        return False
+    if password is None:
+        password = ""
+    
     account = check_account(cookie)
     if account == False:
         return False
@@ -403,17 +404,30 @@ def check_hip2(domain: str):
         return 'Invalid domain'
 
     address = domainLookup.hip2(domain)
-    if address.startswith("Hip2: "):
+    if not address.startswith("Hip2: "):
+        if not check_address(address, False, True):
+            return 'Hip2: Lookup succeeded but address is invalid'
         return address
-
+    # Try using WALLET TXT record
+    address = domainLookup.wallet_txt(domain)
+    if not address.startswith("hs1"):
+        return "No HIP2 or WALLET record found for this domain"
     if not check_address(address, False, True):
-        return 'Hip2: Lookup succeeded but address is invalid'
+        return 'WALLET DNS record found but address is invalid'
     return address
+
+    
 
 
 def send(account, address, amount):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
+    if not account_name:
+        return {
+            "error": {
+                "message": "Invalid account"
+            }
+        }
     response = hsw.rpc_selectWallet(account_name)
     if response['error'] is not None:
         return {
@@ -718,9 +732,13 @@ def getPendingFinalizes(account, password):
     pending = []
     try:
         for output in tx['outputs']:
-            if output['covenant']['type'] != 10:
+            if type(output) != dict:
                 continue
-            if output['covenant']['action'] != "FINALIZE":
+            if not 'covenant' in output:
+                continue
+            if output['covenant'].get("type") != 10:
+                continue
+            if output['covenant'].get('action') != "FINALIZE":
                 continue
             nameHash = output['covenant']['items'][0]
             # Try to get the name from hash
