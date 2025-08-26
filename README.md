@@ -129,6 +129,20 @@ INTERNAL_HSD: Use internal HSD node (true/false)
 ```
 
 
+
+# Internal HSD
+
+If you set INTERNAL_HSD=true in the .env file the wallet will start and manage its own HSD node. If you want to override the default HSD config create a file called hsdconfig.json in the same directory as main.py and change the values you want to override. For example to disable SPV and use an existing bob wallet sync (on linux) and set the agent to "SuperCoolDev" you could use the following:
+```json
+{
+    "spv": false,
+    "prefix":"~/.config/Bob/hsd_data",
+    "flags":[
+        "--agent=SuperCoolDev"
+    ]
+}
+```
+
 ## Warnings
 
 - This is a work in progress and is not guaranteed to work

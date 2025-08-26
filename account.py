@@ -48,18 +48,25 @@ if SHOW_EXPIRED is None:
 HSD_PROCESS = None
 
 # Get hsdconfig.json
-HSD_CONFIG = {}
+HSD_CONFIG = {
+    "version": "v8.0.0",
+    "chainMigrate": 4,
+    "walletMigrate": 7,
+    "minNodeVersion": 20,
+    "minNpmVersion": 8,
+    "spv": False,
+    "flags": [
+        "--agent=FireWallet"
+    ]
+}
 if not os.path.exists('hsdconfig.json'):
-    # Pull from the latest git
-    response = requests.get("https://git.woodburn.au/nathanwoodburn/firewalletbrowser/raw/branch/main/hsdconfig.json")
-    if response.status_code == 200:
-        with open('hsdconfig.json', 'w') as f:
-            f.write(response.text)
-        HSD_CONFIG = response.json()
+    with open('hsdconfig.json', 'w') as f:
+        f.write(json.dumps(HSD_CONFIG, indent=4))
 else:
     with open('hsdconfig.json') as f:
-        HSD_CONFIG = json.load(f)
-
+        hsdConfigTMP = json.load(f)
+        for key in hsdConfigTMP:
+            HSD_CONFIG[key] = hsdConfigTMP[key]
 
 hsd = api.hsd(HSD_API, HSD_IP, HSD_NODE_PORT)
 hsw = api.hsw(HSD_API, HSD_IP, HSD_WALLET_PORT)
@@ -1634,7 +1641,6 @@ def hsdStart():
         f"--network={HSD_NETWORK}",
         f"--prefix={prefix}",
         f"--api-key={HSD_API}",
-        "--agent=FireWallet",
         "--http-host=127.0.0.1",
         "--log-console=false"
     ]
@@ -1647,6 +1653,10 @@ def hsdStart():
     if spv:
         cmd.append("--spv")
     
+    # Add flags
+    if len(HSD_CONFIG.get("flags",[])) > 0:
+        for flag in HSD_CONFIG.get("flags",[]):
+            cmd.append(flag)
 
     # Launch process
     HSD_PROCESS = subprocess.Popen(
