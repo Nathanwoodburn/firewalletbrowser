@@ -124,6 +124,8 @@ SHOW_EXPIRED: Show expired domains (true/false)
 EXCLUDE: Comma separated list of wallets to exclude from the wallet list (default primary)
 EXPLORER_TX: URL for exploring transactions (default https://shakeshift.com/transaction/)
 HSD_NETWORK: Network to connect to (main, regtest, simnet)
+DISABLE_WALLETDNS: Disable Wallet DNS records when sending HNS to domains (true/false)
+INTERNAL_HSD: Use internal HSD node (true/false)
 ```
 
 

@@ -7,6 +7,11 @@ import re
 import domainLookup
 import json
 import time
+import subprocess
+import atexit
+import signal
+import sys
+
 
 dotenv.load_dotenv()
 
@@ -29,16 +34,32 @@ elif HSD_NETWORK == "regtest":
     HSD_WALLET_PORT = 14039
     HSD_NODE_PORT = 14037
 
-INTERNAL_NODE = os.getenv("INTERNAL_HSD","false").lower() in ["1","true","yes"]
-if INTERNAL_NODE:
+HSD_INTERNAL_NODE = os.getenv("INTERNAL_HSD","false").lower() in ["1","true","yes"]
+if HSD_INTERNAL_NODE:
     if HSD_API == "":
         # Use a random API KEY
         HSD_API = "firewallet-" + str(int(time.time()))
-
+    HSD_IP = "localhost"
 
 SHOW_EXPIRED = os.getenv("SHOW_EXPIRED")
 if SHOW_EXPIRED is None:
     SHOW_EXPIRED = False
+
+HSD_PROCESS = None
+
+# Get hsdconfig.json
+HSD_CONFIG = {}
+if not os.path.exists('hsdconfig.json'):
+    # Pull from the latest git
+    response = requests.get("https://git.woodburn.au/nathanwoodburn/firewalletbrowser/raw/branch/main/hsdconfig.json")
+    if response.status_code == 200:
+        with open('hsdconfig.json', 'w') as f:
+            f.write(response.text)
+        HSD_CONFIG = response.json()
+else:
+    with open('hsdconfig.json') as f:
+        HSD_CONFIG = json.load(f)
+
 
 hsd = api.hsd(HSD_API, HSD_IP, HSD_NODE_PORT)
 hsw = api.hsw(HSD_API, HSD_IP, HSD_WALLET_PORT)
@@ -1439,7 +1460,6 @@ def generateReport(account, format="{name},{expiry},{value},{maxBid}"):
 
 def convertHNS(value: int):
     return value/1000000
-    return value/1000000
 
 
 def get_node_api_url(path=''):
@@ -1461,3 +1481,188 @@ def get_wallet_api_url(path=''):
             path = f'/{path}'
         return f"{base_url}{path}"
     return base_url
+
+
+
+# region HSD Internal Node
+
+
+
+def checkPreRequisites() -> dict[str, bool]:
+    prerequisites = {
+        "node": False,
+        "npm": False,
+        "git": False,
+        "hsd": False
+    }
+
+    # Check if node is installed and get version
+    nodeSubprocess = subprocess.run(["node", "-v"], capture_output=True, text=True)
+    if nodeSubprocess.returncode == 0:
+        major_version = int(nodeSubprocess.stdout.strip().lstrip('v').split('.')[0])
+        if major_version >= HSD_CONFIG.get("minNodeVersion", 20):
+            prerequisites["node"] = True
+
+    # Check if npm is installed
+    npmSubprocess = subprocess.run(["npm", "-v"], capture_output=True, text=True)
+    if npmSubprocess.returncode == 0:
+        major_version = int(npmSubprocess.stdout.strip().split('.')[0])
+        if major_version >= HSD_CONFIG.get("minNPMVersion", 8):
+            prerequisites["npm"] = True
+
+    # Check if git is installed
+    gitSubprocess = subprocess.run(["git", "-v"], capture_output=True, text=True)
+    if gitSubprocess.returncode == 0:
+        prerequisites["git"] = True
+    
+    # Check if hsd is installed
+    if os.path.exists("./hsd/bin/hsd"):
+        prerequisites["hsd"] = True
+        
+    
+
+
+    return prerequisites
+
+
+
+def hsdInit():
+    if not HSD_INTERNAL_NODE:
+        return
+    prerequisites = checkPreRequisites()
+    
+    PREREQ_MESSAGES = {
+        "node": "Install Node.js from https://nodejs.org/en/download (Version >= {minNodeVersion})",
+        "npm": "Install npm (version >= {minNPMVersion}) - usually comes with Node.js",
+        "git": "Install Git from https://git-scm.com/downloads"}
+
+
+    # Check if all prerequisites are met (except hsd)
+    if not all(prerequisites[key] for key in prerequisites if key != "hsd"):
+        print("HSD Internal Node prerequisites not met:")
+        for key, value in prerequisites.items():
+            if not value:
+                print(f" - {key} is missing or does not meet the version requirement.")
+                exit(1)
+        return
+    
+    # Check if hsd is installed
+    if not prerequisites["hsd"]:
+        print("HSD not found, installing...")
+        # If hsd folder exists, remove it
+        if os.path.exists("hsd"):
+            os.rmdir("hsd")
+
+        # Clone hsd repo
+        gitClone = subprocess.run(["git", "clone", "--depth", "1", "--branch", HSD_CONFIG.get("version", "latest"), "https://github.com/handshake-org/hsd.git", "hsd"], capture_output=True, text=True)
+        if gitClone.returncode != 0:
+            print("Failed to clone hsd repository:")
+            print(gitClone.stderr)
+            exit(1)
+        print("Cloned hsd repository.")
+        # Install hsd dependencies
+        print("Installing hsd dependencies...")
+        npmInstall = subprocess.run(["npm", "install"], cwd="hsd", capture_output=True, text=True)
+        if npmInstall.returncode != 0:
+            print("Failed to install hsd dependencies:")
+            print(npmInstall.stderr)
+            exit(1)
+        print("Installed hsd dependencies.")       
+
+def hsdStart():
+    global HSD_PROCESS
+    if not HSD_INTERNAL_NODE:
+        return
+
+    # Check if hsd was started in the last 30 seconds
+    if os.path.exists("hsd.lock"):
+        lock_time = os.path.getmtime("hsd.lock")
+        if time.time() - lock_time < 30:
+            print("HSD was started recently, skipping start.")
+            return
+        else:
+            os.remove("hsd.lock")
+    
+    print("Starting HSD...")
+    # Create a lock file
+    with open("hsd.lock", "w") as f:
+        f.write(str(time.time()))
+    
+    # Config lookups with defaults
+    chain_migrate = HSD_CONFIG.get("chainMigrate", False)
+    wallet_migrate = HSD_CONFIG.get("walletMigrate", False)
+    spv = HSD_CONFIG.get("spv", False)
+
+    # Base command
+    cmd = [
+        "node",
+        "./hsd/bin/hsd",
+        f"--network={HSD_NETWORK}",
+        f"--prefix={os.path.join(os.getcwd(), 'hsd-data')}",
+        f"--api-key={HSD_API}",
+        "--agent=FireWallet",
+        "--http-host=127.0.0.1",
+        "--log-console=false"
+    ]
+
+    # Conditionally add migration flags
+    if chain_migrate:
+        cmd.append(f"--chain-migrate={chain_migrate}")
+    if wallet_migrate:
+        cmd.append(f"--wallet-migrate={wallet_migrate}")
+    if spv:
+        cmd.append("--spv")
+    
+
+    # Launch process
+    HSD_PROCESS = subprocess.Popen(
+        cmd,
+        cwd=os.getcwd(),
+        text=True
+    )
+    
+    print(f"HSD started with PID {HSD_PROCESS.pid}")
+
+    atexit.register(hsdStop)
+
+    # Handle Ctrl+C
+    try:
+        signal.signal(signal.SIGINT, lambda s, f: (hsdStop(), sys.exit(0)))
+        signal.signal(signal.SIGTERM, lambda s, f: (hsdStop(), sys.exit(0)))
+    except:
+        pass
+
+
+def hsdStop():
+    global HSD_PROCESS
+
+    if HSD_PROCESS is None:
+        return
+    
+    print("Stopping HSD...")
+
+    # Send SIGINT (like Ctrl+C)
+    HSD_PROCESS.send_signal(signal.SIGINT)
+
+    try:
+        HSD_PROCESS.wait(timeout=10)  # wait for graceful exit
+        print("HSD shut down cleanly.")
+    except subprocess.TimeoutExpired:
+        print("HSD did not exit yet, is it alright???")
+    
+    # Clean up lock file
+    if os.path.exists("hsd.lock"):
+        os.remove("hsd.lock")
+
+    HSD_PROCESS = None
+
+def hsdRestart():
+    hsdStop()
+    time.sleep(2)
+    hsdStart()
+
+
+checkPreRequisites()
+hsdInit()
+hsdStart()
+# endregion

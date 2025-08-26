@@ -1,0 +1,8 @@
+{
+"version": "v8.0.0",
+"chainMigrate":4,
+"walletMigrate":7,
+"minNodeVersion":20,
+"minNpmVersion":8,
+"spv": true
+}

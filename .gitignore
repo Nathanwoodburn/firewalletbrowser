@@ -17,3 +17,5 @@ cache/
 build/
 dist/
 hsd/
+hsd-data/
+hsd.lock
