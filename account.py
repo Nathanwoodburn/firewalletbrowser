@@ -489,7 +489,12 @@ def send(account, address, amount):
 def isOwnDomain(account, name: str):
     # Get domain
     domain_info = getDomain(name)
-    owner = getAddressFromCoin(domain_info['info']['owner']['hash'],domain_info['info']['owner']['index'])
+    if 'info' not in domain_info or domain_info['info'] is None:
+        return False
+    if 'owner' not in domain_info['info']:
+        return False
+
+    owner = getAddressFromCoin(domain_info['info']['owner'].get("hash"),domain_info['info']['owner'].get("index"))
     # Select the account
     hsw.rpc_selectWallet(account)
     account = hsw.rpc_getAccount(owner)
@@ -529,14 +534,40 @@ def getDomain(domain: str):
                 "message": response['error']['message']
             }
         }
+    
+    # If info is None grab from hsd.hns.au
+    if response['result'] is None or response['result'].get('info') is None:
+        response = requests.get(f"https://hsd.hns.au/api/v1/name/{domain}").json()
+        if 'error' in response:
+            return {
+                "error": {
+                    "message": response['error']
+                }
+            }
+        return response
+
     return response['result']
+
+def isKnownDomain(domain: str) -> bool:
+    # Get the domain
+    response = hsd.rpc_getNameInfo(domain)
+    if response['error'] is not None:
+        return False
+    
+    # If info is None grab from hsd.hns.au
+    if response['result'] is None or response['result'].get('info') is None:
+        return False
+    return True
 
 def getAddressFromCoin(coinhash: str, coinindex = 0):
     # Get the address from the hash
     response = requests.get(get_node_api_url(f"coin/{coinhash}/{coinindex}"))
     if response.status_code != 200:
-        print(f"Error getting address from coin: {response.text}")
-        return "No Owner"
+        # Try to get coin from hsd.hns.au
+        response = requests.get(f"https://hsd.hns.au/api/v1/coin/{coinhash}/{coinindex}")
+        if response.status_code != 200:
+            print(f"Error getting address from coin")
+            return "No Owner"
     data = response.json()
     if 'address' not in data:
         print(json.dumps(data, indent=4))
@@ -748,7 +779,9 @@ def getPendingRegisters(account):
             for bid in bids:
                 if bid['name'] == domain['name']:
                     if bid['value'] == domain['highest']:
-                        pending.append(bid)
+                        # Double check the domain is actually in the node                        
+                        if isKnownDomain(domain['name']):
+                            pending.append(bid)
     return pending
 
 
@@ -1483,7 +1516,6 @@ def get_wallet_api_url(path=''):
     return base_url
 
 
-
 # region HSD Internal Node
 
 
@@ -1592,13 +1624,15 @@ def hsdStart():
     chain_migrate = HSD_CONFIG.get("chainMigrate", False)
     wallet_migrate = HSD_CONFIG.get("walletMigrate", False)
     spv = HSD_CONFIG.get("spv", False)
+    prefix = HSD_CONFIG.get("prefix", os.path.join(os.getcwd(), "hsd-data"))
+
 
     # Base command
     cmd = [
         "node",
         "./hsd/bin/hsd",
         f"--network={HSD_NETWORK}",
-        f"--prefix={os.path.join(os.getcwd(), 'hsd-data')}",
+        f"--prefix={prefix}",
         f"--api-key={HSD_API}",
         "--agent=FireWallet",
         "--http-host=127.0.0.1",
