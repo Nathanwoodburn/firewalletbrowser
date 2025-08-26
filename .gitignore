@@ -16,3 +16,4 @@ customPlugins/
 cache/
 build/
 dist/
+hsd/

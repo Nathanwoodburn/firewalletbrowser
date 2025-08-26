@@ -6,30 +6,7 @@ from domainLookup import punycode_to_emoji
 import os
 from handywrapper import api
 import threading
-
-HSD_API = os.getenv("HSD_API","")
-HSD_IP = os.getenv("HSD_IP","localhost")
-
-HSD_NETWORK = os.getenv("HSD_NETWORK")
-HSD_WALLET_PORT = 12039
-HSD_NODE_PORT = 12037
-
-if not HSD_NETWORK:
-    HSD_NETWORK = "main"
-else:
-    HSD_NETWORK = HSD_NETWORK.lower()
-
-if HSD_NETWORK == "simnet":
-    HSD_WALLET_PORT = 15039
-    HSD_NODE_PORT = 15037
-elif HSD_NETWORK == "testnet":
-    HSD_WALLET_PORT = 13039
-    HSD_NODE_PORT = 13037
-elif HSD_NETWORK == "regtest":
-    HSD_WALLET_PORT = 14039
-    HSD_NODE_PORT = 14037
-
-hsd = api.hsd(HSD_API, HSD_IP, HSD_NODE_PORT)
+import account
 
 # Get Explorer URL
 TX_EXPLORER_URL = os.getenv("EXPLORER_TX")
@@ -559,7 +536,7 @@ def renderDomainAsync(namehash: str) -> None:
             if namehash in cache:
                 return
         # Fetch the name outside the lock (network call)
-        name = hsd.rpc_getNameByHash(namehash)
+        name = account.hsd.rpc_getNameByHash(namehash)
         if name["error"] is None:
             name = name["result"]
             rendered = renderDomain(name)
