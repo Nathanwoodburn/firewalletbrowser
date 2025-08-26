@@ -6,7 +6,7 @@ from domainLookup import punycode_to_emoji
 import os
 from handywrapper import api
 import threading
-import account
+import requests
 
 # Get Explorer URL
 TX_EXPLORER_URL = os.getenv("EXPLORER_TX")
@@ -535,8 +535,10 @@ def renderDomainAsync(namehash: str) -> None:
 
             if namehash in cache:
                 return
-        # Fetch the name outside the lock (network call)
-        name = account.hsd.rpc_getNameByHash(namehash)
+        # Fetch the name outside the lock (network call) using hsd.hns.au
+        # name = account.hsd.rpc_getNameByHash(namehash)
+        name = requests.get(f"https://hsd.hns.au/api/v1/namehash/{namehash}").json()
+
         if name["error"] is None:
             name = name["result"]
             rendered = renderDomain(name)

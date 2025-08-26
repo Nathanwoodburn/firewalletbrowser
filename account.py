@@ -13,14 +13,11 @@ dotenv.load_dotenv()
 HSD_API = os.getenv("HSD_API","")
 HSD_IP = os.getenv("HSD_IP","localhost")
 
-HSD_NETWORK = os.getenv("HSD_NETWORK")
+HSD_NETWORK = os.getenv("HSD_NETWORK", "main")
 HSD_WALLET_PORT = 12039
 HSD_NODE_PORT = 12037
 
-if not HSD_NETWORK:
-    HSD_NETWORK = "main"
-else:
-    HSD_NETWORK = HSD_NETWORK.lower()
+HSD_NETWORK = HSD_NETWORK.lower()
 
 if HSD_NETWORK == "simnet":
     HSD_WALLET_PORT = 15039
@@ -31,6 +28,12 @@ elif HSD_NETWORK == "testnet":
 elif HSD_NETWORK == "regtest":
     HSD_WALLET_PORT = 14039
     HSD_NODE_PORT = 14037
+
+INTERNAL_NODE = os.getenv("INTERNAL_HSD","false").lower() in ["1","true","yes"]
+if INTERNAL_NODE:
+    if HSD_API == "":
+        # Use a random API KEY
+        HSD_API = "firewallet-" + str(int(time.time()))
 
 
 SHOW_EXPIRED = os.getenv("SHOW_EXPIRED")

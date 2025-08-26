@@ -56,10 +56,6 @@ def blocks_to_time(blocks: int) -> str:
         if hours == 0:
             return f"{days} days"
         return f"{days} days {hours} hrs"
-        
-    
-    
-
 
 @app.route('/')
 def index():
@@ -82,6 +78,8 @@ def index():
         return render_template("index.html", account=account, plugins=plugins)
     
     info = gitinfo.get_git_info()
+    if info is None:
+        return render_template("index.html", account=account, plugins=plugins)
     branch = info['refs']
     commit = info['commit']
     if commit != latestVersion(branch):
