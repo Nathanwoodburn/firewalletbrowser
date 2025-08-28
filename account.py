@@ -488,40 +488,74 @@ def getDomains(account, own=True):
 
     return domains
 
+def init_tx_page_db():
+    """Initialize the SQLite database for transaction page cache."""
+    os.makedirs('cache', exist_ok=True)
+    db_path = os.path.join('cache', 'tx_pages.db')
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Create the tx_pages table if it doesn't exist
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS tx_pages (
+        account TEXT,
+        page_key TEXT,
+        txid TEXT,
+        timestamp INTEGER,
+        PRIMARY KEY (account, page_key)
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()
 
 def getPageTXCache(account, page, size=100):
-    page = f"{page}-{size}"
-    if not os.path.exists(f'cache'):
-        os.mkdir(f'cache')
-
-    if not os.path.exists(f'cache/{account}_page.json'):
-        with open(f'cache/{account}_page.json', 'w') as f:
-            f.write('{}')
-    with open(f'cache/{account}_page.json') as f:
-        pageCache = json.load(f)
-
-    if page in pageCache and pageCache[page]['time'] > int(time.time()) - cacheTime:
-        return pageCache[page]['txid']
+    """Get cached transaction ID from SQLite database."""
+    account = getxPub(account)
+    page_key = f"{page}-{size}"
+    
+    # Initialize database if needed
+    init_tx_page_db()
+    
+    db_path = os.path.join('cache', 'tx_pages.db')
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Query for the cached transaction ID
+    cursor.execute(
+        'SELECT txid, timestamp FROM tx_pages WHERE account = ? AND page_key = ?',
+        (account, page_key)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row and row[1] > int(time.time()) - cacheTime:
+        return row[0]  # Return the cached txid
     return None
 
-
 def pushPageTXCache(account, page, txid, size=100):
-    page = f"{page}-{size}"
-    if not os.path.exists(f'cache/{account}_page.json'):
-        with open(f'cache/{account}_page.json', 'w') as f:
-            f.write('{}')
-    with open(f'cache/{account}_page.json') as f:
-        pageCache = json.load(f)
-
-    pageCache[page] = {
-        'time': int(time.time()),
-        'txid': txid
-    }
-    with open(f'cache/{account}_page.json', 'w') as f:
-        json.dump(pageCache, f, indent=4)
-
-    return pageCache[page]['txid']
-
+    """Store transaction ID in SQLite database."""
+    account = getxPub(account)
+    page_key = f"{page}-{size}"
+    
+    # Initialize database if needed
+    init_tx_page_db()
+    
+    db_path = os.path.join('cache', 'tx_pages.db')
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Insert or replace the transaction ID
+    cursor.execute(
+        'INSERT OR REPLACE INTO tx_pages (account, page_key, txid, timestamp) VALUES (?, ?, ?, ?)',
+        (account, page_key, txid, int(time.time()))
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    return txid
 
 def getTXFromPage(account, page, size=100):
     if page == 1:
@@ -1569,7 +1603,9 @@ def zapTXs(account):
 
 
 def getxPub(account):
-    account_name = check_account(account)
+    account_name = account
+    if account.count(":") > 0:
+        account_name = check_account(account)
 
     if account_name == False:
         return {
@@ -1587,8 +1623,6 @@ def getxPub(account):
                 }
             }
         return response['accountKey']
-
-        return response
     except Exception as e:
         return {
             "error": {
