@@ -68,7 +68,7 @@
                     <h3 class="mb-1" style="text-align: center;color: rgb(0,255,0);">{{success}}</h3>
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">Node Settings</h4><small>HSD Version: v{{hsd_version}}</small>
+                            <h4 class="card-title">Node Settings</h4><small>HSD Version: v{{hsd_version}}&nbsp; Type: {% if internal %} Internal {% else %} Remote {% endif %} ({% if spv %}SPV{% else %}Full Node{% endif %})</small>
                             <h6 class="text-muted mb-2 card-subtitle">Settings that affect all wallets</h6><ul class="list-group">
     <li class="list-group-item">
         <div><a class="btn btn-primary stick-right" role="button" href="/settings/rescan">Rescan</a>

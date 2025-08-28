@@ -1148,15 +1148,20 @@ def settings():
     if success == None:
         success = ""
 
+
     if not os.path.exists(".git"):
         return render_template("settings.html", account=account,
                                hsd_version=account_module.hsdVersion(False),
-                               error=error,success=success,version="Error",internal=account_module.HSD_INTERNAL_NODE)
+                               error=error,success=success,version="Error",
+                               internal=account_module.HSD_INTERNAL_NODE,
+                               spv=account_module.isSPV())
     info = gitinfo.get_git_info()
     if not info:
         return render_template("settings.html", account=account,                               
                                hsd_version=account_module.hsdVersion(False),
-                               error=error,success=success,version="Error",internal=account_module.HSD_INTERNAL_NODE)
+                               error=error,success=success,version="Error",
+                               internal=account_module.HSD_INTERNAL_NODE,
+                               spv=account_module.isSPV())
 
     branch = info['refs']
     if branch != "main":
@@ -1171,7 +1176,8 @@ def settings():
         version += ' (New version available)'
     return render_template("settings.html", account=account,                           
                            hsd_version=account_module.hsdVersion(False),
-                           error=error,success=success,version=version,internal=account_module.HSD_INTERNAL_NODE)
+                           error=error,success=success,version=version,internal=account_module.HSD_INTERNAL_NODE,
+                           spv=account_module.isSPV())
 
 @app.route('/settings/<action>')
 def settings_action(action):
