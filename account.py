@@ -64,7 +64,8 @@ HSD_CONFIG = {
     ]
 }
 
-CACHE_TTL = int(os.getenv("CACHE_TTL",90))
+TX_CACHE_TTL = 3600
+DOMAIN_CACHE_TTL = int(os.getenv("CACHE_TTL",90))
 
 if not os.path.exists('hsdconfig.json'):
     with open('hsdconfig.json', 'w') as f:
@@ -77,8 +78,6 @@ else:
 
 hsd = api.hsd(HSD_API, HSD_IP, HSD_NODE_PORT)
 hsw = api.hsw(HSD_API, HSD_IP, HSD_WALLET_PORT)
-
-cacheTime = 3600
 
 # Verify the connection
 response = hsd.getInfo()
@@ -377,7 +376,7 @@ def getBalance(account: str):
         cursor = conn.cursor()
         
         now = int(time.time())
-        cache_cutoff = now - (CACHE_TTL * 86400)  # Cache TTL in days
+        cache_cutoff = now - (DOMAIN_CACHE_TTL * 86400)  # Cache TTL in days
         
         for domain in domains:
             domain_name = domain['name']
@@ -530,7 +529,7 @@ def getPageTXCache(account, page, size=100):
     row = cursor.fetchone()
     conn.close()
     
-    if row and row[1] > int(time.time()) - cacheTime:
+    if row and row[1] > int(time.time()) - TX_CACHE_TTL:
         return row[0]  # Return the cached txid
     return None
 

@@ -143,6 +143,25 @@ If you set INTERNAL_HSD=true in the .env file the wallet will start and manage i
 }
 ```
 
+Supported config options are:
+```yaml
+spv: true/false
+prefix: path to hsd data directory
+flags: list of additional flags to pass to hsd
+version: version of hsd to use (used when installing HSD from source)
+chainMigrate: <int> (for users migrating from older versions of HSD)
+walletMigrate: <int> (for users migrating from older versions of HSD)
+```
+
+## Support the Project
+
+If you find FireWallet useful and would like to support its continued development, please consider making a donation. Your contributions help maintain the project and develop new features.
+
+HNS donations can be sent to: `hs1qh7uzytf2ftwkd9dmjjs7az9qfver5m7dd7x4ej`
+Other donation options can be found at [my website](https://nathan.woodburn.au/donate)
+
+Thank you for your support!
+
 ## Warnings
 
 - This is a work in progress and is not guaranteed to work
