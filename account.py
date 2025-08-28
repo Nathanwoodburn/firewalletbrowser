@@ -774,7 +774,6 @@ def getDomain(domain: str):
                 "message": response['error']['message']
             }
         }
-
     return response['result']
 
 def isKnownDomain(domain: str) -> bool:
@@ -817,6 +816,17 @@ def renewDomain(account, domain):
 
 def getDNS(domain: str):
     # Get the DNS
+
+    if isSPV():
+        response = requests.get(f"https://hsd.hns.au/api/v1/nameresource/{domain}")
+        if response.status_code != 200:
+            return {
+                "error": f"Error fetching DNS records: {response.status_code}"
+            }
+        response = response.json()
+        return response.get('records', [])
+
+
     response = hsd.rpc_getNameResource(domain)
     if response['error'] is not None:
         return {
