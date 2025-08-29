@@ -32,7 +32,7 @@ def gunicornServer():
     gunicorn_app.run()
     
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     # Check if --gunicorn is in the command line arguments
     if "--gunicorn" in sys.argv:
         gunicornServer()

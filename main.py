@@ -56,10 +56,6 @@ def blocks_to_time(blocks: int) -> str:
         if hours == 0:
             return f"{days} days"
         return f"{days} days {hours} hrs"
-        
-    
-    
-
 
 @app.route('/')
 def index():
@@ -82,6 +78,8 @@ def index():
         return render_template("index.html", account=account, plugins=plugins)
     
     info = gitinfo.get_git_info()
+    if info is None:
+        return render_template("index.html", account=account, plugins=plugins)
     branch = info['refs']
     commit = info['commit']
     if commit != latestVersion(branch):
@@ -1150,16 +1148,20 @@ def settings():
     if success == None:
         success = ""
 
+
     if not os.path.exists(".git"):
         return render_template("settings.html", account=account,
-                               
                                hsd_version=account_module.hsdVersion(False),
-                               error=error,success=success,version="Error")
+                               error=error,success=success,version="Error",
+                               internal=account_module.HSD_INTERNAL_NODE,
+                               spv=account_module.isSPV())
     info = gitinfo.get_git_info()
     if not info:
         return render_template("settings.html", account=account,                               
                                hsd_version=account_module.hsdVersion(False),
-                               error=error,success=success,version="Error")
+                               error=error,success=success,version="Error",
+                               internal=account_module.HSD_INTERNAL_NODE,
+                               spv=account_module.isSPV())
 
     branch = info['refs']
     if branch != "main":
@@ -1174,7 +1176,8 @@ def settings():
         version += ' (New version available)'
     return render_template("settings.html", account=account,                           
                            hsd_version=account_module.hsdVersion(False),
-                           error=error,success=success,version=version)
+                           error=error,success=success,version=version,internal=account_module.HSD_INTERNAL_NODE,
+                           spv=account_module.isSPV())
 
 @app.route('/settings/<action>')
 def settings_action(action):
@@ -1191,19 +1194,21 @@ def settings_action(action):
         if 'error' in resp:
             return redirect("/settings?error=" + str(resp['error']))
         return redirect("/settings?success=Rescan started")
-    elif action == "resend":
+    
+    if action == "resend":
         resp = account_module.resendTXs()
         if 'error' in resp:
             return redirect("/settings?error=" + str(resp['error']))
         return redirect("/settings?success=Resent transactions")
 
 
-    elif action == "zap":
+    if action == "zap":
         resp = account_module.zapTXs(request.cookies.get("account"))
         if type(resp) == dict and 'error' in resp:
             return redirect("/settings?error=" + str(resp['error']))
         return redirect("/settings?success=Zapped transactions")
-    elif action == "xpub":
+    
+    if action == "xpub":
         xpub = account_module.getxPub(request.cookies.get("account"))
         content = "<br><br>"
         content += f"<textarea style='display: none;' id='data' rows='4' cols='50'>{xpub}</textarea>"
@@ -1213,6 +1218,12 @@ def settings_action(action):
         return render_template("message.html", account=account,
                                title="xPub Key",
                                content=f"<code>{xpub}</code>{content}")
+
+    if action == "restart":
+        resp = account_module.hsdRestart()
+        return render_template("message.html", account=account,
+                               title="Restarting",
+                               content="The node is restarting. This may take a minute or two. You can close this window.")
 
     return redirect("/settings?error=Invalid action")
 
@@ -1261,6 +1272,9 @@ def login():
     wallets = account_module.listWallets()
     wallets = render.wallets(wallets)
 
+    # If there are no wallets redirect to either register or import
+    if len(wallets) == 0:
+        return redirect("/welcome")
 
     if 'message' in request.args:
         return render_template("login.html", 

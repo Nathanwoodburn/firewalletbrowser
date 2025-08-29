@@ -7,20 +7,25 @@ import re
 import domainLookup
 import json
 import time
+import subprocess
+import atexit
+import signal
+import sys
+import threading
+import sqlite3
+from functools import wraps
+
 
 dotenv.load_dotenv()
 
 HSD_API = os.getenv("HSD_API","")
 HSD_IP = os.getenv("HSD_IP","localhost")
 
-HSD_NETWORK = os.getenv("HSD_NETWORK")
+HSD_NETWORK = os.getenv("HSD_NETWORK", "main")
 HSD_WALLET_PORT = 12039
 HSD_NODE_PORT = 12037
 
-if not HSD_NETWORK:
-    HSD_NETWORK = "main"
-else:
-    HSD_NETWORK = HSD_NETWORK.lower()
+HSD_NETWORK = HSD_NETWORK.lower()
 
 if HSD_NETWORK == "simnet":
     HSD_WALLET_PORT = 15039
@@ -32,15 +37,47 @@ elif HSD_NETWORK == "regtest":
     HSD_WALLET_PORT = 14039
     HSD_NODE_PORT = 14037
 
+HSD_INTERNAL_NODE = os.getenv("INTERNAL_HSD","false").lower() in ["1","true","yes"]
+if HSD_INTERNAL_NODE:
+    if HSD_API == "":
+        # Use a random API KEY
+        HSD_API = "firewallet-" + str(int(time.time()))
+    HSD_IP = "localhost"
 
 SHOW_EXPIRED = os.getenv("SHOW_EXPIRED")
 if SHOW_EXPIRED is None:
     SHOW_EXPIRED = False
 
+HSD_PROCESS = None
+SPV_MODE = None
+
+# Get hsdconfig.json
+HSD_CONFIG = {
+    "version": "v8.0.0",
+    "chainMigrate": 4,
+    "walletMigrate": 7,
+    "minNodeVersion": 20,
+    "minNpmVersion": 8,
+    "spv": False,
+    "flags": [
+        "--agent=FireWallet"
+    ]
+}
+
+TX_CACHE_TTL = 3600
+DOMAIN_CACHE_TTL = int(os.getenv("CACHE_TTL",90))
+
+if not os.path.exists('hsdconfig.json'):
+    with open('hsdconfig.json', 'w') as f:
+        f.write(json.dumps(HSD_CONFIG, indent=4))
+else:
+    with open('hsdconfig.json') as f:
+        hsdConfigTMP = json.load(f)
+        for key in hsdConfigTMP:
+            HSD_CONFIG[key] = hsdConfigTMP[key]
+
 hsd = api.hsd(HSD_API, HSD_IP, HSD_NODE_PORT)
 hsw = api.hsw(HSD_API, HSD_IP, HSD_WALLET_PORT)
-
-cacheTime = 3600
 
 # Verify the connection
 response = hsd.getInfo()
@@ -58,6 +95,13 @@ def hsdVersion(format=True):
     info = hsd.getInfo()
     if 'error' in info:
         return -1
+    
+    # Check if SPV mode is enabled
+    global SPV_MODE
+    if info.get('chain',{}).get('options',{}).get('spv',False):
+        SPV_MODE = True
+    else:
+        SPV_MODE = False
     if format:
         return float('.'.join(info['version'].split(".")[:2]))
     else:
@@ -184,6 +228,124 @@ def selectWallet(account: str):
                 "message": response['error']['message']
             }
         }
+    
+
+def init_domain_db():
+    """Initialize the SQLite database for domain cache."""
+    os.makedirs('cache', exist_ok=True)
+    db_path = os.path.join('cache', 'domains.db')
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Create the domains table if it doesn't exist
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS domains (
+        name TEXT PRIMARY KEY,
+        info TEXT,
+        last_updated INTEGER
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+
+def getCachedDomains():
+    """Get cached domain information from SQLite database."""
+    init_domain_db()  # Ensure DB exists
+    
+    db_path = os.path.join('cache', 'domains.db')
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row  # This allows accessing columns by name
+    cursor = conn.cursor()
+    
+    # Get all domains from the database
+    cursor.execute('SELECT name, info, last_updated FROM domains')
+    rows = cursor.fetchall()
+    
+    # Convert to dictionary format
+    domain_cache = {}
+    for row in rows:
+        try:
+            domain_cache[row['name']] = json.loads(row['info'])
+            domain_cache[row['name']]['last_updated'] = row['last_updated']
+        except json.JSONDecodeError:
+            print(f"Error parsing cached data for domain {row['name']}")
+    
+    conn.close()
+    return domain_cache
+
+
+ACTIVE_DOMAIN_UPDATES = set()  # Track domains being updated
+DOMAIN_UPDATE_LOCK = threading.Lock()  # For thread-safe access to ACTIVE_DOMAIN_UPDATES
+
+def update_domain_cache(domain_names: list):
+    """Fetch domain info and update the SQLite cache."""
+    if not domain_names:
+        return
+    
+    # Filter out domains that are already being updated
+    domains_to_update = []
+    with DOMAIN_UPDATE_LOCK:
+        for domain in domain_names:
+            if domain not in ACTIVE_DOMAIN_UPDATES:
+                ACTIVE_DOMAIN_UPDATES.add(domain)
+                domains_to_update.append(domain)
+    
+    if not domains_to_update:
+        # All requested domains are already being updated
+        return
+        
+    try:
+        # Initialize database
+        init_domain_db()
+        
+        db_path = os.path.join('cache', 'domains.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        for domain_name in domains_to_update:
+            try:
+                # Get domain info from node
+                domain_info = getDomain(domain_name)
+                
+                if 'error' in domain_info or not domain_info.get('info'):
+                    print(f"Failed to get info for domain {domain_name}: {domain_info.get('error', 'Unknown error')}", flush=True)
+                    continue
+                
+                # Update or insert into database
+                now = int(time.time())
+                serialized_info = json.dumps(domain_info)
+                
+                cursor.execute(
+                    'INSERT OR REPLACE INTO domains (name, info, last_updated) VALUES (?, ?, ?)',
+                    (domain_name, serialized_info, now)
+                )
+                
+                print(f"Updated cache for domain {domain_name}")
+            except Exception as e:
+                print(f"Error updating cache for domain {domain_name}: {str(e)}")
+            finally:
+                # Always remove from active set, even if there was an error
+                with DOMAIN_UPDATE_LOCK:
+                    if domain_name in ACTIVE_DOMAIN_UPDATES:
+                        ACTIVE_DOMAIN_UPDATES.remove(domain_name)
+        
+        # Commit all changes at once
+        conn.commit()
+        conn.close()
+        
+    except Exception as e:
+        print(f"Error updating domain cache: {str(e)}", flush=True)
+        # Make sure to clean up the active set on any exception
+        with DOMAIN_UPDATE_LOCK:
+            for domain in domains_to_update:
+                if domain in ACTIVE_DOMAIN_UPDATES:
+                    ACTIVE_DOMAIN_UPDATES.remove(domain)
+    
+    print("Updated cache for domains")
+
 
 def getBalance(account: str):
     # Get the total balance
@@ -201,9 +363,66 @@ def getBalance(account: str):
 
     domains = getDomains(account)
     domainValue = 0
-    for domain in domains:
-        if domain['state'] == "CLOSED":
-            domainValue += domain['value']
+    domains_to_update = []  # Track domains that need cache updates
+    
+    if isSPV():
+        # Initialize database if needed
+        init_domain_db()
+        
+        # Connect to the database directly for efficient querying
+        db_path = os.path.join('cache', 'domains.db')
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        now = int(time.time())
+        cache_cutoff = now - (DOMAIN_CACHE_TTL * 86400)  # Cache TTL in days
+        
+        for domain in domains:
+            domain_name = domain['name']
+            
+            # Check if domain is in cache and still fresh
+            cursor.execute(
+                'SELECT info, last_updated FROM domains WHERE name = ?', 
+                (domain_name,)
+            )
+            row = cursor.fetchone()
+            
+            # Only add domain for update if:
+            # 1. Not in cache or stale
+            # 2. Not currently being updated by another thread
+            with DOMAIN_UPDATE_LOCK:
+                if (not row or row['last_updated'] < cache_cutoff) and domain_name not in ACTIVE_DOMAIN_UPDATES:
+                    domains_to_update.append(domain_name)
+                    continue
+                
+            # Use the cached info
+            try:
+                if row:  # Make sure we have data
+                    domain_info = json.loads(row['info'])
+                    if domain_info.get('info', {}).get('state', "") == "CLOSED":
+                        domainValue += domain_info.get('info', {}).get('value', 0)
+            except json.JSONDecodeError:
+                # Only add for update if not already being updated
+                with DOMAIN_UPDATE_LOCK:
+                    if domain_name not in ACTIVE_DOMAIN_UPDATES:
+                        domains_to_update.append(domain_name)
+        
+        conn.close()
+    else:
+        for domain in domains:
+            if domain['state'] == "CLOSED":
+                domainValue += domain['value']
+    
+    # Start background thread to update cache for missing domains
+    if domains_to_update:
+        thread = threading.Thread(
+            target=update_domain_cache,
+            args=(domains_to_update,),
+            daemon=True
+        )
+        thread.start()
+        
     total = total - (domainValue/1000000)
     locked = locked - (domainValue/1000000)
 
@@ -268,40 +487,74 @@ def getDomains(account, own=True):
 
     return domains
 
+def init_tx_page_db():
+    """Initialize the SQLite database for transaction page cache."""
+    os.makedirs('cache', exist_ok=True)
+    db_path = os.path.join('cache', 'tx_pages.db')
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Create the tx_pages table if it doesn't exist
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS tx_pages (
+        account TEXT,
+        page_key TEXT,
+        txid TEXT,
+        timestamp INTEGER,
+        PRIMARY KEY (account, page_key)
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()
 
 def getPageTXCache(account, page, size=100):
-    page = f"{page}-{size}"
-    if not os.path.exists(f'cache'):
-        os.mkdir(f'cache')
-
-    if not os.path.exists(f'cache/{account}_page.json'):
-        with open(f'cache/{account}_page.json', 'w') as f:
-            f.write('{}')
-    with open(f'cache/{account}_page.json') as f:
-        pageCache = json.load(f)
-
-    if page in pageCache and pageCache[page]['time'] > int(time.time()) - cacheTime:
-        return pageCache[page]['txid']
+    """Get cached transaction ID from SQLite database."""
+    account = getxPub(account)
+    page_key = f"{page}-{size}"
+    
+    # Initialize database if needed
+    init_tx_page_db()
+    
+    db_path = os.path.join('cache', 'tx_pages.db')
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Query for the cached transaction ID
+    cursor.execute(
+        'SELECT txid, timestamp FROM tx_pages WHERE account = ? AND page_key = ?',
+        (account, page_key)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row and row[1] > int(time.time()) - TX_CACHE_TTL:
+        return row[0]  # Return the cached txid
     return None
 
-
 def pushPageTXCache(account, page, txid, size=100):
-    page = f"{page}-{size}"
-    if not os.path.exists(f'cache/{account}_page.json'):
-        with open(f'cache/{account}_page.json', 'w') as f:
-            f.write('{}')
-    with open(f'cache/{account}_page.json') as f:
-        pageCache = json.load(f)
-
-    pageCache[page] = {
-        'time': int(time.time()),
-        'txid': txid
-    }
-    with open(f'cache/{account}_page.json', 'w') as f:
-        json.dump(pageCache, f, indent=4)
-
-    return pageCache[page]['txid']
-
+    """Store transaction ID in SQLite database."""
+    account = getxPub(account)
+    page_key = f"{page}-{size}"
+    
+    # Initialize database if needed
+    init_tx_page_db()
+    
+    db_path = os.path.join('cache', 'tx_pages.db')
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Insert or replace the transaction ID
+    cursor.execute(
+        'INSERT OR REPLACE INTO tx_pages (account, page_key, txid, timestamp) VALUES (?, ?, ?, ?)',
+        (account, page_key, txid, int(time.time()))
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    return txid
 
 def getTXFromPage(account, page, size=100):
     if page == 1:
@@ -465,7 +718,12 @@ def send(account, address, amount):
 def isOwnDomain(account, name: str):
     # Get domain
     domain_info = getDomain(name)
-    owner = getAddressFromCoin(domain_info['info']['owner']['hash'],domain_info['info']['owner']['index'])
+    if 'info' not in domain_info or domain_info['info'] is None:
+        return False
+    if 'owner' not in domain_info['info']:
+        return False
+
+    owner = getAddressFromCoin(domain_info['info']['owner'].get("hash"),domain_info['info']['owner'].get("index"))
     # Select the account
     hsw.rpc_selectWallet(account)
     account = hsw.rpc_getAccount(owner)
@@ -497,6 +755,16 @@ def isOwnPrevout(account, prevout: dict):
     
 
 def getDomain(domain: str):
+    if isSPV():
+        response = requests.get(f"https://hsd.hns.au/api/v1/name/{domain}").json()
+        if 'error' in response:
+            return {
+                "error": {
+                    "message": response['error']
+                }
+            }
+        return response
+
     # Get the domain
     response = hsd.rpc_getNameInfo(domain)
     if response['error'] is not None:
@@ -507,11 +775,21 @@ def getDomain(domain: str):
         }
     return response['result']
 
+def isKnownDomain(domain: str) -> bool:
+    # Get the domain
+    response = hsd.rpc_getNameInfo(domain)
+    if response['error'] is not None:
+        return False
+    
+    if response['result'] is None or response['result'].get('info') is None:
+        return False
+    return True
+
 def getAddressFromCoin(coinhash: str, coinindex = 0):
     # Get the address from the hash
     response = requests.get(get_node_api_url(f"coin/{coinhash}/{coinindex}"))
     if response.status_code != 200:
-        print(f"Error getting address from coin: {response.text}")
+        print(f"Error getting address from coin")
         return "No Owner"
     data = response.json()
     if 'address' not in data:
@@ -537,6 +815,17 @@ def renewDomain(account, domain):
 
 def getDNS(domain: str):
     # Get the DNS
+
+    if isSPV():
+        response = requests.get(f"https://hsd.hns.au/api/v1/nameresource/{domain}")
+        if response.status_code != 200:
+            return {
+                "error": f"Error fetching DNS records: {response.status_code}"
+            }
+        response = response.json()
+        return response.get('records', [])
+
+
     response = hsd.rpc_getNameResource(domain)
     if response['error'] is not None:
         return {
@@ -724,7 +1013,9 @@ def getPendingRegisters(account):
             for bid in bids:
                 if bid['name'] == domain['name']:
                     if bid['value'] == domain['highest']:
-                        pending.append(bid)
+                        # Double check the domain is actually in the node                        
+                        if isKnownDomain(domain['name']):
+                            pending.append(bid)
     return pending
 
 
@@ -1321,7 +1612,9 @@ def zapTXs(account):
 
 
 def getxPub(account):
-    account_name = check_account(account)
+    account_name = account
+    if account.count(":") > 0:
+        account_name = check_account(account)
 
     if account_name == False:
         return {
@@ -1339,8 +1632,6 @@ def getxPub(account):
                 }
             }
         return response['accountKey']
-
-        return response
     except Exception as e:
         return {
             "error": {
@@ -1436,12 +1727,21 @@ def generateReport(account, format="{name},{expiry},{value},{maxBid}"):
 
 def convertHNS(value: int):
     return value/1000000
-    return value/1000000
 
+SPV_EXTERNAL_ROUTES = [
+    "name",
+    "coin",
+    "tx",
+    "block"
+]
 
 def get_node_api_url(path=''):
     """Construct a URL for the HSD node API."""
     base_url = f"http://x:{HSD_API}@{HSD_IP}:{HSD_NODE_PORT}"
+    if isSPV() and any(path.startswith(route) for route in SPV_EXTERNAL_ROUTES):
+        # If in SPV mode and the path is one of the external routes, use the external API
+        base_url = f"https://hsd.hns.au/api/v1"
+        
     if path:
         # Ensure path starts with a slash if it's not empty
         if not path.startswith('/'):
@@ -1458,3 +1758,207 @@ def get_wallet_api_url(path=''):
             path = f'/{path}'
         return f"{base_url}{path}"
     return base_url
+
+def isSPV() -> bool:
+    global SPV_MODE
+    if SPV_MODE is None:
+        info = hsd.getInfo()
+        if 'error' in info:
+            return False
+        
+        # Check if SPV mode is enabled        
+        if info.get('chain',{}).get('options',{}).get('spv',False):
+            SPV_MODE = True
+        else:
+            SPV_MODE = False
+    return SPV_MODE
+
+# region HSD Internal Node
+
+
+
+def checkPreRequisites() -> dict[str, bool]:
+    prerequisites = {
+        "node": False,
+        "npm": False,
+        "git": False,
+        "hsd": False
+    }
+
+    # Check if node is installed and get version
+    nodeSubprocess = subprocess.run(["node", "-v"], capture_output=True, text=True)
+    if nodeSubprocess.returncode == 0:
+        major_version = int(nodeSubprocess.stdout.strip().lstrip('v').split('.')[0])
+        if major_version >= HSD_CONFIG.get("minNodeVersion", 20):
+            prerequisites["node"] = True
+
+    # Check if npm is installed
+    npmSubprocess = subprocess.run(["npm", "-v"], capture_output=True, text=True)
+    if npmSubprocess.returncode == 0:
+        major_version = int(npmSubprocess.stdout.strip().split('.')[0])
+        if major_version >= HSD_CONFIG.get("minNPMVersion", 8):
+            prerequisites["npm"] = True
+
+    # Check if git is installed
+    gitSubprocess = subprocess.run(["git", "-v"], capture_output=True, text=True)
+    if gitSubprocess.returncode == 0:
+        prerequisites["git"] = True
+    
+    # Check if hsd is installed
+    if os.path.exists("./hsd/bin/hsd"):
+        prerequisites["hsd"] = True
+        
+    
+
+
+    return prerequisites
+
+
+
+def hsdInit():
+    if not HSD_INTERNAL_NODE:
+        return
+    prerequisites = checkPreRequisites()
+    
+    PREREQ_MESSAGES = {
+        "node": "Install Node.js from https://nodejs.org/en/download (Version >= {minNodeVersion})",
+        "npm": "Install npm (version >= {minNPMVersion}) - usually comes with Node.js",
+        "git": "Install Git from https://git-scm.com/downloads"}
+
+
+    # Check if all prerequisites are met (except hsd)
+    if not all(prerequisites[key] for key in prerequisites if key != "hsd"):
+        print("HSD Internal Node prerequisites not met:")
+        for key, value in prerequisites.items():
+            if not value:
+                print(f" - {key} is missing or does not meet the version requirement.")
+                exit(1)
+        return
+    
+    # Check if hsd is installed
+    if not prerequisites["hsd"]:
+        print("HSD not found, installing...")
+        # If hsd folder exists, remove it
+        if os.path.exists("hsd"):
+            os.rmdir("hsd")
+
+        # Clone hsd repo
+        gitClone = subprocess.run(["git", "clone", "--depth", "1", "--branch", HSD_CONFIG.get("version", "latest"), "https://github.com/handshake-org/hsd.git", "hsd"], capture_output=True, text=True)
+        if gitClone.returncode != 0:
+            print("Failed to clone hsd repository:")
+            print(gitClone.stderr)
+            exit(1)
+        print("Cloned hsd repository.")
+        # Install hsd dependencies
+        print("Installing hsd dependencies...")
+        npmInstall = subprocess.run(["npm", "install"], cwd="hsd", capture_output=True, text=True)
+        if npmInstall.returncode != 0:
+            print("Failed to install hsd dependencies:")
+            print(npmInstall.stderr)
+            exit(1)
+        print("Installed hsd dependencies.")       
+
+def hsdStart():
+    global HSD_PROCESS
+    global SPV_MODE
+    if not HSD_INTERNAL_NODE:
+        return
+
+    # Check if hsd was started in the last 30 seconds
+    if os.path.exists("hsd.lock"):
+        lock_time = os.path.getmtime("hsd.lock")
+        if time.time() - lock_time < 30:
+            print("HSD was started recently, skipping start.")
+            return
+        else:
+            os.remove("hsd.lock")
+    
+    print("Starting HSD...")
+    # Create a lock file
+    with open("hsd.lock", "w") as f:
+        f.write(str(time.time()))
+    
+    # Config lookups with defaults
+    chain_migrate = HSD_CONFIG.get("chainMigrate", False)
+    wallet_migrate = HSD_CONFIG.get("walletMigrate", False)
+    spv = HSD_CONFIG.get("spv", False)
+    prefix = HSD_CONFIG.get("prefix", os.path.join(os.getcwd(), "hsd-data"))
+
+
+    # Base command
+    cmd = [
+        "node",
+        "./hsd/bin/hsd",
+        f"--network={HSD_NETWORK}",
+        f"--prefix={prefix}",
+        f"--api-key={HSD_API}",
+        "--http-host=127.0.0.1",
+        "--log-console=false"
+    ]
+
+    # Conditionally add migration flags
+    if chain_migrate:
+        cmd.append(f"--chain-migrate={chain_migrate}")
+    if wallet_migrate:
+        cmd.append(f"--wallet-migrate={wallet_migrate}")
+    SPV_MODE = spv
+    if spv:
+        cmd.append("--spv")
+    
+    # Add flags
+    if len(HSD_CONFIG.get("flags",[])) > 0:
+        for flag in HSD_CONFIG.get("flags",[]):
+            cmd.append(flag)
+
+    # Launch process
+    HSD_PROCESS = subprocess.Popen(
+        cmd,
+        cwd=os.getcwd(),
+        text=True
+    )
+    
+    print(f"HSD started with PID {HSD_PROCESS.pid}")
+
+    atexit.register(hsdStop)
+
+    # Handle Ctrl+C
+    try:
+        signal.signal(signal.SIGINT, lambda s, f: (hsdStop(), sys.exit(0)))
+        signal.signal(signal.SIGTERM, lambda s, f: (hsdStop(), sys.exit(0)))
+    except:
+        pass
+
+
+def hsdStop():
+    global HSD_PROCESS
+
+    if HSD_PROCESS is None:
+        return
+    
+    print("Stopping HSD...")
+
+    # Send SIGINT (like Ctrl+C)
+    HSD_PROCESS.send_signal(signal.SIGINT)
+
+    try:
+        HSD_PROCESS.wait(timeout=10)  # wait for graceful exit
+        print("HSD shut down cleanly.")
+    except subprocess.TimeoutExpired:
+        print("HSD did not exit yet, is it alright???")
+    
+    # Clean up lock file
+    if os.path.exists("hsd.lock"):
+        os.remove("hsd.lock")
+
+    HSD_PROCESS = None
+
+def hsdRestart():
+    hsdStop()
+    time.sleep(2)
+    hsdStart()
+
+
+checkPreRequisites()
+hsdInit()
+hsdStart()
+# endregion

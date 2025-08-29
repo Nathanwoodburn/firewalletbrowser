@@ -124,8 +124,43 @@ SHOW_EXPIRED: Show expired domains (true/false)
 EXCLUDE: Comma separated list of wallets to exclude from the wallet list (default primary)
 EXPLORER_TX: URL for exploring transactions (default https://shakeshift.com/transaction/)
 HSD_NETWORK: Network to connect to (main, regtest, simnet)
+DISABLE_WALLETDNS: Disable Wallet DNS records when sending HNS to domains (true/false)
+INTERNAL_HSD: Use internal HSD node (true/false)
 ```
 
+
+
+# Internal HSD
+
+If you set INTERNAL_HSD=true in the .env file the wallet will start and manage its own HSD node. If you want to override the default HSD config create a file called hsdconfig.json in the same directory as main.py and change the values you want to override. For example to disable SPV and use an existing bob wallet sync (on linux) and set the agent to "SuperCoolDev" you could use the following:
+```json
+{
+    "spv": false,
+    "prefix":"~/.config/Bob/hsd_data",
+    "flags":[
+        "--agent=SuperCoolDev"
+    ]
+}
+```
+
+Supported config options are:
+```yaml
+spv: true/false
+prefix: path to hsd data directory
+flags: list of additional flags to pass to hsd
+version: version of hsd to use (used when installing HSD from source)
+chainMigrate: <int> (for users migrating from older versions of HSD)
+walletMigrate: <int> (for users migrating from older versions of HSD)
+```
+
+## Support the Project
+
+If you find FireWallet useful and would like to support its continued development, please consider making a donation. Your contributions help maintain the project and develop new features.
+
+HNS donations can be sent to: `hs1qh7uzytf2ftwkd9dmjjs7az9qfver5m7dd7x4ej`
+Other donation options can be found at [my website](https://nathan.woodburn.au/donate)
+
+Thank you for your support!
 
 ## Warnings
 

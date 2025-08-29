@@ -68,25 +68,31 @@
                     <h3 class="mb-1" style="text-align: center;color: rgb(0,255,0);">{{success}}</h3>
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">Node Settings</h4><small>HSD Version: v{{hsd_version}}</small>
-                            <h6 class="text-muted mb-2 card-subtitle">Settings that affect all wallets</h6>
-                            <ul class="list-group">
-                                <li class="list-group-item">
-                                    <div><a class="btn btn-primary stick-right" role="button" href="/settings/rescan">Rescan</a>
-                                        <h3>Rescan</h3><span>Rescan the blockchain for transactions</span>
-                                    </div>
-                                </li>
-                                <li class="list-group-item">
-                                    <div><a class="btn btn-primary stick-right" role="button" href="/settings/resend">Resend</a>
-                                        <h3>Resend&nbsp;unconfirmed transactions</h3><span>Resend any transactions that haven't been mined yet.</span>
-                                    </div>
-                                </li>
-                                <li class="list-group-item">
-                                    <div><a class="btn btn-primary stick-right" role="button" href="/settings/zap">Zap</a>
-                                        <h3>Delete unconfirmed transactions</h3><span>This will only remove pending tx from the wallet older than 20 minutes (~ 2 blocks)</span>
-                                    </div>
-                                </li>
-                            </ul>
+                            <h4 class="card-title">Node Settings</h4><small>HSD Version: v{{hsd_version}}&nbsp; Type: {% if internal %} Internal {% else %} Remote {% endif %} ({% if spv %}SPV{% else %}Full Node{% endif %})</small>
+                            <h6 class="text-muted mb-2 card-subtitle">Settings that affect all wallets</h6><ul class="list-group">
+    <li class="list-group-item">
+        <div><a class="btn btn-primary stick-right" role="button" href="/settings/rescan">Rescan</a>
+            <h3>Rescan</h3><span>Rescan the blockchain for transactions</span>
+        </div>
+    </li>
+    <li class="list-group-item">
+        <div><a class="btn btn-primary stick-right" role="button" href="/settings/resend">Resend</a>
+            <h3>Resend unconfirmed transactions</h3><span>Resend any transactions that haven&#39;t been mined yet.</span>
+        </div>
+    </li>
+    <li class="list-group-item">
+        <div><a class="btn btn-primary stick-right" role="button" href="/settings/zap">Zap</a>
+            <h3>Delete unconfirmed transactions</h3><span>This will only remove pending tx from the wallet older than 20 minutes (~ 2 blocks)</span>
+        </div>
+    </li>
+    {% if internal %}
+    <li class="list-group-item">
+        <div><a class="btn btn-primary stick-right" role="button" href="/settings/restart">Restart Node</a>
+            <h3>Restart Internal Node</h3><span>This will attempt to restart the HSD node</span>
+        </div>
+    </li>
+    {% endif %}
+</ul>
                         </div>
                     </div>
                 </div>
