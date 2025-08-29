@@ -34,7 +34,7 @@ jobs:
           fi
           
 
-          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG \ -t firewallet:$tag_num .
+          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG -t firewallet:$tag_num .
           docker tag firewallet:$tag_num git.woodburn.au/nathanwoodburn/firewallet:$tag_num
           docker push git.woodburn.au/nathanwoodburn/firewallet:$tag_num
           docker tag firewallet:$tag_num git.woodburn.au/nathanwoodburn/firewallet:$tag
@@ -69,7 +69,7 @@ jobs:
           fi
           
 
-          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG \ -t firewallet-hsd:$tag_num .
+          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG -t firewallet-hsd:$tag_num .
           docker tag firewallet-hsd:$tag_num git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag_num
           docker push git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag_num
           docker tag firewallet-hsd:$tag_num git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag
