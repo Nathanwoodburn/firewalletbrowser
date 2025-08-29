@@ -1,6 +1,6 @@
 services:
   firewallet:
-    image: firewallet-hsd:latest
+    image: git.woodburn.au/nathanwoodburn/firewallet-hsd:latest
     ports:
       - "5000:5000"
     volumes:
