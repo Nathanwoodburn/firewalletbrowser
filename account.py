@@ -1784,25 +1784,34 @@ def checkPreRequisites() -> dict[str, bool]:
         "git": False,
         "hsd": False
     }
+    
+    try:
+        # Check if node is installed and get version
+        nodeSubprocess = subprocess.run(["node", "-v"], capture_output=True, text=True)
+        if nodeSubprocess.returncode == 0:
+            major_version = int(nodeSubprocess.stdout.strip().lstrip('v').split('.')[0])
+            if major_version >= HSD_CONFIG.get("minNodeVersion", 20):
+                prerequisites["node"] = True
+    except FileNotFoundError:
+        pass
 
-    # Check if node is installed and get version
-    nodeSubprocess = subprocess.run(["node", "-v"], capture_output=True, text=True)
-    if nodeSubprocess.returncode == 0:
-        major_version = int(nodeSubprocess.stdout.strip().lstrip('v').split('.')[0])
-        if major_version >= HSD_CONFIG.get("minNodeVersion", 20):
-            prerequisites["node"] = True
+    try:
+        # Check if npm is installed
+        npmSubprocess = subprocess.run(["npm", "-v"], capture_output=True, text=True)
+        if npmSubprocess.returncode == 0:
+            major_version = int(npmSubprocess.stdout.strip().split('.')[0])
+            if major_version >= HSD_CONFIG.get("minNPMVersion", 8):
+                prerequisites["npm"] = True
+    except FileNotFoundError:
+        pass
 
-    # Check if npm is installed
-    npmSubprocess = subprocess.run(["npm", "-v"], capture_output=True, text=True)
-    if npmSubprocess.returncode == 0:
-        major_version = int(npmSubprocess.stdout.strip().split('.')[0])
-        if major_version >= HSD_CONFIG.get("minNPMVersion", 8):
-            prerequisites["npm"] = True
-
-    # Check if git is installed
-    gitSubprocess = subprocess.run(["git", "-v"], capture_output=True, text=True)
-    if gitSubprocess.returncode == 0:
-        prerequisites["git"] = True
+    try:
+        # Check if git is installed
+        gitSubprocess = subprocess.run(["git", "-v"], capture_output=True, text=True)
+        if gitSubprocess.returncode == 0:
+            prerequisites["git"] = True
+    except FileNotFoundError:
+        pass
     
     # Check if hsd is installed
     if os.path.exists("./hsd/bin/hsd"):
@@ -1832,7 +1841,7 @@ def hsdInit():
         for key, value in prerequisites.items():
             if not value:
                 print(f" - {key} is missing or does not meet the version requirement.")
-                exit(1)
+        exit(1)
         return
     
     # Check if hsd is installed
@@ -1958,7 +1967,6 @@ def hsdRestart():
     hsdStart()
 
 
-checkPreRequisites()
 hsdInit()
 hsdStart()
 # endregion
