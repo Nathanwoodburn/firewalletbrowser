@@ -4,11 +4,24 @@ on:
   push:
 
 jobs:
-  Build Image:
+  Build Images:
     runs-on: [ubuntu-latest, amd]
+    strategy:
+      matrix:
+        variant:
+          - target: default
+            tag_suffix: ""
+            dockerfile: "Dockerfile"
+          - target: hsd
+            tag_suffix: "-hsd"
+            dockerfile: "Dockerfile.hsd"
+
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
       - name: Setup Docker
         uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
@@ -16,7 +29,7 @@ jobs:
         with:
           registry: git.woodburn.au
           username: nathanwoodburn
-          password: ${{ secrets.DOCKERGIT_TOKEN }}
+          password: ${{ secrets.DOCKERGIT_TOKEN }}      
       - name: Build Docker image
         run : |          
           echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
@@ -32,41 +45,8 @@ jobs:
           fi
           
 
-          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG -t firewallet:$tag_num .
-          docker tag firewallet:$tag_num git.woodburn.au/nathanwoodburn/firewallet:$tag_num
-          docker push git.woodburn.au/nathanwoodburn/firewallet:$tag_num
-          docker tag firewallet:$tag_num git.woodburn.au/nathanwoodburn/firewallet:$tag
-          docker push git.woodburn.au/nathanwoodburn/firewallet:$tag
-  Build Image with HSD:
-    runs-on: [ubuntu-latest, amd]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Docker
-        uses: docker/setup-buildx-action@v3
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          registry: git.woodburn.au
-          username: nathanwoodburn
-          password: ${{ secrets.DOCKERGIT_TOKEN }}        
-      - name: Build Docker image
-        run : |          
-          echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          tag=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          tag=${tag//\//-}
-          tag_num=${GITHUB_RUN_NUMBER}
-          echo "tag_num=$tag_num"
-
-          if [[ "$tag" == "main" ]]; then
-            tag="latest"
-          else
-            tag_num="${tag}-${tag_num}"
-          fi
-          
-
-          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG -t firewallet-hsd:$tag_num .
-          docker tag firewallet-hsd:$tag_num git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag_num
-          docker push git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag_num
-          docker tag firewallet-hsd:$tag_num git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag
-          docker push git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag
+          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG --file ${{matrix.variant.dockerfile}} -t firewallet${{matrix.variant.tag_suffix}}:$tag_num .
+          docker tag firewallet${{matrix.variant.tag_suffix}}:$tag_num git.woodburn.au/nathanwoodburn/firewallet${{matrix.variant.tag_suffix}}:$tag_num
+          docker push git.woodburn.au/nathanwoodburn/firewallet${{matrix.variant.tag_suffix}}:$tag_num
+          docker tag firewallet${{matrix.variant.tag_suffix}}:$tag_num git.woodburn.au/nathanwoodburn/firewallet${{matrix.variant.tag_suffix}}:$tag
+          docker push git.woodburn.au/nathanwoodburn/firewallet${{matrix.variant.tag_suffix}}:$tag
