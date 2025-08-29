@@ -30,7 +30,7 @@ fees = 0.02
 revokeCheck = random.randint(100000,999999)
 
 
-THEME = os.getenv("THEME")
+THEME = os.getenv("THEME", "black")
 
 
 def blocks_to_time(blocks: int) -> str:

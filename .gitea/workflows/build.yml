@@ -34,8 +34,43 @@ jobs:
           fi
           
 
-          docker build -t firewallet:$tag_num .
+          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG \ -t firewallet:$tag_num .
           docker tag firewallet:$tag_num git.woodburn.au/nathanwoodburn/firewallet:$tag_num
           docker push git.woodburn.au/nathanwoodburn/firewallet:$tag_num
           docker tag firewallet:$tag_num git.woodburn.au/nathanwoodburn/firewallet:$tag
           docker push git.woodburn.au/nathanwoodburn/firewallet:$tag
+  Build Image with HSD:
+    runs-on: [ubuntu-latest, amd]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Docker
+        run : |
+          apt-get install ca-certificates curl gnupg
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          chmod a+r /etc/apt/keyrings/docker.gpg
+          echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+          apt-get update
+          apt-get install docker-ce-cli -y          
+      - name: Build Docker image
+        run : |          
+          echo "${{ secrets.DOCKERGIT_TOKEN }}" | docker login git.woodburn.au -u nathanwoodburn --password-stdin
+          echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          tag=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          tag=${tag//\//-}
+          tag_num=${GITHUB_RUN_NUMBER}
+          echo "tag_num=$tag_num"
+
+          if [[ "$tag" == "main" ]]; then
+            tag="latest"
+          else
+            tag_num="${tag}-${tag_num}"
+          fi
+          
+
+          docker build --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg VCS_REF=$GITEA_SHA --build-arg VERSION=$GITEA_TAG \ -t firewallet-hsd:$tag_num .
+          docker tag firewallet-hsd:$tag_num git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag_num
+          docker push git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag_num
+          docker tag firewallet-hsd:$tag_num git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag
+          docker push git.woodburn.au/nathanwoodburn/firewallet-hsd:$tag

@@ -1787,38 +1787,36 @@ def checkPreRequisites() -> dict[str, bool]:
     
     try:
         # Check if node is installed and get version
-        nodeSubprocess = subprocess.run(["node", "-v"], capture_output=True, text=True)
+        nodeSubprocess = subprocess.run(["node", "-v"], capture_output=True, text=True,timeout=2)
         if nodeSubprocess.returncode == 0:
             major_version = int(nodeSubprocess.stdout.strip().lstrip('v').split('.')[0])
             if major_version >= HSD_CONFIG.get("minNodeVersion", 20):
                 prerequisites["node"] = True
-    except FileNotFoundError:
+    except Exception:
         pass
-
+    
     try:
         # Check if npm is installed
-        npmSubprocess = subprocess.run(["npm", "-v"], capture_output=True, text=True)
+        npmSubprocess = subprocess.run(["npm", "-v"], capture_output=True, text=True,timeout=2)
         if npmSubprocess.returncode == 0:
             major_version = int(npmSubprocess.stdout.strip().split('.')[0])
             if major_version >= HSD_CONFIG.get("minNPMVersion", 8):
                 prerequisites["npm"] = True
-    except FileNotFoundError:
+    except Exception:
         pass
 
     try:
         # Check if git is installed
-        gitSubprocess = subprocess.run(["git", "-v"], capture_output=True, text=True)
+        gitSubprocess = subprocess.run(["git", "-v"], capture_output=True, text=True,timeout=2)
         if gitSubprocess.returncode == 0:
             prerequisites["git"] = True
-    except FileNotFoundError:
+    except Exception:
         pass
+
     
     # Check if hsd is installed
     if os.path.exists("./hsd/bin/hsd"):
         prerequisites["hsd"] = True
-        
-    
-
 
     return prerequisites
 
@@ -1827,11 +1825,23 @@ def checkPreRequisites() -> dict[str, bool]:
 def hsdInit():
     if not HSD_INTERNAL_NODE:
         return
-    prerequisites = checkPreRequisites()
     
+    # Don't check prerequisites if HSD is included in a docker container
+    if os.getenv("HSD_DOCKER_CONTAINER", "false").lower() == "true":
+        prerequisites = {
+            "node": True,
+            "npm": True,
+            "git": True,
+            "hsd": True
+        }
+    else:
+        prerequisites = checkPreRequisites()
+    
+    minNodeVersion = HSD_CONFIG.get("minNodeVersion", 20)
+    minNPMVersion = HSD_CONFIG.get("minNPMVersion", 8)
     PREREQ_MESSAGES = {
-        "node": "Install Node.js from https://nodejs.org/en/download (Version >= {minNodeVersion})",
-        "npm": "Install npm (version >= {minNPMVersion}) - usually comes with Node.js",
+        "node": f"Install Node.js from https://nodejs.org/en/download (Version >= {minNodeVersion})",
+        "npm": f"Install npm (version >= {minNPMVersion}) - usually comes with Node.js",
         "git": "Install Git from https://git-scm.com/downloads"}
 
 
@@ -1840,7 +1850,9 @@ def hsdInit():
         print("HSD Internal Node prerequisites not met:")
         for key, value in prerequisites.items():
             if not value:
-                print(f" - {key} is missing or does not meet the version requirement.")
+                print(f" - {key} is missing or does not meet the version requirement.",flush=True)
+                if key in PREREQ_MESSAGES:
+                    print(PREREQ_MESSAGES[key],flush=True)
         exit(1)
         return
     

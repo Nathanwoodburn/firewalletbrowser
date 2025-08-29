@@ -1,0 +1,58 @@
+# ---- HSD build stage ----
+FROM node:22-alpine AS hsd-build
+WORKDIR /opt/hsd
+RUN apk add --no-cache git bash unbound-dev gmp-dev g++ gcc make python3
+RUN git clone --depth=1 --branch v8.0.0 https://github.com/handshake-org/hsd.git .
+RUN npm install --omit=dev
+
+# ---- Final stage ----
+FROM python:3.13-alpine
+WORKDIR /app
+
+# Install runtime deps only
+RUN apk add --no-cache unbound-dev gmp
+
+
+# Copy node and npm from hsd-build stage
+COPY --from=hsd-build /usr/local/bin/node /usr/local/bin/node
+COPY --from=hsd-build /usr/local/lib/node_modules/npm /usr/local/lib/node
+COPY --from=hsd-build /usr/local/bin/npm /usr/local/bin/npm
+
+# Copy FireWallet dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy HSD from build stage
+COPY --from=hsd-build /opt/hsd /app/hsd
+
+# Copy FireWallet source
+COPY . .
+
+# Expose ports
+EXPOSE 5000
+# Optional HSD ports
+# EXPOSE 12037
+# EXPOSE 12039
+
+ENV INTERNAL_HSD=true
+ENV HSD_DOCKER_CONTAINER=true
+
+ARG BUILD_DATE
+ARG VCS_REF
+
+LABEL org.opencontainers.image.title="FireWallet (HSD)" \
+      org.opencontainers.image.description="The Handshake Wallet That is Fire" \
+      org.opencontainers.image.url="https://firewallet.au" \
+      org.opencontainers.image.source="https://git.woodburn.au/nathanwoodburn/firewalletbrowser" \
+      org.opencontainers.image.version="2.0.0" \
+      org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.revision=$VCS_REF \
+      org.opencontainers.image.licenses="AGPL-3.0-only"
+
+
+
+VOLUME ["/app/hsd-data", "/app/user_data"]
+
+
+ENTRYPOINT ["python3"]
+CMD ["server.py"]

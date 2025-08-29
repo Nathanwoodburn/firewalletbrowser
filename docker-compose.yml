@@ -1,0 +1,26 @@
+services:
+  hsd:
+    image: ghcr.io/handshake-org/hsd:8
+    volumes:
+      - hsd_data:/root/.hsd
+    environment:
+      - HSD_HTTP_HOST=0.0.0.0
+      - HSD_WALLET_HTTP_HOST=0.0.0.0
+      - HSD_LOG_LEVEL=error
+      - HSD_API_KEY=changeme
+    
+
+  firewallet:
+    image: git.woodburn.au/nathanwoodburn/firewallet:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - HSD_IP=hsd
+      - HSD_API=changeme
+    volumes:
+      - user_data:/app/user_data
+
+
+volumes:
+  hsd_data:
+  user_data:
