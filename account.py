@@ -1582,9 +1582,7 @@ def resendTXs():
         }
 
 
-def zapTXs(account):
-    age = 60 * 20  # 20 minutes
-
+def zapTXs(account, age=1200):
     account_name = check_account(account)
 
     if not account_name:

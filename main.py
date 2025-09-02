@@ -1200,7 +1200,15 @@ def settings_action(action):
 
 
     if action == "zap":
-        resp = account_module.zapTXs(request.cookies.get("account"))
+        age = request.args.get("age", 1200)
+        try:
+            age = int(age)
+        except ValueError:
+            age = 1200
+        if age < 0:
+            age = 1200
+        
+        resp = account_module.zapTXs(request.cookies.get("account"),age)
         if type(resp) is dict and 'error' in resp:
             return redirect("/settings?error=" + str(resp['error']))
         return redirect("/settings?success=Zapped transactions")
