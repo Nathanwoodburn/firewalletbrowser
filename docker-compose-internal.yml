@@ -4,10 +4,8 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - hsd_data:/app/hsd-data
+      - hsd_data:/app/hsd_data
       - user_data:/app/user_data
-    environment:
-      - INTERNAL_HSD=true
 
 volumes:
   hsd_data:

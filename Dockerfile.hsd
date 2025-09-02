@@ -50,7 +50,7 @@ LABEL org.opencontainers.image.title="FireWallet (HSD)" \
 
 
 
-VOLUME ["/app/hsd-data", "/app/user_data"]
+VOLUME ["/app/hsd_data", "/app/user_data"]
 
 
 ENTRYPOINT ["python3"]

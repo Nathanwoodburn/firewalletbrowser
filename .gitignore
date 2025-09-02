@@ -17,6 +17,6 @@ cache/
 build/
 dist/
 hsd/
-hsd-data/
+hsd_data/
 hsd.lock
 hsdconfig.json

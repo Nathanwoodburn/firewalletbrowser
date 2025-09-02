@@ -1900,7 +1900,7 @@ def hsdStart():
     chain_migrate = HSD_CONFIG.get("chainMigrate", False)
     wallet_migrate = HSD_CONFIG.get("walletMigrate", False)
     spv = HSD_CONFIG.get("spv", False)
-    prefix = HSD_CONFIG.get("prefix", os.path.join(os.getcwd(), "hsd-data"))
+    prefix = HSD_CONFIG.get("prefix", os.path.join(os.getcwd(), "hsd_data"))
 
 
     # Base command
@@ -1975,7 +1975,6 @@ def hsdRestart():
     hsdStop()
     time.sleep(2)
     hsdStart()
-
 
 hsdInit()
 hsdStart()
