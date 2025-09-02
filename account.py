@@ -13,7 +13,6 @@ import signal
 import sys
 import threading
 import sqlite3
-from functools import wraps
 
 
 dotenv.load_dotenv()
@@ -131,7 +130,7 @@ def check_password(cookie: str|None, password: str|None):
         password = ""
     
     account = check_account(cookie)
-    if account == False:
+    if not account:
         return False
 
     # Check if the password is valid
@@ -639,7 +638,7 @@ def check_address(address: str, allow_name: bool = True, return_address: bool = 
             return False
         return 'Invalid address'
 
-    if response['result']['isvalid'] == True:
+    if response['result']['isvalid']:
         if return_address:
             return address
         return 'Valid address'
@@ -789,7 +788,7 @@ def getAddressFromCoin(coinhash: str, coinindex = 0):
     # Get the address from the hash
     response = requests.get(get_node_api_url(f"coin/{coinhash}/{coinindex}"))
     if response.status_code != 200:
-        print(f"Error getting address from coin")
+        print("Error getting address from coin")
         return "No Owner"
     data = response.json()
     if 'address' not in data:
@@ -802,7 +801,7 @@ def renewDomain(account, domain):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -835,7 +834,7 @@ def getDNS(domain: str):
         return {
             "error": "No DNS records"
         }
-    if response['result'] == None:
+    if response['result'] is None:
         return []
 
     if 'records' not in response['result']:
@@ -847,7 +846,7 @@ def setDNS(account, domain, records):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -919,7 +918,7 @@ def getNodeSync():
 
 def getWalletStatus():
     response = hsw.rpc_getWalletInfo()
-    if 'error' in response and response['error'] != None:
+    if 'error' in response and response['error'] is not None:
         return "Error"
 
     # return response
@@ -968,7 +967,7 @@ def getPendingReveals(account):
                 if bid['name'] == domain['name']:
                     state_found = False
                     for reveal in reveals:
-                        if reveal['own'] == True:
+                        if reveal['own']:
                             if bid['value'] == reveal['value']:
                                 state_found = True
 
@@ -998,8 +997,8 @@ def getPendingRedeems(account, password):
                 pending.append(nameHash)
             else:
                 pending.append(name['result'])
-    except:
-        print("Failed to parse redeems")
+    except Exception as e:
+        print(f"Failed to parse redeems: {str(e)}")
 
     return pending
 
@@ -1009,7 +1008,7 @@ def getPendingRegisters(account):
     domains = getDomains(account, False)
     pending = []
     for domain in domains:
-        if domain['state'] == "CLOSED" and domain['registered'] == False:
+        if domain['state'] == "CLOSED" and not domain['registered']:
             for bid in bids:
                 if bid['name'] == domain['name']:
                     if bid['value'] == domain['highest']:
@@ -1027,9 +1026,9 @@ def getPendingFinalizes(account, password):
     pending = []
     try:
         for output in tx['outputs']:
-            if type(output) != dict:
+            if type(output) is not dict:
                 continue
-            if not 'covenant' in output:
+            if 'covenant' not in output:
                 continue
             if output['covenant'].get("type") != 10:
                 continue
@@ -1042,8 +1041,8 @@ def getPendingFinalizes(account, password):
                 pending.append(nameHash)
             else:
                 pending.append(name['result'])
-    except:
-        print("Failed to parse finalizes")
+    except Exception as e:
+        print(f"Failed to parse finalizes: {str(e)}")
     return pending
 
 
@@ -1066,7 +1065,7 @@ def revealAuction(account, domain):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1086,7 +1085,7 @@ def revealAll(account):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1120,7 +1119,7 @@ def redeemAll(account):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1152,9 +1151,8 @@ def redeemAll(account):
 
 def registerAll(account):
     account_name = check_account(account)
-    password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1177,9 +1175,8 @@ def registerAll(account):
 
 def finalizeAll(account):
     account_name = check_account(account)
-    password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1212,7 +1209,7 @@ def bid(account, domain, bid, blind):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1237,7 +1234,7 @@ def openAuction(account, domain):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1259,7 +1256,7 @@ def transfer(account, domain, address):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1281,7 +1278,7 @@ def finalize(account, domain):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1318,7 +1315,7 @@ def cancelTransfer(account, domain):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1355,7 +1352,7 @@ def revoke(account, domain):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1392,7 +1389,7 @@ def sendBatch(account, batch):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1441,7 +1438,7 @@ def createBatch(account, batch):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1590,7 +1587,7 @@ def zapTXs(account):
 
     account_name = check_account(account)
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1616,7 +1613,7 @@ def getxPub(account):
     if account.count(":") > 0:
         account_name = check_account(account)
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1644,7 +1641,7 @@ def signMessage(account, domain, message):
     account_name = check_account(account)
     password = ":".join(account.split(":")[1:])
 
-    if account_name == False:
+    if not account_name:
         return {
             "error": {
                 "message": "Invalid account"
@@ -1684,6 +1681,7 @@ def verifyMessageWithName(domain, signature, message):
             return response['result']
         return False
     except Exception as e:
+        print(f"Error verifying message with name: {str(e)}")
         return False
 
 
@@ -1694,6 +1692,7 @@ def verifyMessage(address, signature, message):
             return response['result']
         return False
     except Exception as e:
+        print(f"Error verifying message: {str(e)}")
         return False
 
 # endregion
@@ -1740,7 +1739,7 @@ def get_node_api_url(path=''):
     base_url = f"http://x:{HSD_API}@{HSD_IP}:{HSD_NODE_PORT}"
     if isSPV() and any(path.startswith(route) for route in SPV_EXTERNAL_ROUTES):
         # If in SPV mode and the path is one of the external routes, use the external API
-        base_url = f"https://hsd.hns.au/api/v1"
+        base_url = "https://hsd.hns.au/api/v1"
         
     if path:
         # Ensure path starts with a slash if it's not empty
@@ -1946,7 +1945,8 @@ def hsdStart():
     try:
         signal.signal(signal.SIGINT, lambda s, f: (hsdStop(), sys.exit(0)))
         signal.signal(signal.SIGTERM, lambda s, f: (hsdStop(), sys.exit(0)))
-    except:
+    except Exception as e:
+        print(f"Failed to set signal handlers: {str(e)}")
         pass
 
 

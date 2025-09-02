@@ -12,11 +12,9 @@ import re
 from flask_qrcode import QRcode
 import domainLookup
 import urllib.parse
-import importlib
 import plugin as plugins_module
 import gitinfo
 import datetime
-import functools
 import time
 
 dotenv.load_dotenv()
@@ -114,7 +112,7 @@ def transactions():
     page = request.args.get('page', 1)
     try:
         page = int(page)
-    except:
+    except ValueError:
         page = 1
 
     if page < 1:
@@ -196,7 +194,7 @@ def send():
     content = f"Are you sure you want to send {amount} HNS to {toAddress}<br><br>"
     content += f"This will cost {amount} HNS + mining fees and is not able to be undone."
 
-    cancel = f"/send"
+    cancel = "/send"
     confirm = f"/send/confirm?address={address}&amount={amount}"
 
 
@@ -211,7 +209,7 @@ def sendConfirmed():
     address = request.args.get("address")
     amount = float(request.args.get("amount","0"))
     response = account_module.send(request.cookies.get("account"),address,amount)
-    if 'error' in response and response['error'] != None:
+    if 'error' in response and response['error'] is not None:
         # If error is a dict get the message
         if isinstance(response['error'], dict):
             if 'message' in response['error']:
@@ -282,7 +280,7 @@ def auctions():
     
     # Sort
     sort = request.args.get("sort")
-    if sort == None:
+    if sort is None:
         sort = "time"
     sort = sort.lower()
     sort_price = ""
@@ -296,7 +294,7 @@ def auctions():
     reverse = False
 
     direction = request.args.get("direction")
-    if direction == None:
+    if direction is None:
         if sort == "time":
             direction = "⬆"
         else:
@@ -365,7 +363,7 @@ def revealAllBids():
         return redirect("/auctions?message=Failed to reveal bids")
 
     if 'error' in response:
-        if response['error'] != None:
+        if response['error'] is not None:
             if response['error']['message'] == "Nothing to do.":
                 return redirect("/auctions?message=No reveals pending")
             return redirect("/auctions?message=" + response['error']['message'])
@@ -388,7 +386,7 @@ def redeemAllBids():
         return redirect("/auctions?message=Failed to redeem bids")
 
     if 'error' in response:
-        if response['error'] != None:
+        if response['error'] is not None:
             if response['error']['message'] == "Nothing to do.":
                 return redirect("/auctions?message=No redeems pending")
             return redirect("/auctions?message=" + response['error']['message'])
@@ -410,7 +408,7 @@ def registerAllDomains():
         return redirect("/auctions?message=Failed to register domains")
 
     if 'error' in response:
-        if response['error'] != None:
+        if response['error'] is not None:
             if response['error']['message'] == "Nothing to do.":
                 return redirect("/auctions?message=No domains to register")
             return redirect("/auctions?message=" + response['error']['message'])
@@ -429,7 +427,7 @@ def finalizeAllBids():
 
     response = account_module.finalizeAll(request.cookies.get("account"))
     if 'error' in response:
-        if response['error'] != None:
+        if response['error'] is not None:
             if response['error']['message'] == "Nothing to do.":
                 return redirect("/dashboard?message=No domains to finalize")
             return redirect("/dashboard?message=" + response['error']['message'])
@@ -507,7 +505,6 @@ def search():
     domain_info = account_module.getDomain(search_term)
     owner = 'Unknown'
     dns = []
-    txs = []
 
     if domain_info:
         # Check if info and info.owner
@@ -560,10 +557,10 @@ def manage(domain: str):
     dns = render.dns(dns)
 
     errorMessage = request.args.get("error")
-    if errorMessage == None:
+    if errorMessage is None:
         errorMessage = ""
     address = request.args.get("address")
-    if address == None:
+    if address is None:
         address = ""
     
     finalize_time = ""
@@ -607,7 +604,7 @@ def finalize(domain: str):
     
     domain = domain.lower()
     response = account_module.finalize(request.cookies.get("account"),domain)
-    if response['error'] != None:
+    if response['error'] is not None:
         print(response)
         return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
@@ -626,7 +623,7 @@ def cancelTransfer(domain: str):
     domain = domain.lower()
     response = account_module.cancelTransfer(request.cookies.get("account"),domain)
     if 'error' in response:
-        if response['error'] != None:
+        if response['error'] is not None:
             print(response)
             return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
@@ -645,9 +642,9 @@ def revokeInit(domain: str):
     domain = domain.lower()
 
     content = f"Are you sure you want to revoke {domain}/?<br>"
-    content += f"This will return the domain to the auction pool and you will lose any funds spent on the domain.<br>"
-    content += f"This cannot be undone after the transaction is sent.<br><br>"
-    content += f"Please enter your password to confirm."
+    content += "This will return the domain to the auction pool and you will lose any funds spent on the domain.<br>"
+    content += "This cannot be undone after the transaction is sent.<br><br>"
+    content += "Please enter your password to confirm."
 
     cancel = f"/manage/{domain}"
     confirm = f"/manage/{domain}/revoke/confirm"
@@ -676,13 +673,13 @@ def revokeConfirm(domain: str):
         return redirect("/manage/" + domain + "?error=An error occurred. Please try again.")
 
     response = account_module.check_password(request.cookies.get("account"),password)
-    if response == False:
+    if not response:
         return redirect("/manage/" + domain + "?error=Invalid password")
 
 
     response = account_module.revoke(request.cookies.get("account"),domain)
     if 'error' in response:
-        if response['error'] != None:
+        if response['error'] is not None:
             print(response)
             return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
@@ -722,7 +719,7 @@ def editPage(domain: str):
        
 
     user_edits = request.args.get("dns")
-    if user_edits != None:
+    if user_edits is not None:
         dns = urllib.parse.unquote(user_edits)
     else:
         dns = account_module.getDNS(domain)
@@ -735,7 +732,7 @@ def editPage(domain: str):
     # Check if new records have been added
     dnsType = request.args.get("type")
     dnsValue = request.args.get("value")
-    if dnsType != None and dnsValue != None:
+    if dnsType is not None and dnsValue is not None:
         if dnsType != "DS":
             dns.append({"type": dnsType, "value": dnsValue})
         else:
@@ -749,7 +746,7 @@ def editPage(domain: str):
                 key_tag = int(ds[0])
                 algorithm = int(ds[1])
                 digest_type = int(ds[2])
-            except:
+            except ValueError:
                 raw_dns = str(dns).replace("'",'"')
                 return redirect("/manage/" + domain + "/edit?dns=" + urllib.parse.quote(str(raw_dns)) + "&error=Invalid DS record")
             
@@ -761,7 +758,7 @@ def editPage(domain: str):
     raw_dns = str(dns).replace("'",'"')
     dns = render.dns(dns,True)
     errorMessage = request.args.get("error")
-    if errorMessage == None:
+    if errorMessage is None:
         errorMessage = ""
 
     
@@ -820,7 +817,7 @@ def transfer(domain):
 
     action = f"Send {domain}/ to {request.form.get('address')}"
     content = f"Are you sure you want to send {domain}/ to {toAddress}<br><br>"
-    content += f"This requires sending a finalize transaction 2 days after the transfer is initiated."
+    content += "This requires sending a finalize transaction 2 days after the transfer is initiated."
 
     cancel = f"/manage/{domain}?address={address}"
     confirm = f"/manage/{domain}/transfer/confirm?address={address}"
@@ -847,9 +844,9 @@ def signMessage(domain):
 
     content = "Message to sign:<br><code>" + message + "</code><br><br>"
     signedMessage = account_module.signMessage(request.cookies.get("account"),domain,message)
-    if signedMessage["error"] != None:
+    if signedMessage["error"] is not None:
         return redirect("/manage/" + domain + "?error=" + signedMessage["error"])
-    content += f"Signature:<br><code>{signedMessage["result"]}</code><br><br>"
+    content += f"Signature:<br><code>{signedMessage['result']}</code><br><br>"
 
     data = {
         "domain": domain,
@@ -906,7 +903,7 @@ def auction(domain):
 
     domainInfo = account_module.getDomain(search_term)
     error = request.args.get("error")
-    if error == None:
+    if error is None:
         error = ""
     
     if 'error' in domainInfo:
@@ -916,9 +913,9 @@ def auction(domain):
                                error=error)
     
     if domainInfo['info'] is None:
-        if 'registered' in domainInfo and domainInfo['registered'] == False and 'expired' in domainInfo and domainInfo['expired'] == False:
+        if 'registered' in domainInfo and not domainInfo['registered'] and 'expired' in domainInfo and not domainInfo['expired']:
             # Needs to be registered
-                next_action = f'ERROR GETTING NEXT STATE'
+                next_action = 'ERROR GETTING NEXT STATE'
         else:
             next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
         return render_template("auction.html", account=account, 
@@ -965,7 +962,7 @@ def auction(domain):
         elif stats['blocksUntilReveal'] == 2:
             next += "<br>LAST CHANCE TO BID"
         elif stats['blocksUntilReveal'] == 3:
-            next += f"<br>Next block is last chance to bid"
+            next += "<br>Next block is last chance to bid"
         elif stats['blocksUntilReveal'] < 6:
             next += f"<br>Last chance to bid in {stats['blocksUntilReveal']-2} blocks"
 
@@ -997,7 +994,7 @@ def rescan_auction(domain):
     
     domain = domain.lower()
     
-    response = account_module.rescan_auction(account,domain)
+    account_module.rescan_auction(account,domain)
     return redirect("/auction/" + domain)
 
 @app.route('/auction/<domain>/bid')
@@ -1093,7 +1090,7 @@ def open_auction(domain):
     response = account_module.openAuction(request.cookies.get("account"),domain)
 
     if 'error' in response:
-        if response['error'] != None:
+        if response['error'] is not None:
             return redirect("/auction/" + domain + "?error=" + response['error']['message'])
 
     return redirect(f"/success?tx={response['hash']}")
@@ -1142,10 +1139,10 @@ def settings():
         return redirect("/logout")
     
     error = request.args.get("error")
-    if error == None:
+    if error is None:
         error = ""
     success = request.args.get("success")
-    if success == None:
+    if success is None:
         success = ""
 
 
@@ -1204,7 +1201,7 @@ def settings_action(action):
 
     if action == "zap":
         resp = account_module.zapTXs(request.cookies.get("account"))
-        if type(resp) == dict and 'error' in resp:
+        if type(resp) is dict and 'error' in resp:
             return redirect("/settings?error=" + str(resp['error']))
         return redirect("/settings?success=Zapped transactions")
     
@@ -1229,7 +1226,7 @@ def settings_action(action):
 
 @app.route('/settings/upload', methods=['POST'])
 def upload_image():
-    if not 'account' in request.cookies:
+    if 'account' not in request.cookies:
         return redirect("/login?message=Not logged in")
     
     account = request.cookies.get("account")
@@ -1253,7 +1250,7 @@ def upload_image():
     return redirect("/settings?error=An error occurred")
 
 def latestVersion(branch):
-    result = requests.get(f"https://git.woodburn.au/api/v1/repos/nathanwoodburn/firewalletbrowser/branches")
+    result = requests.get("https://git.woodburn.au/api/v1/repos/nathanwoodburn/firewalletbrowser/branches")
     if result.status_code != 200:
         return "Error"
     
@@ -1290,7 +1287,7 @@ def login_post():
     account = request.form.get("account")
     password = request.form.get("password")
 
-    if account == None or password == None:
+    if account is None or password is None:
         wallets = account_module.listWallets()
         wallets = render.wallets(wallets)
         return render_template("login.html",
@@ -1329,7 +1326,7 @@ def register():
     password = request.form.get("password")
     repeatPassword = request.form.get("password_repeat")
 
-    if account == None or password == None or repeatPassword == None:
+    if account is None or password is None or repeatPassword is None:
         return render_template("register.html",
                                error="Invalid account or password",
                                name=account,password=password,password_repeat=repeatPassword)
@@ -1376,7 +1373,7 @@ def import_wallet():
     repeatPassword = request.form.get("password_repeat")
     seed = request.form.get("seed")
 
-    if account == None or password == None or repeatPassword == None or seed == None:
+    if account is None or password is None or repeatPassword is None or seed is None:
         return render_template("import-wallet.html",
                                error="Invalid account, password or seed",
                                name=account,password=password,password_repeat=repeatPassword,
@@ -1475,12 +1472,12 @@ def plugin(ptype,plugin):
     functions = plugins_module.getPluginFunctions(plugin)
     functions = render.plugin_functions(functions,plugin)
 
-    if data['verified'] == False:
+    if not data['verified']:
         functions = "<div class='container-fluid'><div class='alert alert-warning' role='alert'>This plugin is not verified and is disabled for your protection. Please check the code before marking the plugin as verified <a href='/plugin/" + plugin + "/verify' class='btn btn-danger'>Verify</a></div></div>" + functions
 
     
     error = request.args.get("error")
-    if error == None:
+    if error is None:
         error = ""
 
     return render_template("plugin.html", account=account, 
@@ -1506,7 +1503,7 @@ def plugin_verify(ptype,plugin):
 
     data = plugins_module.getPluginData(plugin)
 
-    if data['verified'] == False:
+    if not data['verified']:
         plugins_module.verifyPlugin(plugin)
 
     return redirect("/plugin/" + plugin)
@@ -1593,7 +1590,7 @@ def api_hsd(function):
         if not domain:
             return jsonify({"error": "No domain specified"}), 400
         domainInfo = account_module.getDomain(domain)
-        if 'error' in domainInfo and domainInfo['error'] != None:
+        if 'error' in domainInfo and domainInfo['error'] is not None:
             return jsonify({"error": domainInfo['error']}), 400
         stats = domainInfo['info']['stats'] if 'stats' in domainInfo['info'] else {}
         state = domainInfo['info']['state']
@@ -1628,7 +1625,7 @@ def api_hsd(function):
             elif stats['blocksUntilReveal'] == 2:
                 next += "<br>LAST CHANCE TO BID"
             elif stats['blocksUntilReveal'] == 3:
-                next += f"<br>Next block is last chance to bid"
+                next += "<br>Next block is last chance to bid"
             elif stats['blocksUntilReveal'] < 6:
                 next += f"<br>Last chance to bid in {stats['blocksUntilReveal']-2} blocks"
 
@@ -1714,7 +1711,7 @@ def api_wallet(function):
 
     if function == "domains":
         domains = account_module.getDomains(account)
-        if type(domains) == dict and 'error' in domains:
+        if type(domains) is dict and 'error' in domains:
             return jsonify({"result": [], "error": domains['error']})
         
         # Add nameRender to each domain
@@ -1728,7 +1725,7 @@ def api_wallet(function):
         page = request.args.get('page', 1)
         try:
             page = int(page)
-        except:
+        except ValueError:
             page = 1
 
         if page < 1:
@@ -1783,9 +1780,9 @@ def api_wallet(function):
 
     if function == "icon":
         # Check if there is an icon
-        if not os.path.exists(f'user_data/images'):
+        if not os.path.exists('user_data/images'):
             return send_file('templates/assets/img/HNS.png')
-        files = os.listdir(f'user_data/images')
+        files = os.listdir('user_data/images')
         for file in files:
             if file.startswith(account):
                 return send_file(f'user_data/images/{file}')
@@ -1801,7 +1798,6 @@ def api_wallet_mobile(function):
         return jsonify({"error": "Not logged in"})
     
     account = account_module.check_account(request.cookies.get("account"))
-    password = request.cookies.get("account","").split(":")[1]
     if not account:
         return jsonify({"error": "Invalid account"})
     
@@ -1820,9 +1816,9 @@ def api_wallet_mobile(function):
     
 @app.route('/api/v1/icon/<account>')
 def api_icon(account):
-    if not os.path.exists(f'user_data/images'):
+    if not os.path.exists('user_data/images'):
         return send_file('templates/assets/img/HNS.png')
-    files = os.listdir(f'user_data/images')
+    files = os.listdir('user_data/images')
     for file in files:
         if file.startswith(account):
             return send_file(f'user_data/images/{file}')
@@ -1854,7 +1850,7 @@ def renderDomain(name: str) -> str:
         return f"{rendered}/ ({name})"
 
 
-    except Exception as e:
+    except Exception:
         return f"{name}/"
 
 #endregion
@@ -1906,3 +1902,9 @@ if __name__ == '__main__':
         app.run(debug=True)
     else:
         app.run()
+
+def tests():
+    assert blocks_to_time(6) == "1 hrs"
+    assert blocks_to_time(3) == "30 mins"
+    assert blocks_to_time(1) == "10 mins"
+    assert blocks_to_time(10) == "1 hrs 40 mins"

@@ -1,7 +1,5 @@
-import json
 import account
 import requests
-import os
 
 # Plugin Data
 info = {
@@ -90,7 +88,7 @@ def main(params, authentication):
                 return {"status": f"Failed: {batch['error']['message']}", "transaction": "None"}
         
         if 'result' in batch:
-            if batch['result'] != None:
+            if batch['result'] is not None:
                 tx = batch['result']['hash']
         return {"status": "Success", "transaction": tx}
         # Note only one batch can be sent at a time

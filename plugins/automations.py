@@ -1,4 +1,3 @@
-import json
 import account
 import requests
 import threading
@@ -127,7 +126,7 @@ def automations_background(authentication):
         account_name = account.check_account(authentication)
         password = ":".join(authentication.split(":")[1:])
 
-        if account_name == False:
+        if not account_name:
             return {
                 "error": {
                     "message": "Invalid account"

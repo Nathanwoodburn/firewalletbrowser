@@ -93,7 +93,7 @@ def status(params, authentication):
     response = requests.post(f"https://{instance}/api", json=data, headers=headers)
     if response.status_code != 200:
         return {"status": "Error connecting to Varo"}
-    if response.json()["success"] != True:
+    if not response.json()["success"]:
         return {"status": "Error connecting to Varo"}
     return {"status": f"Connected to {instance}"}
 
@@ -110,7 +110,7 @@ def login(params, authentication):
     if response.status_code != 200:
         return {"status": "Error connecting to Varo"}
     
-    if response.json()["success"] != True:
+    if not response.json()["success"]:
         return {"status": "Error connecting to Varo"}
     
     auth = {
@@ -146,7 +146,7 @@ def addDomain(params, authentication):
     zones = requests.post(f"https://{instance}/api", json=data, headers=headers)
     if zones.status_code != 200:
         return {"status": "Error connecting to Varo"}
-    if zones.json()["success"] != True:
+    if not zones.json()["success"]:
         return {"status": "Error connecting to Varo"}
     
     zones = zones.json()["data"]
@@ -169,7 +169,7 @@ def addDomain(params, authentication):
     response = requests.post(f"https://{instance}/api", json=data, headers=headers)
     if response.status_code != 200:
         return {"status": "Error connecting to Varo"}
-    if response.json()["success"] != True:
+    if not response.json()["success"]:
         return {"status": "Error connecting to Varo"}
     zoneID = response.json()["data"]["zone"]
     data = {
@@ -179,7 +179,7 @@ def addDomain(params, authentication):
     response = requests.post(f"https://{instance}/api", json=data, headers=headers)
     if response.status_code != 200:
         return {"status": "Error connecting to Varo"}
-    if response.json()["success"] != True:
+    if not response.json()["success"]:
         return {"status": "Error connecting to Varo"}
     zone = response.json()["data"]
     
