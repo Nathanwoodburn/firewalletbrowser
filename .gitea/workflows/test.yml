@@ -1,10 +1,10 @@
-name: Test Python Compatibility
-run-name: Test Python Compatibility
+name: Tests and Linting
+run-name: Python Compatibility and Linting tests
 on:
   push:
 
 jobs:
-  Python-Compatibility:
+  Tests-Linting:
     runs-on: [ubuntu-latest, amd]
     container: catthehacker/ubuntu:act-latest
     strategy:
@@ -29,7 +29,7 @@ jobs:
           fi
           pip install pytest ruff
           
-      - name: Run tests
+      - name: Test with pytest
         run: |
           echo "Testing with Python ${{ matrix.python-version }}"
           python -m pytest main.py
