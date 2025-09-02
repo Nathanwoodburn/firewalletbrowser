@@ -62,7 +62,8 @@ def listPlugins(update=False):
     try:
         with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
-    except:
+    except Exception as e:
+        print(f"Error loading plugin signatures: {e}")
         # Write a new signatures file
         with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
@@ -87,7 +88,8 @@ def verifyPlugin(plugin: str):
     try:
         with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
-    except:
+    except Exception as e:
+        print(f"Error loading plugin signatures: {e}")
         # Write a new signatures file
         with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
@@ -120,7 +122,8 @@ def getPluginData(pluginStr: str):
     try:
         with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
-    except:
+    except Exception as e:
+        print(f"Error loading plugin signatures: {e}")
         # Write a new signatures file
         with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)
@@ -171,7 +174,8 @@ def runPluginFunction(plugin: str, function: str, params: dict, authentication: 
     try:
         with open("user_data/plugin_signatures.json", "r") as f:
             signatures = json.load(f)
-    except:
+    except Exception as e:
+        print(f"Error loading plugin signatures: {e}")
         # Write a new signatures file
         with open("user_data/plugin_signatures.json", "w") as f:
             json.dump(signatures, f)

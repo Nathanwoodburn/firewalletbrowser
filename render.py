@@ -53,7 +53,7 @@ def domains(domains, mobile=False):
 
         link = f'/manage/{domain["name"]}'
         link_action = "Manage"
-        if domain['registered'] == False:
+        if not domain['registered']:
             link_action = "Register"
             link = f'/auction/{domain["name"]}/register'
 
@@ -251,7 +251,7 @@ def txs(data):
         amount = entry['amount']
         amount = amount / 1000000
 
-        if entry['blind'] == None:
+        if entry['blind'] is None:
             html_output += f"<td>{amount:,.2f} HNS</td>\n"
         else:
             blind = entry['blind']
@@ -496,7 +496,7 @@ def plugin_output_dash(outputs, returns):
     for returnOutput in returns:
         if returnOutput not in outputs:
             continue
-        if outputs[returnOutput] == None:
+        if outputs[returnOutput] is None:
             continue
         html += render_template('components/dashboard-plugin.html', name=returns[returnOutput]["name"], output=outputs[returnOutput])         
     return html
