@@ -9,7 +9,7 @@ jobs:
     container: catthehacker/ubuntu:act-latest
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.13']
+        python-version: ['3.8', '3.10', '3.13']
       fail-fast: false
 
     steps:

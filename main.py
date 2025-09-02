@@ -849,7 +849,7 @@ def signMessage(domain):
     signedMessage = account_module.signMessage(request.cookies.get("account"),domain,message)
     if signedMessage["error"] != None:
         return redirect("/manage/" + domain + "?error=" + signedMessage["error"])
-    content += f"Signature:<br><code>{signedMessage["result"]}</code><br><br>"
+    content += f"Signature:<br><code>{signedMessage['result']}</code><br><br>"
 
     data = {
         "domain": domain,

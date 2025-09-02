@@ -13,7 +13,6 @@ import signal
 import sys
 import threading
 import sqlite3
-from functools import wraps
 
 
 dotenv.load_dotenv()
