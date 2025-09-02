@@ -1221,6 +1221,18 @@ def settings_action(action):
         return render_template("message.html", account=account,
                                title="Restarting",
                                content="The node is restarting. This may take a minute or two. You can close this window.")
+    
+    if action == "api-info":
+        content = f"API URL: <code>http://{account_module.HSD_IP}:{account_module.HSD_NODE_PORT}</code><br>"
+        content += f"Wallet URL: <code>http://{account_module.HSD_IP}:{account_module.HSD_WALLET_PORT}</code><br>"
+        content += f"API Key: <code>{account_module.HSD_API}</code><br><br>"
+
+        
+
+        return render_template("message.html", account=account,
+                               title="API Information",
+                               content=content)
+
 
     return redirect("/settings?error=Invalid action")
 
