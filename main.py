@@ -1906,3 +1906,9 @@ if __name__ == '__main__':
         app.run(debug=True)
     else:
         app.run()
+
+def tests():
+    assert blocks_to_time(6) == "1 hrs"
+    assert blocks_to_time(3) == "30 mins"
+    assert blocks_to_time(1) == "10 mins"
+    assert blocks_to_time(10) == "1 hrs 40 mins"

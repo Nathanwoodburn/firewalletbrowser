@@ -33,9 +33,3 @@ jobs:
         run: |
           echo "Testing with Python ${{ matrix.python-version }}"
           python -m pytest main.py
-          
-      - name: Check compatibility
-        run: |
-          # Add any additional compatibility checks if needed
-          python --version
-          python -c "import sys; print(f'Python {sys.version_info.major}.{sys.version_info.minor} compatibility test passed')"
