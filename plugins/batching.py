@@ -382,7 +382,7 @@ def bid(params, authentication):
         bid = float(params["bid"])
         blind = float(params["blind"])
         blind+=bid
-    except:
+    except ValueError:
         return {
             "status":"Invalid bid amount",
             "transaction":None
