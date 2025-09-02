@@ -2,9 +2,7 @@ import datetime
 import json
 import urllib.parse
 from flask import render_template
-from domainLookup import punycode_to_emoji
 import os
-from handywrapper import api
 import threading
 import requests
 
@@ -182,7 +180,7 @@ def transactions(txs):
         elif amount > 0:
             amount = f"<span style='color: green;'>+{amount:,.2f}</span>"
         else:
-            amount = f"<span style='color: gray;'>0.00</span>"
+            amount = "<span style='color: gray;'>0.00</span>"
 
 
         # hash = f"<a target='_blank' href='{TX_EXPLORER_URL}{hash}'>{hash[:8]}...</a>"
@@ -261,7 +259,7 @@ def txs(data):
             html_output += f"<td>{amount:,.2f} + {blind:,.2f} HNS</td>\n"
 
         html_output += f"<td>{timestamp_to_readable_time(entry['time'])}</td>\n"
-        html_output += f"</tr>\n"
+        html_output += "</tr>\n"
 
     return html_output
 
@@ -316,13 +314,13 @@ def bids(bids,reveals):
             html += f"<td>{value:,.2f} HNS</td>"
             html += f"<td>{bidValue:,.2f} HNS</td>"
         else:
-            html += f"<td>Hidden until reveal</td>"
-            html += f"<td>Hidden until reveal</td>"
+            html += "<td>Hidden until reveal</td>"
+            html += "<td>Hidden until reveal</td>"
             
         if bid['own']:
             html += "<td>You</td>"
         else:
-            html += f"<td>Unknown</td>"
+            html += "<td>Unknown</td>"
 
         html += f"<td><a class='text-decoration-none' style='color: var(--bs-table-color-state, var(--bs-table-color-type, var(--bs-table-color)));' target='_blank' href='{TX_EXPLORER_URL}{bid['prevout']['hash']}'>Bid TX 🔗</a></td>"
         html += "</tr>"
@@ -410,22 +408,22 @@ def plugin_functions(functions, pluginName):
             functionType = functions[function]["type"]
 
 
-        html += f'<div class="card" style="margin-top: 50px;">'
-        html += f'<div class="card-body">'
+        html += '<div class="card" style="margin-top: 50px;">'
+        html += '<div class="card-body">'
         html += f'<h4 class="card-title">{name}</h4>'
         html += f'<h6 class="text-muted card-subtitle mb-2">{description}</h6>'
         html += f'<h6 class="text-muted card-subtitle mb-2">Function type: {functionType.capitalize()}</h6>'
 
         if functionType != "default":
             html += f'<p class="card-text">Returns: {returns}</p>'
-            html += f'</div>'
-            html += f'</div>'
+            html += '</div>'
+            html += '</div>'
             continue
 
         # Form
         html += f'<form method="post" style="padding: 20px;" action="/plugin/{pluginName}/{function}">'
         for param in params:
-            html += f'<div style="margin-bottom: 20px;">'
+            html += '<div style="margin-bottom: 20px;">'
             paramName = params[param]["name"]
             paramType = params[param]["type"]
             if paramType == "text":
@@ -449,14 +447,14 @@ def plugin_functions(functions, pluginName):
 
                 
             
-            html += f'</div>'
+            html += '</div>'
         
-        html += f'<button type="submit" class="btn btn-primary">Submit</button>'        
-        html += f'</form>'
+        html += '<button type="submit" class="btn btn-primary">Submit</button>'        
+        html += '</form>'
         # For debugging
         html += f'<p class="card-text">Returns: {returns}</p>'
-        html += f'</div>'
-        html += f'</div>'
+        html += '</div>'
+        html += '</div>'
         
         
     return html
@@ -468,16 +466,16 @@ def plugin_output(outputs, returns):
     for returnOutput in returns:
         if returnOutput not in outputs:
             continue
-        html += f'<div class="card" style="margin-top: 50px; margin-bottom: 50px;">'
-        html += f'<div class="card-body">'
+        html += '<div class="card" style="margin-top: 50px; margin-bottom: 50px;">'
+        html += '<div class="card-body">'
         html += f'<h4 class="card-title">{returns[returnOutput]["name"]}</h4>'
         
         output = outputs[returnOutput]
         if returns[returnOutput]["type"] == "list":
-            html += f'<ul>'
+            html += '<ul>'
             for item in output:
                 html += f'<li>{item}</li>'
-            html += f'</ul>'
+            html += '</ul>'
         elif returns[returnOutput]["type"] == "text":
             html += f'<p>{output}</p>'
         elif returns[returnOutput]["type"] == "tx":
@@ -487,8 +485,8 @@ def plugin_output(outputs, returns):
             html += render_template('components/dns-output.html', dns=dns(output))
 
 
-        html += f'</div>'
-        html += f'</div>'        
+        html += '</div>'
+        html += '</div>'        
     return html
 
 def plugin_output_dash(outputs, returns):
@@ -517,7 +515,7 @@ def renderDomain(name: str) -> str:
         return f"{rendered}/ ({name})"
 
 
-    except Exception as e:
+    except Exception:
         return f"{name}/"
 
 def renderDomainAsync(namehash: str) -> None:

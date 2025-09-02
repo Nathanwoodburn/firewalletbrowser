@@ -12,11 +12,9 @@ import re
 from flask_qrcode import QRcode
 import domainLookup
 import urllib.parse
-import importlib
 import plugin as plugins_module
 import gitinfo
 import datetime
-import functools
 import time
 
 dotenv.load_dotenv()
@@ -196,7 +194,7 @@ def send():
     content = f"Are you sure you want to send {amount} HNS to {toAddress}<br><br>"
     content += f"This will cost {amount} HNS + mining fees and is not able to be undone."
 
-    cancel = f"/send"
+    cancel = "/send"
     confirm = f"/send/confirm?address={address}&amount={amount}"
 
 
@@ -645,9 +643,9 @@ def revokeInit(domain: str):
     domain = domain.lower()
 
     content = f"Are you sure you want to revoke {domain}/?<br>"
-    content += f"This will return the domain to the auction pool and you will lose any funds spent on the domain.<br>"
-    content += f"This cannot be undone after the transaction is sent.<br><br>"
-    content += f"Please enter your password to confirm."
+    content += "This will return the domain to the auction pool and you will lose any funds spent on the domain.<br>"
+    content += "This cannot be undone after the transaction is sent.<br><br>"
+    content += "Please enter your password to confirm."
 
     cancel = f"/manage/{domain}"
     confirm = f"/manage/{domain}/revoke/confirm"
@@ -820,7 +818,7 @@ def transfer(domain):
 
     action = f"Send {domain}/ to {request.form.get('address')}"
     content = f"Are you sure you want to send {domain}/ to {toAddress}<br><br>"
-    content += f"This requires sending a finalize transaction 2 days after the transfer is initiated."
+    content += "This requires sending a finalize transaction 2 days after the transfer is initiated."
 
     cancel = f"/manage/{domain}?address={address}"
     confirm = f"/manage/{domain}/transfer/confirm?address={address}"
@@ -918,7 +916,7 @@ def auction(domain):
     if domainInfo['info'] is None:
         if 'registered' in domainInfo and domainInfo['registered'] == False and 'expired' in domainInfo and domainInfo['expired'] == False:
             # Needs to be registered
-                next_action = f'ERROR GETTING NEXT STATE'
+                next_action = 'ERROR GETTING NEXT STATE'
         else:
             next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
         return render_template("auction.html", account=account, 
@@ -965,7 +963,7 @@ def auction(domain):
         elif stats['blocksUntilReveal'] == 2:
             next += "<br>LAST CHANCE TO BID"
         elif stats['blocksUntilReveal'] == 3:
-            next += f"<br>Next block is last chance to bid"
+            next += "<br>Next block is last chance to bid"
         elif stats['blocksUntilReveal'] < 6:
             next += f"<br>Last chance to bid in {stats['blocksUntilReveal']-2} blocks"
 
@@ -1229,7 +1227,7 @@ def settings_action(action):
 
 @app.route('/settings/upload', methods=['POST'])
 def upload_image():
-    if not 'account' in request.cookies:
+    if 'account' not in request.cookies:
         return redirect("/login?message=Not logged in")
     
     account = request.cookies.get("account")
@@ -1253,7 +1251,7 @@ def upload_image():
     return redirect("/settings?error=An error occurred")
 
 def latestVersion(branch):
-    result = requests.get(f"https://git.woodburn.au/api/v1/repos/nathanwoodburn/firewalletbrowser/branches")
+    result = requests.get("https://git.woodburn.au/api/v1/repos/nathanwoodburn/firewalletbrowser/branches")
     if result.status_code != 200:
         return "Error"
     
@@ -1628,7 +1626,7 @@ def api_hsd(function):
             elif stats['blocksUntilReveal'] == 2:
                 next += "<br>LAST CHANCE TO BID"
             elif stats['blocksUntilReveal'] == 3:
-                next += f"<br>Next block is last chance to bid"
+                next += "<br>Next block is last chance to bid"
             elif stats['blocksUntilReveal'] < 6:
                 next += f"<br>Last chance to bid in {stats['blocksUntilReveal']-2} blocks"
 
@@ -1783,9 +1781,9 @@ def api_wallet(function):
 
     if function == "icon":
         # Check if there is an icon
-        if not os.path.exists(f'user_data/images'):
+        if not os.path.exists('user_data/images'):
             return send_file('templates/assets/img/HNS.png')
-        files = os.listdir(f'user_data/images')
+        files = os.listdir('user_data/images')
         for file in files:
             if file.startswith(account):
                 return send_file(f'user_data/images/{file}')
@@ -1820,9 +1818,9 @@ def api_wallet_mobile(function):
     
 @app.route('/api/v1/icon/<account>')
 def api_icon(account):
-    if not os.path.exists(f'user_data/images'):
+    if not os.path.exists('user_data/images'):
         return send_file('templates/assets/img/HNS.png')
-    files = os.listdir(f'user_data/images')
+    files = os.listdir('user_data/images')
     for file in files:
         if file.startswith(account):
             return send_file(f'user_data/images/{file}')
@@ -1854,7 +1852,7 @@ def renderDomain(name: str) -> str:
         return f"{rendered}/ ({name})"
 
 
-    except Exception as e:
+    except Exception:
         return f"{name}/"
 
 #endregion

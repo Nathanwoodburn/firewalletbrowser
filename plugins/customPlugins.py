@@ -1,6 +1,4 @@
 import json
-import account
-import requests
 import os
 
 # Plugin Data

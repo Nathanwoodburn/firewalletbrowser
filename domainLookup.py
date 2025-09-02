@@ -11,7 +11,6 @@ import dns.query
 import dns.rdatatype
 import httpx
 from requests_doh import DNSOverHTTPSSession, add_dns_provider
-import requests
 import urllib3
 from cryptography.x509.oid import ExtensionOID
 
@@ -172,11 +171,11 @@ def resolve_TLSA_with_doh(query_name, doh_url="https://hnsdoh.com/dns-query"):
 def emoji_to_punycode(emoji):
     try:
         return emoji.encode("idna").decode("ascii")
-    except Exception as e:
+    except Exception:
         return emoji
     
 def punycode_to_emoji(punycode):
     try:
         return punycode.encode("ascii").decode("idna")
-    except Exception as e:
+    except Exception:
         return punycode

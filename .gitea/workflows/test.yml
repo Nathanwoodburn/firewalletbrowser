@@ -9,14 +9,14 @@ jobs:
     container: catthehacker/ubuntu:act-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.10', '3.13']
+        python-version: ['3.10', '3.11', '3.13']
       fail-fast: false
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
@@ -27,9 +27,14 @@ jobs:
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
-          pip install pytest
+          pip install pytest ruff
           
       - name: Run tests
         run: |
           echo "Testing with Python ${{ matrix.python-version }}"
           python -m pytest main.py
+      
+      - name: Lint with ruff
+        run: |
+          echo "Linting with Python ${{ matrix.python-version }}"
+          ruff check
