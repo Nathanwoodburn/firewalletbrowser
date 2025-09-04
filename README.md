@@ -17,6 +17,12 @@ For a quick and easy installation on ubuntu/debian you can run the install.sh sc
 ```bash
 curl https://git.woodburn.au/nathanwoodburn/firewalletbrowser/raw/branch/main/install.sh | bash
 ```
+This will install all dependencies (including Node/NPM for an internal HSD node), create a python virtual environment and install the required python packages.  
+After the script has run you can start the wallet with
+```bash
+./start.sh
+```
+
 
 ## Usage
 
