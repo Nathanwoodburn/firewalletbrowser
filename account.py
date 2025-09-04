@@ -1804,7 +1804,7 @@ def checkPreRequisites() -> dict[str, bool]:
 
     try:
         # Check if git is installed
-        gitSubprocess = subprocess.run(["git", "-v"], capture_output=True, text=True,timeout=2)
+        gitSubprocess = subprocess.run(["git", "--version"], capture_output=True, text=True,timeout=2)
         if gitSubprocess.returncode == 0:
             prerequisites["git"] = True
     except Exception:
