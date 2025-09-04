@@ -15,7 +15,7 @@ If you have HSD runnning on a separate computer also add the IP here
 
 For a quick and easy installation on ubuntu/debian you can run the install.sh script
 ```bash
-curl https://git.woodburn.au/nathanwoodburn/firewalletbrowser/src/branch/main/install.sh | bash
+curl https://git.woodburn.au/nathanwoodburn/firewalletbrowser/raw/branch/main/install.sh | bash
 ```
 
 ## Usage
