@@ -2,9 +2,15 @@
 
 install_command=""
 
+# Check if currently in the FireWalletBrowser directory
+if [ -f "server.py" ]; then
+    echo "Please run this script from outside the FireWalletBrowser directory."
+    exit 1
+fi
+
+echo "Starting installation of FireWalletBrowser..."
 
 # Check if OS is using apt package manager (Debian/Ubuntu)
-
 if command -v apt-get &> /dev/null; then
     install_command="sudo apt-get install -y"
     dependencies=(git curl wget python3 python3-pip python3-venv)

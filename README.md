@@ -13,6 +13,11 @@ cp example.env .env
 Edit .env to have your HSD api key.
 If you have HSD runnning on a separate computer also add the IP here
 
+For a quick and easy installation on ubuntu/debian you can run the install.sh script
+```bash
+curl https://git.woodburn.au/nathanwoodburn/firewalletbrowser/src/branch/main/install.sh | bash
+```
+
 ## Usage
 
 Make sure HSD is running then run the following commands:
