@@ -1,6 +1,7 @@
 import io
 import json
 import random
+import sqlite3
 import sys
 from flask import Flask, make_response, redirect, request, jsonify, render_template, send_from_directory,send_file
 import os
@@ -82,10 +83,17 @@ def index():
     commit = info['commit']
     if commit != latestVersion(branch):
         print("New version available",flush=True)
-        plugins += render_template('components/dashboard-alert.html', name='Update', output='A new version of FireWallet is available') 
+        plugins += render_template('components/dashboard-alert.html', name='Update', output='A new version of FireWallet is available')
+
+    alerts = get_alerts(account)
+    for alert in alerts:
+        output_html = alert['output']
+        # Add a dismiss button
+        output_html += f"&nbsp<a href='/dismiss/{alert['id']}' class='btn btn-secondary btn-sm' style='margin:none;'>Dismiss</a>"
+        plugins += render_template('components/dashboard-alert.html', name=alert['name'], output=output_html)
 
     return render_template("index.html", account=account, plugins=plugins)
- 
+
 def reverseDirection(direction: str):
     if direction == "⬆":
         return "⬇"
@@ -1430,7 +1438,7 @@ def import_wallet():
                                name=account,password=password,password_repeat=repeatPassword,
                                seed=seed)
     
-    
+    add_alert("Rescan needed", "Please rescan the wallet after importing to see all transactions", account)
     # Set the cookie
     response = make_response(redirect("/"))
     response.set_cookie("account", account+":"+password)
@@ -1872,6 +1880,108 @@ def renderDomain(name: str) -> str:
 
     except Exception:
         return f"{name}/"
+
+def get_alerts(account:str) -> list:
+    """
+    Get alerts to show on the dashboard.
+    """
+    
+    alerts = []
+
+    # Check if the node is connected
+    if not account_module.hsdConnected():
+        alerts.append({
+            "name": "Node",
+            "output": "HSD node is not connected. Please check your settings."
+        })
+        return alerts
+
+    # Check if the wallet is synced
+    wallet_status = account_module.getWalletStatus()
+    if wallet_status != "Ready":
+        alerts.append({
+            "name": "Wallet",
+            "output": f"The wallet is not synced ({wallet_status}). Please wait for it to sync."
+        })
+    print(account)
+    # Try to read from notifications sqlite database
+    if os.path.exists("user_data/notifications.db"):
+        try:
+            conn = sqlite3.connect("user_data/notifications.db")
+            c = conn.cursor()
+            c.execute("SELECT id, name, message FROM notifications WHERE read=0 AND (account=? OR account='all')", (account,))
+            rows = c.fetchall()
+            for row in rows:
+                alerts.append({
+                    "id": row[0],
+                    "name": row[1],
+                    "output": row[2]
+                })
+            conn.close()
+        except Exception as e:
+            print(f"Error reading notifications: {e}",flush=True)
+            pass
+        
+    return alerts
+
+def add_alert(name:str,output:str,account:str="all"):
+    """
+    Add an alert to the notifications database.
+    
+    name: Name of the alert
+    output: Message of the alert
+    account: Account to add the alert for (default: all)
+    """
+    if not os.path.exists("user_data/notifications.db"):
+        conn = sqlite3.connect("user_data/notifications.db")
+        c = conn.cursor()
+        c.execute("CREATE TABLE notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, message TEXT, account TEXT, read INTEGER DEFAULT 0)")
+        conn.commit()
+        conn.close()
+    
+    try:
+        conn = sqlite3.connect("user_data/notifications.db")
+        c = conn.cursor()
+        c.execute("INSERT INTO notifications (name, message, account) VALUES (?, ?, ?)", (name, output, account))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error adding notification: {e}",flush=True)
+        pass
+
+def dismiss_alert(alert_id:int,account:str="all"):
+    """
+    Mark an alert as read.
+
+    alert_id: ID of the alert to dismiss
+    account: Account to dismiss the alert for (default: all)
+    """
+    if not os.path.exists("user_data/notifications.db"):
+        return
+    
+    try:
+        conn = sqlite3.connect("user_data/notifications.db")
+        c = conn.cursor()
+        c.execute("UPDATE notifications SET read=1 WHERE id=?", (alert_id,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error dismissing notification: {e}",flush=True)
+        pass
+
+@app.route('/dismiss/<int:alert_id>')
+@app.route('/api/v1/dismiss/<int:alert_id>')
+def dismiss_alert_route(alert_id):
+    # Check if the user is logged in
+    if request.cookies.get("account") is None:
+        return redirect("/login")
+    
+    account = account_module.check_account(request.cookies.get("account"))
+    if not account:
+        return redirect("/logout")
+
+    dismiss_alert(alert_id,account)
+    return redirect(request.referrer or "/")
 
 #endregion
 
