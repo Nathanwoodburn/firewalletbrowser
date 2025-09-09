@@ -1927,6 +1927,10 @@ def get_alerts(account:str) -> list:
 def add_alert(name:str,output:str,account:str="all"):
     """
     Add an alert to the notifications database.
+    
+    name: Name of the alert
+    output: Message of the alert
+    account: Account to add the alert for (default: all)
     """
     if not os.path.exists("user_data/notifications.db"):
         conn = sqlite3.connect("user_data/notifications.db")
@@ -1945,9 +1949,29 @@ def add_alert(name:str,output:str,account:str="all"):
         print(f"Error adding notification: {e}",flush=True)
         pass
 
+def dismiss_alert(alert_id:int,account:str="all"):
+    """
+    Mark an alert as read.
+
+    alert_id: ID of the alert to dismiss
+    account: Account to dismiss the alert for (default: all)
+    """
+    if not os.path.exists("user_data/notifications.db"):
+        return
+    
+    try:
+        conn = sqlite3.connect("user_data/notifications.db")
+        c = conn.cursor()
+        c.execute("UPDATE notifications SET read=1 WHERE id=?", (alert_id,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error dismissing notification: {e}",flush=True)
+        pass
+
 @app.route('/dismiss/<int:alert_id>')
 @app.route('/api/v1/dismiss/<int:alert_id>')
-def dismiss_alert(alert_id):
+def dismiss_alert_route(alert_id):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
         return redirect("/login")
@@ -1956,20 +1980,8 @@ def dismiss_alert(alert_id):
     if not account:
         return redirect("/logout")
 
-    if not os.path.exists("user_data/notifications.db"):
-        return redirect("/")
-
-    try:
-        conn = sqlite3.connect("user_data/notifications.db")
-        c = conn.cursor()
-        c.execute("UPDATE notifications SET read=1 WHERE id=? AND (account=? OR account='all')", (alert_id,account))
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"Error dismissing notification: {e}",flush=True)
-        pass
-
-    return redirect("/")
+    dismiss_alert(alert_id,account)
+    return redirect(request.referrer or "/")
 
 #endregion
 
