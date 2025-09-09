@@ -168,7 +168,7 @@ walletMigrate: <int> (for users migrating from older versions of HSD)
 
 If you find FireWallet useful and would like to support its continued development, please consider making a donation. Your contributions help maintain the project and develop new features.
 
-HNS donations can be sent to: `hs1qh7uzytf2ftwkd9dmjjs7az9qfver5m7dd7x4ej`
+HNS donations can be sent to: `hs1qh7uzytf2ftwkd9dmjjs7az9qfver5m7dd7x4ej`  
 Other donation options can be found at [my website](https://nathan.woodburn.au/donate)
 
 Thank you for your support!
