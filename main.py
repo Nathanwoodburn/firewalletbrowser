@@ -1946,6 +1946,7 @@ def add_alert(name:str,output:str,account:str="all"):
         pass
 
 @app.route('/dismiss/<int:alert_id>')
+@app.route('/api/v1/dismiss/<int:alert_id>')
 def dismiss_alert(alert_id):
     # Check if the user is logged in
     if request.cookies.get("account") is None:
