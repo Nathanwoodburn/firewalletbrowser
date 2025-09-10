@@ -2026,12 +2026,27 @@ def page_not_found(e):
 #endregion
 
 if __name__ == '__main__':
-    #TODO add parsing to allow for custom port and host
+    host = '127.0.0.1'
+    port = 5000
+    # Check if --host is in the command line arguments
+    if "--host" in sys.argv:
+        host_index = sys.argv.index("--host") + 1
+        if host_index < len(sys.argv):
+            host = sys.argv[host_index]
+    # Check if --port is in the command line arguments
+    if "--port" in sys.argv:
+        port_index = sys.argv.index("--port") + 1
+        if port_index < len(sys.argv):
+            try:
+                port = int(sys.argv[port_index])
+            except ValueError:
+                pass
+
     # Check to see if --debug is in the command line arguments
     if "--debug" in sys.argv:
-        app.run(debug=True)
+        app.run(debug=True, host=host, port=port)
     else:
-        app.run()
+        app.run(host=host, port=port)
 
 def tests():
     assert blocks_to_time(6) == "1 hrs"
