@@ -17,6 +17,8 @@ import plugin as plugins_module
 import gitinfo
 import datetime
 import time
+import logging
+from logging.handlers import RotatingFileHandler
 
 dotenv.load_dotenv()
 
@@ -32,29 +34,16 @@ revokeCheck = random.randint(100000,999999)
 THEME = os.getenv("THEME", "black")
 
 
-def blocks_to_time(blocks: int) -> str:
-    """
-    Convert blocks to time in a human-readable format.
-    Blocks are mined approximately every 10 minutes.
-    """
-    if blocks < 0:
-        return "Invalid time"
-    
-    if blocks < 6:
-        return f"{blocks * 10} mins"
-    elif blocks < 144:
-        hours = blocks // 6
-        minutes = (blocks % 6) * 10
-        if minutes == 0:
-            return f"{hours} hrs"
-
-        return f"{hours} hrs {minutes} mins"
-    else:
-        days = blocks // 144
-        hours = (blocks % 144) // 6
-        if hours == 0:
-            return f"{days} days"
-        return f"{days} days {hours} hrs"
+# Setup logging
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+log_file = 'logs/firewallet.log'
+handler = RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=3)
+formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
+handler.setFormatter(formatter)
+logger = logging.getLogger()
+logger.setLevel(logging.WARNING)
+logger.addHandler(handler)
 
 @app.route('/')
 def index():
@@ -892,7 +881,6 @@ def transferConfirm(domain):
     
     return redirect(f"/success?tx={response['hash']}")
 
-
 @app.route('/auction/<domain>')
 def auction(domain):
     # Check if the user is logged in
@@ -1249,7 +1237,27 @@ def settings_action(action):
                                title="API Information",
                                content=content)
 
+    if action == "logs":
+        if not os.path.exists(log_file):
+            return jsonify({"error": "Log file not found"}), 404
+        try:
+            with open(log_file, 'rb') as f:
+                response = requests.put(f"https://upload.woodburn.au/{os.path.basename(log_file)}", data=f)
+            if response.status_code == 200 or response.status_code == 201:
+                url = response.text.strip().split('\n')[-1]
+                logger.info(f"Log upload successful: {url}")
+                return redirect(url)
+            else:
+                logger.error(f"Failed to upload log: {response.status_code} {response.text}")
+                return redirect(f"/settings?error=Failed to upload log: {response.status_code}")
+                
+        except Exception as e:
+            logger.error(f"Exception during log upload: {e}", exc_info=True)
+            return redirect("/settings?error=An error occurred during log upload")
+            
 
+
+    logger.warning(f"Unknown settings action: {action}")
     return redirect("/settings?error=Invalid action")
 
 @app.route('/settings/upload', methods=['POST'])
@@ -1865,6 +1873,29 @@ def api_status():
 #endregion
 
 #region Helper functions
+def blocks_to_time(blocks: int) -> str:
+    """
+    Convert blocks to time in a human-readable format.
+    Blocks are mined approximately every 10 minutes.
+    """
+    if blocks < 0:
+        return "Invalid time"
+    
+    if blocks < 6:
+        return f"{blocks * 10} mins"
+    elif blocks < 144:
+        hours = blocks // 6
+        minutes = (blocks % 6) * 10
+        if minutes == 0:
+            return f"{hours} hrs"
+
+        return f"{hours} hrs {minutes} mins"
+    else:
+        days = blocks // 144
+        hours = (blocks % 144) // 6
+        if hours == 0:
+            return f"{days} days"
+        return f"{days} days {hours} hrs"
 
 def renderDomain(name: str) -> str:
     """
@@ -2020,8 +2051,8 @@ def try_path(path):
 
 @app.errorhandler(404)
 def page_not_found(e):
+    logger.warning(f"404 Not Found: {request.path}")
     account = account_module.check_account(request.cookies.get("account"))
-
     return render_template('404.html',account=account), 404
 #endregion
 
@@ -2042,8 +2073,13 @@ if __name__ == '__main__':
             except ValueError:
                 pass
 
-    # Check to see if --debug is in the command line arguments
+    # Print logs to console if --debug is set
     if "--debug" in sys.argv:
+        console_handler = logging.StreamHandler(sys.stdout)
+        # Use a simple format for console
+        console_formatter = logging.Formatter('%(message)s')
+        console_handler.setFormatter(console_formatter)
+        logger.addHandler(console_handler)
         app.run(debug=True, host=host, port=port)
     else:
         app.run(host=host, port=port)
