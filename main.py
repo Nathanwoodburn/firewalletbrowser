@@ -43,6 +43,12 @@ formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(mess
 handler.setFormatter(formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.WARNING)
+
+# Disable werkzeug logging
+logging.getLogger('werkzeug').setLevel(logging.INFO)
+logging.getLogger("urllib3").setLevel(logging.ERROR)
+logging.getLogger("requests").setLevel(logging.ERROR)
+
 logger.addHandler(handler)
 
 @app.route('/')
@@ -71,7 +77,7 @@ def index():
     branch = info['refs']
     commit = info['commit']
     if commit != latestVersion(branch):
-        print("New version available",flush=True)
+        logger.info("New version available")
         plugins += render_template('components/dashboard-alert.html', name='Update', output='A new version of FireWallet is available')
 
     alerts = get_alerts(account)
@@ -602,7 +608,7 @@ def finalize(domain: str):
     domain = domain.lower()
     response = account_module.finalize(request.cookies.get("account"),domain)
     if response['error'] is not None:
-        print(response)
+        logger.error(f"Error finalizing transfer for {domain}: {response['error']}")
         return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
     return redirect("/success?tx=" + response['result']['hash'])
@@ -621,7 +627,7 @@ def cancelTransfer(domain: str):
     response = account_module.cancelTransfer(request.cookies.get("account"),domain)
     if 'error' in response:
         if response['error'] is not None:
-            print(response)
+            logger.error(f"Error canceling transfer for {domain}: {response['error']}")
             return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
     return redirect("/success?tx=" + response['result']['hash'])
@@ -677,7 +683,7 @@ def revokeConfirm(domain: str):
     response = account_module.revoke(request.cookies.get("account"),domain)
     if 'error' in response:
         if response['error'] is not None:
-            print(response)
+            logger.error(f"Error revoking {domain}: {response['error']}")
             return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
     return redirect(f"/success?tx={response['hash']}")
@@ -783,7 +789,7 @@ def editSave(domain: str):
     dns = urllib.parse.unquote(dns)
     response = account_module.setDNS(request.cookies.get("account"),domain,dns)
     if 'error' in response:
-        print(response)
+        logger.error(f"Error setting DNS for {domain}: {response['error']}")
         return redirect(f"/manage/{domain}/edit?dns={raw_dns}&error={response['error']}")
     return redirect(f"/success?tx={response['hash']}")
 
@@ -929,13 +935,11 @@ def auction(domain):
     if state == 'CLOSED':
         if not domainInfo['info']['registered']:
             if account_module.isOwnDomain(account,domain):
-                print("Waiting to be registered")
                 state = 'PENDING REGISTER'
                 next = "Pending Register"
                 next_action = f'<a href="/auction/{domain}/register">Register Domain</a>'
             
             else:
-                print("Not registered")
                 state = 'AVAILABLE'
                 next = "Available Now"
                 next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
@@ -1500,7 +1504,7 @@ def plugin(ptype,plugin):
     plugin = f"{ptype}/{plugin}"
 
     if not plugins_module.pluginExists(plugin):
-        print(f"Plugin {plugin} not found")
+        logger.warning(f"Plugin not found: {plugin}")
         return redirect("/plugins")
 
     data = plugins_module.getPluginData(plugin)
@@ -1635,13 +1639,11 @@ def api_hsd(function):
         if state == 'CLOSED':
             if not domainInfo['info']['registered']:
                 if account_module.isOwnDomain(account,domain):
-                    print("Waiting to be registered")
                     state = 'PENDING REGISTER'
                     next = "Pending Register"
                     next_action = f'<a href="/auction/{domain}/register">Register Domain</a>'
                 
                 else:
-                    print("Not registered")
                     state = 'AVAILABLE'
                     next = "Available Now"
                     next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
@@ -1934,7 +1936,6 @@ def get_alerts(account:str) -> list:
             "name": "Wallet",
             "output": f"The wallet is not synced ({wallet_status}). Please wait for it to sync."
         })
-    print(account)
     # Try to read from notifications sqlite database
     if os.path.exists("user_data/notifications.db"):
         try:
@@ -1950,7 +1951,7 @@ def get_alerts(account:str) -> list:
                 })
             conn.close()
         except Exception as e:
-            print(f"Error reading notifications: {e}",flush=True)
+            logger.error(f"Error reading notifications: {e}")
             pass
         
     return alerts
@@ -1977,7 +1978,7 @@ def add_alert(name:str,output:str,account:str="all"):
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Error adding notification: {e}",flush=True)
+        logger.error(f"Error adding notification: {e}")
         pass
 
 def dismiss_alert(alert_id:int,account:str="all"):
@@ -1997,7 +1998,7 @@ def dismiss_alert(alert_id:int,account:str="all"):
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Error dismissing notification: {e}",flush=True)
+        logger.error(f"Error dismissing notification: {e}")
         pass
 
 @app.route('/dismiss/<int:alert_id>')
@@ -2072,16 +2073,19 @@ if __name__ == '__main__':
                 port = int(sys.argv[port_index])
             except ValueError:
                 pass
-
-    # Print logs to console if --debug is set
+    print(f"Starting FireWallet on http://{host}:{port}",flush=True)
+    
     if "--debug" in sys.argv:
         console_handler = logging.StreamHandler(sys.stdout)
         # Use a simple format for console
         console_formatter = logging.Formatter('%(message)s')
         console_handler.setFormatter(console_formatter)
+        console_handler.setLevel(logging.WARNING)
         logger.addHandler(console_handler)
+        logger.setLevel(logging.DEBUG)
         app.run(debug=True, host=host, port=port)
     else:
+        
         app.run(host=host, port=port)
 
 def tests():

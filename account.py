@@ -352,6 +352,7 @@ def getBalance(account: str):
     # Get the total balance
     info = hsw.getBalance('default', account)
     if 'error' in info:
+        logger.error(f"Error getting balance for account {account}: {info['error']}")
         return {'available': 0, 'total': 0}
 
     total = info['confirmed']
@@ -361,6 +362,7 @@ def getBalance(account: str):
     # Convert to HNS
     total = total / 1000000
     available = available / 1000000
+    logger.debug(f"Initial balance for account {account}: total={total}, available={available}, locked={locked}")
 
     domains = getDomains(account)
     domainValue = 0
@@ -404,6 +406,7 @@ def getBalance(account: str):
                     if domain_info.get('info', {}).get('state', "") == "CLOSED":
                         domainValue += domain_info.get('info', {}).get('value', 0)
             except json.JSONDecodeError:
+                logger.warning(f"Error parsing cached data for domain {domain_name}")
                 # Only add for update if not already being updated
                 with DOMAIN_UPDATE_LOCK:
                     if domain_name not in ACTIVE_DOMAIN_UPDATES:
@@ -423,9 +426,10 @@ def getBalance(account: str):
             daemon=True
         )
         thread.start()
-        
+    
     total = total - (domainValue/1000000)
     locked = locked - (domainValue/1000000)
+    logger.debug(f"Adjusted balance for account {account}: total={total}, available={available}, locked={locked}")
 
     # Only keep 2 decimal places
     total = round(total, 2)
