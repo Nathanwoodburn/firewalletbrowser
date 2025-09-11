@@ -1249,10 +1249,12 @@ def settings_action(action):
 
         try:
             with open(log_file, 'rb') as f:
-                response = requests.put(f"https://upload.woodburn.au/{os.path.basename(log_file)}", data=f)
+                response = requests.put(f"https://upload.woodburn.au/{os.path.basename(log_file)}", data=f,
+                                        headers={"Max-Days": "5"})
             if response.status_code == 200 or response.status_code == 201:
-                url = response.text.strip().split('\n')[-1]
-                logger.info(f"Log upload successful: {url}")
+                token = response.text.strip().split('\n')[-1].split('/')[-2:]
+                url = f"https://upload.woodburn.au/inline/{token[0]}/{token[1]}"
+                logger.info(f"Log upload successful: {url}")                
                 return redirect(url)
             else:
                 logger.error(f"Failed to upload log: {response.status_code} {response.text}")
