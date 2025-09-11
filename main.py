@@ -74,8 +74,9 @@ def index():
     alerts = get_alerts(account)
     for alert in alerts:
         output_html = alert['output']
-        # Add a dismiss button
-        output_html += f"&nbsp<a href='/dismiss/{alert['id']}' class='btn btn-secondary btn-sm' style='margin:none;'>Dismiss</a>"
+        if 'id' in alert:
+            # Add a dismiss button
+            output_html += f"&nbsp<a href='/dismiss/{alert['id']}' class='btn btn-secondary btn-sm' style='margin:none;'>Dismiss</a>"
         plugins += render_template('components/dashboard-alert.html', name=alert['name'], output=output_html)
 
     return render_template("index.html", account=account, plugins=plugins)
@@ -1920,7 +1921,7 @@ def get_alerts(account:str) -> list:
             logger.info("New version available")
             alerts.append({
                 "name": "Update Available",
-                "output": f"A new version of FireWallet is available. <a href='https://git.woodburn.au/nathanwoodburn/firewalletbrowser/compare/{commit}...{branch}' target='_blank'>Changelog</a>."
+                "output": f"A new version of FireWallet is available. <a href='https://git.woodburn.au/nathanwoodburn/firewalletbrowser/compare/{commit}...{branch}' target='_blank'>Changelog</a>"
             })
 
     
