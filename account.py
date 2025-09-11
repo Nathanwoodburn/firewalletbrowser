@@ -13,6 +13,8 @@ import signal
 import sys
 import threading
 import sqlite3
+import logging
+logger = logging.getLogger("firewallet")
 
 
 dotenv.load_dotenv()
@@ -270,7 +272,7 @@ def getCachedDomains():
             domain_cache[row['name']] = json.loads(row['info'])
             domain_cache[row['name']]['last_updated'] = row['last_updated']
         except json.JSONDecodeError:
-            print(f"Error parsing cached data for domain {row['name']}")
+            logger.error(f"Error parsing cached data for domain {row['name']}")
     
     conn.close()
     return domain_cache
@@ -310,7 +312,7 @@ def update_domain_cache(domain_names: list):
                 domain_info = getDomain(domain_name)
                 
                 if 'error' in domain_info or not domain_info.get('info'):
-                    print(f"Failed to get info for domain {domain_name}: {domain_info.get('error', 'Unknown error')}", flush=True)
+                    logger.error(f"Failed to get info for domain {domain_name}: {domain_info.get('error', 'Unknown error')}")
                     continue
                 
                 # Update or insert into database
@@ -322,9 +324,9 @@ def update_domain_cache(domain_names: list):
                     (domain_name, serialized_info, now)
                 )
                 
-                print(f"Updated cache for domain {domain_name}")
+                logger.info(f"Updated cache for domain {domain_name}")
             except Exception as e:
-                print(f"Error updating cache for domain {domain_name}: {str(e)}")
+                logger.error(f"Error updating cache for domain {domain_name}: {str(e)}", exc_info=True)
             finally:
                 # Always remove from active set, even if there was an error
                 with DOMAIN_UPDATE_LOCK:
@@ -336,20 +338,21 @@ def update_domain_cache(domain_names: list):
         conn.close()
         
     except Exception as e:
-        print(f"Error updating domain cache: {str(e)}", flush=True)
+        logger.error(f"Error updating domain cache: {str(e)}", exc_info=True)
         # Make sure to clean up the active set on any exception
         with DOMAIN_UPDATE_LOCK:
             for domain in domains_to_update:
                 if domain in ACTIVE_DOMAIN_UPDATES:
                     ACTIVE_DOMAIN_UPDATES.remove(domain)
     
-    print("Updated cache for domains")
+    logger.info("Updated cache for domains")
 
 
 def getBalance(account: str):
     # Get the total balance
     info = hsw.getBalance('default', account)
     if 'error' in info:
+        logger.error(f"Error getting balance for account {account}: {info['error']}")
         return {'available': 0, 'total': 0}
 
     total = info['confirmed']
@@ -359,6 +362,7 @@ def getBalance(account: str):
     # Convert to HNS
     total = total / 1000000
     available = available / 1000000
+    logger.debug(f"Initial balance for account {account}: total={total}, available={available}, locked={locked}")
 
     domains = getDomains(account)
     domainValue = 0
@@ -402,6 +406,7 @@ def getBalance(account: str):
                     if domain_info.get('info', {}).get('state', "") == "CLOSED":
                         domainValue += domain_info.get('info', {}).get('value', 0)
             except json.JSONDecodeError:
+                logger.warning(f"Error parsing cached data for domain {domain_name}")
                 # Only add for update if not already being updated
                 with DOMAIN_UPDATE_LOCK:
                     if domain_name not in ACTIVE_DOMAIN_UPDATES:
@@ -421,9 +426,10 @@ def getBalance(account: str):
             daemon=True
         )
         thread.start()
-        
+    
     total = total - (domainValue/1000000)
     locked = locked - (domainValue/1000000)
+    logger.debug(f"Adjusted balance for account {account}: total={total}, available={available}, locked={locked}")
 
     # Only keep 2 decimal places
     total = round(total, 2)
@@ -594,14 +600,14 @@ def getTransactions(account, page=1, limit=100):
         return []
 
     if response.status_code != 200:
-        print(response.text)
+        logger.error(f"Error fetching transactions: {response.status_code} - {response.text}")
         return []
     data = response.json()
 
     # Refresh the cache if the next page is different
     nextPage = getPageTXCache(account, page, limit)
     if nextPage is not None and nextPage != data[-1]['hash']:
-        print(f'Refreshing page {page}')
+        logger.info(f'Refreshing tx page {page}')
         pushPageTXCache(account, page, data[-1]['hash'], limit)
     return data
 
@@ -788,11 +794,12 @@ def getAddressFromCoin(coinhash: str, coinindex = 0):
     # Get the address from the hash
     response = requests.get(get_node_api_url(f"coin/{coinhash}/{coinindex}"))
     if response.status_code != 200:
-        print("Error getting address from coin")
+        logger.error("Error getting address from coin")
         return "No Owner"
     data = response.json()
     if 'address' not in data:
-        print(json.dumps(data, indent=4))
+        logger.error("Error getting address from coin")
+        logger.error(json.dumps(data, indent=4))
         return "No Owner"
     return data['address']
 
@@ -998,7 +1005,7 @@ def getPendingRedeems(account, password):
             else:
                 pending.append(name['result'])
     except Exception as e:
-        print(f"Failed to parse redeems: {str(e)}")
+        logger.error(f"Failed to parse redeems: {str(e)}", exc_info=True)
 
     return pending
 
@@ -1042,7 +1049,7 @@ def getPendingFinalizes(account, password):
             else:
                 pending.append(name['result'])
     except Exception as e:
-        print(f"Failed to parse finalizes: {str(e)}")
+        logger.error(f"Failed to parse finalizes: {str(e)}", exc_info=True)
     return pending
 
 
@@ -1052,9 +1059,8 @@ def getRevealTX(reveal):
     index = prevout['index']
     tx = hsd.getTxByHash(hash)
     if 'inputs' not in tx:
-        print(f'Something is up with this tx: {hash}')
-        print(tx)
-        print('---')
+        logger.error(f'Something is up with this tx: {hash}')
+        logger.error(tx)
         # No idea what happened here
         # Check if registered?
         return None
@@ -1498,10 +1504,10 @@ def getMempoolBids():
     for txid in mempoolTxs:
         tx = hsd.getTxByHash(txid)
         if 'error' in tx and tx['error'] is not None:
-            print(f"Error getting tx {txid}: {tx['error']}")
+            logger.error(f"Error getting tx {txid}: {tx['error']}")
             continue
         if 'outputs' not in tx:
-            print(f"Error getting outputs for tx {txid}")
+            logger.error(f"Error getting outputs for tx {txid}")
             continue
         for output in tx['outputs']:
             if output['covenant']['action'] not in ["BID", "REVEAL"]:
@@ -1679,7 +1685,7 @@ def verifyMessageWithName(domain, signature, message):
             return response['result']
         return False
     except Exception as e:
-        print(f"Error verifying message with name: {str(e)}")
+        logger.error(f"Error verifying message with name: {str(e)}", exc_info=True)
         return False
 
 
@@ -1690,7 +1696,7 @@ def verifyMessage(address, signature, message):
             return response['result']
         return False
     except Exception as e:
-        print(f"Error verifying message: {str(e)}")
+        logger.error(f"Error verifying message: {str(e)}", exc_info=True)
         return False
 
 # endregion
@@ -1835,7 +1841,7 @@ def hsdInit():
         prerequisites = checkPreRequisites()
     
     minNodeVersion = HSD_CONFIG.get("minNodeVersion", 20)
-    minNPMVersion = HSD_CONFIG.get("minNPMVersion", 8)
+    minNPMVersion = HSD_CONFIG.get("minNpmVersion", 8)
     PREREQ_MESSAGES = {
         "node": f"Install Node.js from https://nodejs.org/en/download (Version >= {minNodeVersion})",
         "npm": f"Install npm (version >= {minNPMVersion}) - usually comes with Node.js",
@@ -1844,18 +1850,21 @@ def hsdInit():
 
     # Check if all prerequisites are met (except hsd)
     if not all(prerequisites[key] for key in prerequisites if key != "hsd"):
-        print("HSD Internal Node prerequisites not met:")
+        print("HSD Internal Node prerequisites not met:",flush=True)
+        logger.error("HSD Internal Node prerequisites not met:")
         for key, value in prerequisites.items():
             if not value:
                 print(f" - {key} is missing or does not meet the version requirement.",flush=True)
+                logger.error(f" - {key} is missing or does not meet the version requirement.")
                 if key in PREREQ_MESSAGES:
                     print(PREREQ_MESSAGES[key],flush=True)
+                    logger.error(PREREQ_MESSAGES[key])
         exit(1)
         return
     
     # Check if hsd is installed
     if not prerequisites["hsd"]:
-        print("HSD not found, installing...")
+        logger.info("HSD not found, installing...")
         # If hsd folder exists, remove it
         if os.path.exists("hsd"):
             os.rmdir("hsd")
@@ -1863,19 +1872,22 @@ def hsdInit():
         # Clone hsd repo
         gitClone = subprocess.run(["git", "clone", "--depth", "1", "--branch", HSD_CONFIG.get("version", "latest"), "https://github.com/handshake-org/hsd.git", "hsd"], capture_output=True, text=True)
         if gitClone.returncode != 0:
-            print("Failed to clone hsd repository:")
-            print(gitClone.stderr)
+            print("Failed to clone hsd repository:",flush=True)
+            logger.error("Failed to clone hsd repository:")
+            print(gitClone.stderr,flush=True)
+            logger.error(gitClone.stderr)
             exit(1)
-        print("Cloned hsd repository.")
+        logger.info("Cloned hsd repository.")
+        logger.info("Installing hsd dependencies...")
         # Install hsd dependencies
-        print("Installing hsd dependencies...")
         npmInstall = subprocess.run(["npm", "install"], cwd="hsd", capture_output=True, text=True)
         if npmInstall.returncode != 0:
-            print("Failed to install hsd dependencies:")
-            print(npmInstall.stderr)
-            exit(1)
-        print("Installed hsd dependencies.")       
-
+            print("Failed to install hsd dependencies:",flush=True)
+            logger.error("Failed to install hsd dependencies:")
+            print(npmInstall.stderr,flush=True)
+            logger.error(npmInstall.stderr)
+            exit(1) 
+        logger.info("Installed hsd dependencies.")
 def hsdStart():
     global HSD_PROCESS
     global SPV_MODE
@@ -1886,12 +1898,12 @@ def hsdStart():
     if os.path.exists("hsd.lock"):
         lock_time = os.path.getmtime("hsd.lock")
         if time.time() - lock_time < 30:
-            print("HSD was started recently, skipping start.")
+            logger.info("HSD was started recently, skipping start.")
             return
         else:
             os.remove("hsd.lock")
     
-    print("Starting HSD...")
+    logger.info("Starting HSD...")
     # Create a lock file
     with open("hsd.lock", "w") as f:
         f.write(str(time.time()))
@@ -1935,7 +1947,7 @@ def hsdStart():
         text=True
     )
     
-    print(f"HSD started with PID {HSD_PROCESS.pid}")
+    logger.info(f"HSD started with PID {HSD_PROCESS.pid}")
 
     atexit.register(hsdStop)
 
@@ -1944,7 +1956,7 @@ def hsdStart():
         signal.signal(signal.SIGINT, lambda s, f: (hsdStop(), sys.exit(0)))
         signal.signal(signal.SIGTERM, lambda s, f: (hsdStop(), sys.exit(0)))
     except Exception as e:
-        print(f"Failed to set signal handlers: {str(e)}")
+        logger.error(f"Failed to set signal handlers: {str(e)}", exc_info=True)
         pass
 
 
@@ -1954,16 +1966,16 @@ def hsdStop():
     if HSD_PROCESS is None:
         return
     
-    print("Stopping HSD...")
+    logger.info("Stopping HSD...")
 
     # Send SIGINT (like Ctrl+C)
     HSD_PROCESS.send_signal(signal.SIGINT)
 
     try:
         HSD_PROCESS.wait(timeout=10)  # wait for graceful exit
-        print("HSD shut down cleanly.")
+        logger.info("HSD shut down cleanly.")
     except subprocess.TimeoutExpired:
-        print("HSD did not exit yet, is it alright???")
+        logger.warning("HSD did not exit yet, is it alright???")
     
     # Clean up lock file
     if os.path.exists("hsd.lock"):

@@ -17,6 +17,8 @@ import plugin as plugins_module
 import gitinfo
 import datetime
 import time
+import logging
+from logging.handlers import RotatingFileHandler
 
 dotenv.load_dotenv()
 
@@ -32,29 +34,22 @@ revokeCheck = random.randint(100000,999999)
 THEME = os.getenv("THEME", "black")
 
 
-def blocks_to_time(blocks: int) -> str:
-    """
-    Convert blocks to time in a human-readable format.
-    Blocks are mined approximately every 10 minutes.
-    """
-    if blocks < 0:
-        return "Invalid time"
-    
-    if blocks < 6:
-        return f"{blocks * 10} mins"
-    elif blocks < 144:
-        hours = blocks // 6
-        minutes = (blocks % 6) * 10
-        if minutes == 0:
-            return f"{hours} hrs"
+# Setup logging
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+log_file = 'logs/firewallet.log'
+handler = RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=3)
+formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
+handler.setFormatter(formatter)
+logger = logging.getLogger()
+logger.setLevel(logging.WARNING)
 
-        return f"{hours} hrs {minutes} mins"
-    else:
-        days = blocks // 144
-        hours = (blocks % 144) // 6
-        if hours == 0:
-            return f"{days} days"
-        return f"{days} days {hours} hrs"
+# Disable werkzeug logging
+logging.getLogger('werkzeug').setLevel(logging.INFO)
+logging.getLogger("urllib3").setLevel(logging.ERROR)
+logging.getLogger("requests").setLevel(logging.ERROR)
+
+logger.addHandler(handler)
 
 @app.route('/')
 def index():
@@ -76,20 +71,12 @@ def index():
     if not os.path.exists(".git"):
         return render_template("index.html", account=account, plugins=plugins)
     
-    info = gitinfo.get_git_info()
-    if info is None:
-        return render_template("index.html", account=account, plugins=plugins)
-    branch = info['refs']
-    commit = info['commit']
-    if commit != latestVersion(branch):
-        print("New version available",flush=True)
-        plugins += render_template('components/dashboard-alert.html', name='Update', output='A new version of FireWallet is available')
-
     alerts = get_alerts(account)
     for alert in alerts:
         output_html = alert['output']
-        # Add a dismiss button
-        output_html += f"&nbsp<a href='/dismiss/{alert['id']}' class='btn btn-secondary btn-sm' style='margin:none;'>Dismiss</a>"
+        if 'id' in alert:
+            # Add a dismiss button
+            output_html += f"&nbsp<a href='/dismiss/{alert['id']}' class='btn btn-secondary btn-sm' style='margin:none;'>Dismiss</a>"
         plugins += render_template('components/dashboard-alert.html', name=alert['name'], output=output_html)
 
     return render_template("index.html", account=account, plugins=plugins)
@@ -613,7 +600,7 @@ def finalize(domain: str):
     domain = domain.lower()
     response = account_module.finalize(request.cookies.get("account"),domain)
     if response['error'] is not None:
-        print(response)
+        logger.error(f"Error finalizing transfer for {domain}: {response['error']}")
         return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
     return redirect("/success?tx=" + response['result']['hash'])
@@ -632,7 +619,7 @@ def cancelTransfer(domain: str):
     response = account_module.cancelTransfer(request.cookies.get("account"),domain)
     if 'error' in response:
         if response['error'] is not None:
-            print(response)
+            logger.error(f"Error canceling transfer for {domain}: {response['error']}")
             return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
     return redirect("/success?tx=" + response['result']['hash'])
@@ -688,7 +675,7 @@ def revokeConfirm(domain: str):
     response = account_module.revoke(request.cookies.get("account"),domain)
     if 'error' in response:
         if response['error'] is not None:
-            print(response)
+            logger.error(f"Error revoking {domain}: {response['error']}")
             return redirect("/manage/" + domain + "?error=" + response['error']['message'])
 
     return redirect(f"/success?tx={response['hash']}")
@@ -794,7 +781,7 @@ def editSave(domain: str):
     dns = urllib.parse.unquote(dns)
     response = account_module.setDNS(request.cookies.get("account"),domain,dns)
     if 'error' in response:
-        print(response)
+        logger.error(f"Error setting DNS for {domain}: {response['error']}")
         return redirect(f"/manage/{domain}/edit?dns={raw_dns}&error={response['error']}")
     return redirect(f"/success?tx={response['hash']}")
 
@@ -892,7 +879,6 @@ def transferConfirm(domain):
     
     return redirect(f"/success?tx={response['hash']}")
 
-
 @app.route('/auction/<domain>')
 def auction(domain):
     # Check if the user is logged in
@@ -941,13 +927,11 @@ def auction(domain):
     if state == 'CLOSED':
         if not domainInfo['info']['registered']:
             if account_module.isOwnDomain(account,domain):
-                print("Waiting to be registered")
                 state = 'PENDING REGISTER'
                 next = "Pending Register"
                 next_action = f'<a href="/auction/{domain}/register">Register Domain</a>'
             
             else:
-                print("Not registered")
                 state = 'AVAILABLE'
                 next = "Available Now"
                 next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
@@ -1249,7 +1233,27 @@ def settings_action(action):
                                title="API Information",
                                content=content)
 
+    if action == "logs":
+        if not os.path.exists(log_file):
+            return jsonify({"error": "Log file not found"}), 404
+        try:
+            with open(log_file, 'rb') as f:
+                response = requests.put(f"https://upload.woodburn.au/{os.path.basename(log_file)}", data=f)
+            if response.status_code == 200 or response.status_code == 201:
+                url = response.text.strip().split('\n')[-1]
+                logger.info(f"Log upload successful: {url}")
+                return redirect(url)
+            else:
+                logger.error(f"Failed to upload log: {response.status_code} {response.text}")
+                return redirect(f"/settings?error=Failed to upload log: {response.status_code}")
+                
+        except Exception as e:
+            logger.error(f"Exception during log upload: {e}", exc_info=True)
+            return redirect("/settings?error=An error occurred during log upload")
+            
 
+
+    logger.warning(f"Unknown settings action: {action}")
     return redirect("/settings?error=Invalid action")
 
 @app.route('/settings/upload', methods=['POST'])
@@ -1492,7 +1496,7 @@ def plugin(ptype,plugin):
     plugin = f"{ptype}/{plugin}"
 
     if not plugins_module.pluginExists(plugin):
-        print(f"Plugin {plugin} not found")
+        logger.warning(f"Plugin not found: {plugin}")
         return redirect("/plugins")
 
     data = plugins_module.getPluginData(plugin)
@@ -1627,13 +1631,11 @@ def api_hsd(function):
         if state == 'CLOSED':
             if not domainInfo['info']['registered']:
                 if account_module.isOwnDomain(account,domain):
-                    print("Waiting to be registered")
                     state = 'PENDING REGISTER'
                     next = "Pending Register"
                     next_action = f'<a href="/auction/{domain}/register">Register Domain</a>'
                 
                 else:
-                    print("Not registered")
                     state = 'AVAILABLE'
                     next = "Available Now"
                     next_action = f'<a href="/auction/{domain}/open">Open Auction</a>'
@@ -1865,6 +1867,29 @@ def api_status():
 #endregion
 
 #region Helper functions
+def blocks_to_time(blocks: int) -> str:
+    """
+    Convert blocks to time in a human-readable format.
+    Blocks are mined approximately every 10 minutes.
+    """
+    if blocks < 0:
+        return "Invalid time"
+    
+    if blocks < 6:
+        return f"{blocks * 10} mins"
+    elif blocks < 144:
+        hours = blocks // 6
+        minutes = (blocks % 6) * 10
+        if minutes == 0:
+            return f"{hours} hrs"
+
+        return f"{hours} hrs {minutes} mins"
+    else:
+        days = blocks // 144
+        hours = (blocks % 144) // 6
+        if hours == 0:
+            return f"{days} days"
+        return f"{days} days {hours} hrs"
 
 def renderDomain(name: str) -> str:
     """
@@ -1888,6 +1913,20 @@ def get_alerts(account:str) -> list:
     
     alerts = []
 
+    info = gitinfo.get_git_info()
+    if info is not None:    
+        branch = info['refs']
+        commit = info['commit']
+        if commit != latestVersion(branch):
+            logger.info("New version available")
+            alerts.append({
+                "name": "Update Available",
+                "output": f"A new version of FireWallet is available. <a href='https://git.woodburn.au/nathanwoodburn/firewalletbrowser/compare/{commit}...{branch}' target='_blank'>Changelog</a>"
+            })
+
+    
+
+
     # Check if the node is connected
     if not account_module.hsdConnected():
         alerts.append({
@@ -1903,7 +1942,6 @@ def get_alerts(account:str) -> list:
             "name": "Wallet",
             "output": f"The wallet is not synced ({wallet_status}). Please wait for it to sync."
         })
-    print(account)
     # Try to read from notifications sqlite database
     if os.path.exists("user_data/notifications.db"):
         try:
@@ -1919,7 +1957,7 @@ def get_alerts(account:str) -> list:
                 })
             conn.close()
         except Exception as e:
-            print(f"Error reading notifications: {e}",flush=True)
+            logger.error(f"Error reading notifications: {e}")
             pass
         
     return alerts
@@ -1946,7 +1984,7 @@ def add_alert(name:str,output:str,account:str="all"):
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Error adding notification: {e}",flush=True)
+        logger.error(f"Error adding notification: {e}")
         pass
 
 def dismiss_alert(alert_id:int,account:str="all"):
@@ -1966,7 +2004,7 @@ def dismiss_alert(alert_id:int,account:str="all"):
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Error dismissing notification: {e}",flush=True)
+        logger.error(f"Error dismissing notification: {e}")
         pass
 
 @app.route('/dismiss/<int:alert_id>')
@@ -2020,8 +2058,8 @@ def try_path(path):
 
 @app.errorhandler(404)
 def page_not_found(e):
+    logger.warning(f"404 Not Found: {request.path}")
     account = account_module.check_account(request.cookies.get("account"))
-
     return render_template('404.html',account=account), 404
 #endregion
 
@@ -2041,11 +2079,19 @@ if __name__ == '__main__':
                 port = int(sys.argv[port_index])
             except ValueError:
                 pass
-
-    # Check to see if --debug is in the command line arguments
+    print(f"Starting FireWallet on http://{host}:{port}",flush=True)
+    
     if "--debug" in sys.argv:
+        console_handler = logging.StreamHandler(sys.stdout)
+        # Use a simple format for console
+        console_formatter = logging.Formatter('%(message)s')
+        console_handler.setFormatter(console_formatter)
+        console_handler.setLevel(logging.WARNING)
+        logger.addHandler(console_handler)
+        logger.setLevel(logging.DEBUG)
         app.run(debug=True, host=host, port=port)
     else:
+        
         app.run(host=host, port=port)
 
 def tests():

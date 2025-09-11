@@ -18,5 +18,6 @@ build/
 dist/
 hsd/
 hsd_data/
+logs/
 hsd.lock
 hsdconfig.json
