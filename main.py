@@ -7,13 +7,9 @@ from flask import Flask, make_response, redirect, request, jsonify, render_templ
 import os
 import dotenv
 import requests
-import account as account_module
-import render
 import re
 from flask_qrcode import QRcode
-import domainLookup
 import urllib.parse
-import plugin as plugins_module
 import gitinfo
 import datetime
 import time
@@ -21,18 +17,6 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 dotenv.load_dotenv()
-
-app = Flask(__name__)
-qrcode = QRcode(app)
-
-
-# Change this if network fees change
-fees = 0.02
-revokeCheck = random.randint(100000,999999)
-
-
-THEME = os.getenv("THEME", "black")
-
 
 # Setup logging
 if not os.path.exists('logs'):
@@ -42,14 +26,37 @@ handler = RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=3)
 formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
 handler.setFormatter(formatter)
 logger = logging.getLogger()
-logger.setLevel(logging.WARNING)
+
+log_level = os.getenv("LOG_LEVEL", "WARNING").upper()
+if log_level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+    logger.setLevel(getattr(logging, log_level))
+else:
+    logger.setLevel(logging.WARNING)
 
 # Disable werkzeug logging
 logging.getLogger('werkzeug').setLevel(logging.INFO)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 logging.getLogger("requests").setLevel(logging.ERROR)
-
 logger.addHandler(handler)
+
+# Import after logger setup to capture logs from these modules
+import render  # noqa: E402
+import domainLookup  # noqa: E402
+import account as account_module  # noqa: E402
+import plugin as plugins_module  # noqa: E402
+
+app = Flask(__name__)
+qrcode = QRcode(app)
+
+
+# Change this if network fees change
+fees = 0.02
+revokeCheck = random.randint(100000,999999)
+
+THEME = os.getenv("THEME", "black")
+
+
+
 
 @app.route('/')
 def index():
@@ -2094,8 +2101,7 @@ if __name__ == '__main__':
         logger.addHandler(console_handler)
         logger.setLevel(logging.DEBUG)
         app.run(debug=True, host=host, port=port)
-    else:
-        
+    else:        
         app.run(host=host, port=port)
 
 def tests():
