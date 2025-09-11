@@ -1235,7 +1235,11 @@ def settings_action(action):
 
     if action == "logs":
         if not os.path.exists(log_file):
-            return jsonify({"error": "Log file not found"}), 404
+            return redirect("/settings?error=No log file found")
+        # Check if log file is empty
+        if os.path.getsize(log_file) == 0:
+            return redirect("/settings?error=Log file is empty")
+
         try:
             with open(log_file, 'rb') as f:
                 response = requests.put(f"https://upload.woodburn.au/{os.path.basename(log_file)}", data=f)
