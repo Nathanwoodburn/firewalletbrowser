@@ -48,15 +48,10 @@ import plugin as plugins_module  # noqa: E402
 app = Flask(__name__)
 qrcode = QRcode(app)
 
-
 # Change this if network fees change
 fees = 0.02
 revokeCheck = random.randint(100000,999999)
-
 THEME = os.getenv("THEME", "black")
-
-
-
 
 @app.route('/')
 def index():
@@ -322,11 +317,12 @@ def auctions():
         sort_time_next = reverseDirection(direction)
 
         # If older HSD version sort by domain height
-        if bids[0]['height'] == 0:
-            domains = sorted(domains, key=lambda k: k['height'],reverse=reverse)
-            sortbyDomain = True
-        else:
-            bids = sorted(bids, key=lambda k: k['height'],reverse=reverse)
+        if len(bids) > 0:
+            if bids[0]['height'] == 0:
+                domains = sorted(domains, key=lambda k: k['height'],reverse=reverse)
+                sortbyDomain = True
+            else:
+                bids = sorted(bids, key=lambda k: k['height'],reverse=reverse)
     else:
         # Sort by domain
         bids = sorted(bids, key=lambda k: k['name'],reverse=reverse)
