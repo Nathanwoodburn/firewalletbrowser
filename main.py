@@ -1876,7 +1876,8 @@ def api_status():
     }
     status = 200
     error = None
-    node_status['version'] = account_module.hsdVersion(False) # type: ignore
+    node_status['version'] = account_module.hsdVersion(False)
+    
 
     if node_status['internal']:
         node_status['internal_running'] = account_module.hsdRunning()
@@ -1892,9 +1893,15 @@ def api_status():
         error = "Internal node not running"
         status = 503
     
-
+    commit = currentCurrentCommit()
     return jsonify({
         "node": node_status,
+        "version": {
+            "commit": commit,
+            "branch": currentCurrentBranch(),
+            "latest": runningLatestVersion(),
+            "url": f"https://git.woodburn.au/nathanwoodburn/firewalletbrowser/commit/{commit}" if commit != "Error" else None
+        },
         "error": error,
         "status": status
     }), status
@@ -1941,6 +1948,45 @@ def renderDomain(name: str) -> str:
 
     except Exception:
         return f"{name}/"
+
+def currentCurrentCommit() -> str:
+    """
+    Get the current commit of the application.
+    """
+    if not os.path.exists(".git"):
+        return "Error"
+    info = gitinfo.get_git_info()
+    if info is None:
+        return "Error"
+    commit = info['commit']
+    return commit
+
+def currentCurrentBranch() -> str:
+    """
+    Get the current branch of the application.
+    """
+    if not os.path.exists(".git"):
+        return "Error"
+    info = gitinfo.get_git_info()
+    if info is None:
+        return "Error"
+    branch = info['refs']
+    return branch
+
+def runningLatestVersion() -> bool:
+    """
+    Check if the current version is the latest version.
+    """
+    if not os.path.exists(".git"):
+        return False
+    info = gitinfo.get_git_info()
+    if info is None:
+        return False
+    branch = info['refs']
+    commit = info['commit']
+    if commit != latestVersion(branch):
+        return False
+    return True
 
 def get_alerts(account:str) -> list:
     """
