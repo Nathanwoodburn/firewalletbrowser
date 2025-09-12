@@ -1868,9 +1868,36 @@ def api_icon(account):
 def api_status():
     # This doesn't require a login
     # Check if the node is connected
-    if not account_module.hsdConnected():
-        return jsonify({"status":503,"error": "Node not connected"}), 503
-    return jsonify({"status": 200,"result": "FireWallet is running"})
+    node_status = {
+        "connected": account_module.hsdConnected(),
+        "internal": account_module.HSD_INTERNAL_NODE,
+        "internal_running": False,
+        "version": "N/A"
+    }
+    status = 200
+    error = None
+    node_status['version'] = account_module.hsdVersion(False) # type: ignore
+
+    if node_status['internal']:
+        node_status['internal_running'] = account_module.hsdRunning()
+    
+    # If the node is not connected, return an error
+    if not node_status['connected']:
+        error = "Node not connected"
+        status = 503
+    if node_status['version'] == -1:
+        error = "Error connecting to HSD"
+        status = 503
+    if node_status['internal'] and not node_status['internal_running']:
+        error = "Internal node not running"
+        status = 503
+    
+
+    return jsonify({
+        "node": node_status,
+        "error": error,
+        "status": status
+    }), status
 
 
 #endregion

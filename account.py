@@ -95,6 +95,7 @@ def hsdConnected():
 def hsdVersion(format=True):
     info = hsd.getInfo()
     if 'error' in info:
+        logger.error(f"HSD connection error: {info.get('error', 'Unknown error')}")
         return -1
     
     # Check if SPV mode is enabled
@@ -121,6 +122,7 @@ def check_account(cookie: str | None):
     # Check if the account is valid
     info = hsw.getAccountInfo(account, 'default')
     if 'error' in info:
+        logger.error(f"HSW error checking account {account}: {info.get('error', 'Unknown error')}")
         return False
     return account
 
@@ -426,7 +428,7 @@ def getBalance(account: str):
             daemon=True
         )
         thread.start()
-    
+        
     total = total - (domainValue/1000000)
     locked = locked - (domainValue/1000000)
     logger.debug(f"Adjusted balance for account {account}: total={total}, available={available}, locked={locked}")
@@ -583,6 +585,7 @@ def getTransactions(account, page=1, limit=100):
             return []
         info = hsw.getWalletTxHistory(account)
         if 'error' in info:
+            logger.error(f"Error getting transactions for account {account}: {info['error']}")
             return []
         return info[::-1]
 
@@ -916,6 +919,7 @@ def register(account, domain):
 def getNodeSync():
     response = hsd.getInfo()
     if 'error' in response:
+        logger.error(f"Error getting node sync status: {response['error']}")
         return 0
 
     sync = response['chain']['progress']*100
@@ -1941,13 +1945,17 @@ def hsdStart():
             cmd.append(flag)
 
     # Launch process
-    HSD_PROCESS = subprocess.Popen(
-        cmd,
-        cwd=os.getcwd(),
-        text=True
-    )
-    
-    logger.info(f"HSD started with PID {HSD_PROCESS.pid}")
+    try:
+        HSD_PROCESS = subprocess.Popen(
+            cmd,
+            cwd=os.getcwd(),
+            text=True
+        )
+        
+        logger.info(f"HSD started with PID {HSD_PROCESS.pid}")
+    except Exception as e:
+        logger.error(f"Failed to start HSD: {str(e)}", exc_info=True)
+        return
 
     atexit.register(hsdStop)
 
@@ -1959,6 +1967,19 @@ def hsdStart():
         logger.error(f"Failed to set signal handlers: {str(e)}", exc_info=True)
         pass
 
+def hsdRunning() -> bool:
+    global HSD_PROCESS
+    if not HSD_INTERNAL_NODE:
+        return False
+    if HSD_PROCESS is None:
+        return False
+    
+    # Check if process has terminated
+    poll_result = HSD_PROCESS.poll()
+    if poll_result is not None:
+        logger.error(f"HSD process has terminated with exit code: {poll_result}")
+        return False
+    return True
 
 def hsdStop():
     global HSD_PROCESS
