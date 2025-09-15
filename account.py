@@ -45,9 +45,7 @@ if HSD_INTERNAL_NODE:
         HSD_API = "firewallet-" + str(int(time.time()))
     HSD_IP = "localhost"
 
-SHOW_EXPIRED = os.getenv("SHOW_EXPIRED")
-if SHOW_EXPIRED is None:
-    SHOW_EXPIRED = False
+SHOW_EXPIRED = os.getenv("SHOW_EXPIRED","false").lower() in ["1","true","yes"]
 
 HSD_PROCESS = None
 SPV_MODE = None
@@ -368,7 +366,7 @@ def getBalance(account: str):
     available = available / 1000000
     logger.debug(f"Initial balance for account {account}: total={total}, available={available}, locked={locked}")
 
-    domains = getDomains(account)
+    domains = getDomains(account,True,True)
     domainValue = 0
     domains_to_update = []  # Track domains that need cache updates
     
@@ -475,14 +473,14 @@ def getPendingTX(account: str):
     return pending
 
 
-def getDomains(account, own=True):
+def getDomains(account, own: bool = True, expired: bool = SHOW_EXPIRED):
     if own:
         response = requests.get(get_wallet_api_url(f"/wallet/{account}/name?own=true"))
     else:
         response = requests.get(get_wallet_api_url(f"/wallet/{account}/name"))
     info = response.json()
 
-    if SHOW_EXPIRED:
+    if expired:
         return info
 
     # Remove any expired domains
