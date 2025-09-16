@@ -929,11 +929,14 @@ def getNodeSync():
     return sync
 
 
-def getWalletStatus():
+def getWalletStatus(verbose: bool = False):
     response = hsw.rpc_getWalletInfo()
+
     if 'error' in response and response['error'] is not None:
         return "Error"
-
+    
+    if verbose:
+        return response.get('result', {})
     # return response
     walletHeight = response['result']['height']
     # Get the current block height

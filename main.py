@@ -1607,7 +1607,17 @@ def plugin_function(ptype,plugin,function):
 #region API Routes
 @app.route('/api/v1/hsd/<function>', methods=["GET"])
 def api_hsd(function):
-    # Check if the user is logged in
+
+    if function == "sync":
+        return jsonify({"result": account_module.getNodeSync()})
+    if function == "version":
+        return jsonify({"result": account_module.hsdVersion(False)})
+    if function == "height":
+        return jsonify({"result": account_module.getBlockHeight()})
+    if function == "mempool":
+        return jsonify({"result": account_module.getMempoolTxs()})
+    
+    # Check if the user is logged in for all other functions
     account = None
     if request.cookies.get("account") is not None:
         account = account_module.check_account(request.cookies.get("account"))
@@ -1618,17 +1628,10 @@ def api_hsd(function):
 
     if not account:
         return jsonify({"error": "Not logged in"})
-    
-    if function == "sync":
-        return jsonify({"result": account_module.getNodeSync()})
-    if function == "version":
-        return jsonify({"result": account_module.hsdVersion(False)})
-    if function == "height":
-        return jsonify({"result": account_module.getBlockHeight()})
-    if function == "mempool":
-        return jsonify({"result": account_module.getMempoolTxs()})
-    if function == "mempoolBids":
+        
+    if function == "mempoolBids": # This is a heavy function so only allow for logged in users
         return jsonify({"result": account_module.getMempoolBids()})
+    
     if function == "nextAuctionState":
         # Get the domain from the query parameters
         domain = request.args.get('domain')
@@ -1712,7 +1715,13 @@ def api_hsd_mobile(function):
 
 @app.route('/api/v1/wallet/<function>', methods=["GET"])
 def api_wallet(function):
-    # Check if the user is logged in
+
+    if function == "sync":
+        # Check if arg verbose is set
+        verbose = request.args.get('verbose', 'false').lower() == 'true'
+        return jsonify({"result": account_module.getWalletStatus(verbose)})
+    
+    # Check if the user is logged in for all other functions
     account = None
     password = None
     if request.cookies.get("account") is not None:
@@ -1727,9 +1736,9 @@ def api_wallet(function):
     if not account:
         return jsonify({"error": "Not logged in"})
     
-    if function == "sync":
-        return jsonify({"result": account_module.getWalletStatus()})
-    
+    if function == "balance":
+        return jsonify({"result": account_module.getBalance(account)})
+
     if function == "available":
         return jsonify({"result": account_module.getBalance(account)['available']})
     if function == "total":
