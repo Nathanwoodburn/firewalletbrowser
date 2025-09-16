@@ -1608,12 +1608,16 @@ def plugin_function(ptype,plugin,function):
 @app.route('/api/v1/hsd/<function>', methods=["GET"])
 def api_hsd(function):
     # Check if the user is logged in
-    if request.cookies.get("account") is None:
-        return jsonify({"error": "Not logged in"})
+    account = None
+    if request.cookies.get("account") is not None:
+        account = account_module.check_account(request.cookies.get("account"))
     
-    account = account_module.check_account(request.cookies.get("account"))
+    # Allow login using http basic auth
+    if account is None and request.authorization is not None:
+        account = account_module.check_account(f"{request.authorization.username}:{request.authorization.password}")
+
     if not account:
-        return jsonify({"error": "Invalid account"})
+        return jsonify({"error": "Not logged in"})
     
     if function == "sync":
         return jsonify({"result": account_module.getNodeSync()})
@@ -1709,16 +1713,19 @@ def api_hsd_mobile(function):
 @app.route('/api/v1/wallet/<function>', methods=["GET"])
 def api_wallet(function):
     # Check if the user is logged in
-    if request.cookies.get("account") is None:
-        return jsonify({"error": "Not logged in"})
+    account = None
+    password = None
+    if request.cookies.get("account") is not None:
+        account = account_module.check_account(request.cookies.get("account"))
+        password = request.cookies.get("account","").split(":")[1]
     
-    account = account_module.check_account(request.cookies.get("account"))
-    if not account:
-        return jsonify({"error": "Invalid account"})
+    # Allow login using http basic auth
+    if account is None and request.authorization is not None:
+        account = account_module.check_account(f"{request.authorization.username}:{request.authorization.password}")
+        password = request.authorization.password
 
-    password = request.cookies.get("account","").split(":")[1]
     if not account:
-        return jsonify({"error": "Invalid account"})
+        return jsonify({"error": "Not logged in"})
     
     if function == "sync":
         return jsonify({"result": account_module.getWalletStatus()})
@@ -2021,8 +2028,8 @@ def get_alerts(account:str) -> list:
     wallet_status = account_module.getWalletStatus()
     if wallet_status != "Ready":
         alerts.append({
-            "name": "Wallet",
-            "output": f"The wallet is not synced ({wallet_status}). Please wait for it to sync."
+            "name": "Wallet Not Synced",
+            "output": "Please wait for it to sync."
         })
     # Try to read from notifications sqlite database
     if os.path.exists("user_data/notifications.db"):

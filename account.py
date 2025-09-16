@@ -119,6 +119,8 @@ def check_account(cookie: str | None):
         return False
 
     account = cookie.split(":")[0]
+    if len(account) < 1:
+        return False
     # Check if the account is valid
     info = hsw.getAccountInfo(account, 'default')
     if 'error' in info:
@@ -1571,6 +1573,12 @@ def getMempoolBids():
 def rescan():
     try:
         response = hsw.walletRescan(0)
+        if 'success' in response and response['success'] is False:
+            return {
+                "error": {
+                    "message": "Rescan already in progress"
+                }
+            }
         return response
     except Exception as e:
         return {
