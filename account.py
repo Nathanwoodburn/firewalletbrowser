@@ -486,9 +486,14 @@ def getDomains(account, own: bool = True, expired: bool = SHOW_EXPIRED):
     # Remove any expired domains
     domains = []
     for domain in info:
-        if 'stats' in domain:
+        if 'stats' in domain and domain['stats'] is not None:
             if 'daysUntilExpire' in domain['stats']:
                 if domain['stats']['daysUntilExpire'] < 0:
+                    logger.debug(f"Excluding expired domain: {domain['name']} due to daysUntilExpire")
+                    continue
+            if 'blocksSinceExpired' in domain['stats']:
+                if domain['stats']['blocksSinceExpired'] > 0:
+                    logger.debug(f"Excluding expired domain: {domain['name']} due to blocksSinceExpired")
                     continue
         domains.append(domain)
 
@@ -1571,9 +1576,9 @@ def getMempoolBids():
 
 
 # region settingsAPIs
-def rescan():
+def rescan(height:int = 0):
     try:
-        response = hsw.walletRescan(0)
+        response = hsw.walletRescan(height)
         if 'success' in response and response['success'] is False:
             return {
                 "error": {
