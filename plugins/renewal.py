@@ -1,81 +1,85 @@
 import account
 import requests
+import logging
+
+logger = logging.getLogger()
 
 # Plugin Data
 info = {
     "name": "Batch Renew Domains",
     "description": "Renew the next 100 domains",
     "version": "1.0",
-    "author": "Nathan.Woodburn/"
+    "author": "Nathan.Woodburn/",
 }
 
 # Functions
 functions = {
-    "main":{
+    "main": {
         "name": "Renew",
         "type": "default",
         "description": "Renew the next 100 domains in one transaction. Please wait for at least 1 block confirmation before renewing the next 100 domains",
         "params": {},
         "returns": {
-            "status": 
-            {
-                "name": "Status of the function",
-                "type": "text"
-            },
-            "transaction":
-            {
-                "name": "Transaction ID",
-                "type": "tx"
-            }
-        }
+            "status": {"name": "Status of the function", "type": "text"},
+            "transaction": {"name": "Transaction ID", "type": "tx"},
+        },
     }
 }
+
 
 def main(params, authentication):
     password = authentication.split(":")[1]
     wallet = authentication.split(":")[0]
     domains = account.getDomains(wallet)
-    domains = sorted(domains, key=lambda k: k['renewal'])
-        
+    domains = sorted(domains, key=lambda k: k["renewal"])
+
+    # Remove any domains that are expired or don't have an expiry date
     names = []
     for domain in domains:
+        if "stats" not in domain or "blocksUntilExpire" not in domain["stats"]:
+            continue
+        if domain["stats"]["blocksUntilExpire"] <= 0:
+            continue
+
         name = domain["name"]
         names.append(name)
-    
+
+    logger.info(f"Renewing {len(names)} domains")
+
     # Split names into batches of 100
     batches = []
     for i in range(0, len(names), 100):
-        batches.append(names[i:i+100])
+        batches.append(names[i : i + 100])
 
     # Unlock wallet
     KEY = account.HSD_API
     IP = account.HSD_IP
     PORT = account.HSD_WALLET_PORT
-    
-    response = requests.post(f'http://x:{KEY}@{IP}:{PORT}/wallet/{wallet}/unlock',
-                             json={'passphrase': password, 'timeout': 600})
+
+    response = requests.post(
+        f"http://x:{KEY}@{IP}:{PORT}/wallet/{wallet}/unlock",
+        json={"passphrase": password, "timeout": 600},
+    )
     if response.status_code != 200:
         print("Failed to unlock wallet")
-        print(f'Status code: {response.status_code}')
-        print(f'Response: {response.text}')
+        print(f"Status code: {response.status_code}")
+        print(f"Response: {response.text}")
         return {"status": "Failed unlocking wallet", "transaction": "None"}
 
-
     tx = "None"
-    for batch in batches:            
+    for batch in batches:
         batch = []
 
         for domain in names:
             batch.append(f'["RENEW", "{domain}"]')
-        
-        
+
         batchTX = "[" + ", ".join(batch) + "]"
         responseContent = f'{{"method": "sendbatch","params":[ {batchTX} ]}}'
-        response = requests.post(f'http://x:{KEY}@{IP}:{PORT}', data=responseContent)
+        response = requests.post(f"http://x:{KEY}@{IP}:{PORT}", data=responseContent)
         if response.status_code != 200:
-            print("Failed to create batch",flush=True)
-            print(f'Status code: {response.status_code}',flush=True)
-            print(f'Response: {response.text}',flush=True)
+            print("Failed to create batch", flush=True)
+            print(f"Status code: {response.status_code}", flush=True)
+            print(f"Response: {response.text}", flush=True)
             return {"status": "Failed", "transaction": "None"}
 
         batch = response.json()
@@ -83,13 +87,15 @@ def main(params, authentication):
         print("Verifying tx...")
         if batch["error"]:
             if batch["error"] != "":
-                print("Failed to verify batch",flush=True)
-                print(batch["error"]["message"],flush=True)
-                return {"status": f"Failed: {batch['error']['message']}", "transaction": "None"}
-        
-        if 'result' in batch:
-            if batch['result'] is not None:
-                tx = batch['result']['hash']
+                print("Failed to verify batch", flush=True)
+                print(batch["error"]["message"], flush=True)
+                return {
+                    "status": f"Failed: {batch['error']['message']}",
+                    "transaction": "None",
+                }
+
+        if "result" in batch:
+            if batch["result"] is not None:
+                tx = batch["result"]["hash"]
         return {"status": "Success", "transaction": tx}
         # Note only one batch can be sent at a time
-    
