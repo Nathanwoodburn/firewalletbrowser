@@ -1,0 +1,25 @@
+[project]
+name = "firewalletbrowser"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "cryptography>=46.0.3",
+    "dnspython>=2.6.1",
+    "flask>=3.1.2",
+    "flask-qrcode>=3.2.0",
+    "gunicorn>=23.0.0",
+    "handywrapper>=1.0.6",
+    "pysocks>=1.7.1",
+    "python-dotenv>=1.2.1",
+    "python-git-info>=0.8.3",
+    "requests>=2.32.3",
+    "requests-doh>=1.0.0",
+    "waitress>=3.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.0",
+]
